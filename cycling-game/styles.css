@@ -5344,3 +5344,101 @@ html.reduced-motion *::after {
     font-size: 22px;
   }
 }
+
+/* Ajuste final del mando: las cuatro acciones usan la mitad del área de
+   controles y los recursos se identifican siempre con texto. */
+.controls-panel {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+
+.metrics-panel .metric > div:first-child span {
+  overflow: hidden;
+  color: #dce8ed;
+  font-size: 9px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.follow-card.wheel-compact {
+  width: auto;
+  min-width: 92px;
+  padding: 7px 10px;
+}
+
+.follow-card.wheel-compact strong,
+.follow-card.wheel-compact em {
+  display: none;
+}
+
+.follow-card.wheel-compact span {
+  margin: 0;
+  color: #fff7da;
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .controls-panel {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+
+  .metrics-panel .metric {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 5px;
+  }
+
+  .metrics-panel .metric > div:first-child {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 1px;
+  }
+
+  .metrics-panel .metric > div:first-child span {
+    max-width: 100%;
+    font-size: clamp(6px, 1.7vw, 8px);
+    letter-spacing: 0;
+    text-overflow: clip;
+  }
+
+  .metrics-panel .metric > div:first-child strong {
+    align-self: flex-end;
+  }
+
+  .metrics-panel .meter {
+    width: 100%;
+    height: 5px;
+  }
+
+  .follow-card.wheel-compact {
+    width: auto;
+    min-width: 78px;
+  }
+}
+
+@media (min-width: 901px) {
+  .control-deck {
+    grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .controls-panel {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr);
+  }
+}
+
+/* El clima cambia dentro de una etapa diurna: la lluvia enfría la imagen,
+   pero nunca aplica una viñeta oscura que pueda parecer noche. */
+.weather-vignette {
+  background: radial-gradient(circle, transparent 68%, rgba(18,45,55,.045));
+  box-shadow: inset 0 0 72px rgba(14,38,49,.08);
+  transition: background-color .8s;
+}
+
+.weather-vignette.heavy {
+  background-color: rgba(190,216,222,.08);
+  box-shadow: inset 0 0 90px rgba(24,57,67,.12);
+}

@@ -55,13 +55,15 @@ El ciclista avanza automáticamente. La estrategia se controla con botones visib
 - **Comer gel**: recupera nutrición tras un pequeño retraso. Hay tres.
 - **Segura / Normal / Agresiva**: modifica el equilibrio entre velocidad, adherencia y riesgo.
 
-La interfaz de carrera utiliza un lenguaje visual compacto: `♥` energía, `⚡` explosividad, `▰` nutrición o gel, `◎` adherencia, `!` riesgo, `↯` rebufo, `▲` puerto y `◆` sprint intermedio. Las acciones conservan una sola palabra visible y muestran sus cifras detalladas como ayuda contextual, evitando repetir instrucciones dentro de cada botón.
+La interfaz de carrera utiliza un lenguaje visual compacto, pero las cuatro barras de recursos mantienen visibles sus nombres completos —energía, explosividad, nutrición y adherencia— también en móvil. Los iconos de las acciones muestran sus cifras detalladas como ayuda contextual.
 
 Durante la carrera la cabecera omite el nombre de etapa y el rótulo `LIVE`, ya presentes antes de la salida, para dedicar el espacio a posición, distancia, pendiente y mapa. En escritorio los mandos inferiores muestran únicamente icono y acción; sus datos dinámicos siguen disponibles como ayuda contextual sin ocupar una segunda línea.
 
 El panel inferior prioriza la lectura visual: muestra únicamente las cuatro barras grandes de energía, explosividad, nutrición y adherencia. La posición y el grupo pasan a la cabecera de carrera, mientras que los antiguos indicadores pequeños de rebufo, riesgo, geles y velocidad desaparecen. Los diez controles se reparten en dos filas de cinco: ritmo, ataque y sprint arriba; relevo, gel y trazada abajo. En escritorio conservan también una explicación breve sin recortes.
 
 Cada cambio táctico produce indicadores flotantes de recursos. Bajar a esfuerzo 1–2 muestra ahorro de energía y recuperación de explosividad; subir a 4–5 avisa del aumento de velocidad y consumo. Ataques, sprint, selección de rueda y geles muestran también sus beneficios o costes. Cuando el gel hace efecto aparecen sus valores reales: `+32 nutrición` y `+5 energía`.
+
+Las capas informativas de carrera son temporales: ningún aviso, ficha contextual, advertencia, panel táctico ni indicador de punto puntuable permanece más de cinco segundos. Los avisos normales duran algo más de tres segundos y los urgentes algo más de cuatro. Después la carretera vuelve a quedar despejada; solo permanecen los controles y los indicadores compactos de acciones que siguen activas.
 
 Cada partida es un Tour de 10 etapas. La primera y otra jornada entre la quinta y la novena son contrarrelojes individuales; cuatro etapas son de alta montaña y las cuatro restantes alternan llano y media montaña. Las etapas en línea miden entre 120 y 280 km y añaden puertos, descensos, curvas peligrosas y metas volantes. Los puertos se clasifican por su desnivel real como Especial, 1.ª, 2.ª, 3.ª o 4.ª categoría. También divide el recorrido en zonas visuales aleatorias de bosque, ciudad, desierto, alta montaña, campiña verde y terreno seco. Cada zona utiliza su propia paleta y elementos —árboles, edificios, cactus, rocas o matorral— en las dos cámaras, y el mapa muestra una franja con la sucesión de escenarios.
 
@@ -90,11 +92,11 @@ El botón de cámara alterna entre:
 
 La preferencia queda guardada en `localStorage` y ambas vistas son compatibles con el mapa interactivo.
 
-El mando inferior separa las decisiones en tres bloques iconográficos: `Ritmo` utiliza corazón, punto y rayo para Bajo, Medio y Alto; `Conducción` utiliza rombos distintos para Segura, Normal y Agresiva; y `Acciones` agrupa Ataque, Sprint, Gel y Relevo en una cuadrícula 2×2. Los botones no contienen texto visible: conservan nombre accesible, ayuda al pasar el cursor y muestran una confirmación grande al pulsarlos. Esta jerarquía se mantiene tanto en escritorio como en móvil.
+El mando inferior separa las decisiones en tres bloques iconográficos: `Ritmo` utiliza corazón, punto y rayo para Bajo, Medio y Alto; `Conducción` utiliza rombos distintos para Segura, Normal y Agresiva; y `Acciones` agrupa Ataque, Sprint, Relevo y Gel en una cuadrícula 2×2 que ocupa la mitad del área de controles. Los botones conservan nombre accesible, ayuda al pasar el cursor y muestran una confirmación grande al pulsarlos. Esta jerarquía se mantiene tanto en escritorio como en móvil.
 
 Al jugar o simular una etapa, el resultado se abre como una pantalla completa independiente del canvas. `Siguiente etapa` permanece arriba, recibe el foco y vuelve al dashboard con el resultado guardado; la cabecera y los controles del simulador no pueden interceptar la pulsación.
 
-Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra nombre, nacionalidad, rol, estado táctico, equipo y distancia; no existe un botón separado de “buscar rueda”. Con la carrera pausada se puede inspeccionar y seguir cualquier ciclista. El objetivo queda enmarcado y `Cancelar rueda` o `Volver a ti` devuelve el control al jugador.
+Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra durante menos de cinco segundos su nombre, nacionalidad, rol, equipo y distancia; después la ficha se reduce al indicador `RUEDA`. No existe un botón separado de “buscar rueda”. Con la carrera pausada se puede inspeccionar temporalmente cualquier ciclista. El objetivo queda enmarcado y `Cancelar rueda` o `Volver a ti` devuelve el control al jugador.
 
 Las últimas rampas de cada puerto y el último kilómetro concentran público pixel-art. Los aficionados cambian la posición de los brazos para animar, utilizan ropa de distintos colores y rodean el arco y la línea de meta.
 

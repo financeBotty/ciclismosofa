@@ -63,6 +63,9 @@ const TOUR_STAGE_COUNT = 10;
 const YOUNG_RIDER_MAX_AGE = 25;
 const SAVE_SLOT_COUNT = 3;
 const SAVE_VERSION = 1;
+const POPUP_MAX_MS = 4800;
+const NOTICE_MS = 3200;
+const URGENT_NOTICE_MS = 4200;
 const STAGE_POINTS = [50, 30, 20, 15, 12, 10, 8, 6, 4, 2];
 const PLAYER_PROFILES = {
   allrounder: {
@@ -405,12 +408,12 @@ class Road {
 
   generateSceneryZones() {
     const biomes = [
-      { id: "forest", name: "Bosque", ground: "#31583d", detail: "#193d2a", accent: "#699a50" },
-      { id: "city", name: "Ciudad", ground: "#71777a", detail: "#3e4b54", accent: "#c6b997" },
-      { id: "desert", name: "Desierto", ground: "#b88a4d", detail: "#7f5934", accent: "#dcc477" },
-      { id: "mountain", name: "Alta montaña", ground: "#667265", detail: "#394842", accent: "#a7ad92" },
-      { id: "green", name: "Campiña verde", ground: "#56844b", detail: "#2c653d", accent: "#91ad58" },
-      { id: "dry", name: "Terreno seco", ground: "#8a7145", detail: "#594b32", accent: "#b59a5b" }
+      { id: "forest", name: "Bosque", ground: "#4d7b55", detail: "#2d6040", accent: "#7fad63" },
+      { id: "city", name: "Ciudad", ground: "#858d90", detail: "#586871", accent: "#d5c9aa" },
+      { id: "desert", name: "Desierto", ground: "#c79b5c", detail: "#936b42", accent: "#ead38a" },
+      { id: "mountain", name: "Alta montaña", ground: "#7d897e", detail: "#53635d", accent: "#bdc1a8" },
+      { id: "green", name: "Campiña verde", ground: "#68a05c", detail: "#3c784b", accent: "#a6c46a" },
+      { id: "dry", name: "Terreno seco", ground: "#a08351", detail: "#705e40", accent: "#c8aa68" }
     ];
     let km = 0;
     let previousBiome = "";
@@ -443,6 +446,7 @@ class Road {
     if (blend <= 0) return current;
     return {
       ...current,
+      timeOfDay: "day",
       ground: lerpColor(current.ground, next.ground, blend),
       detail: lerpColor(current.detail, next.detail, blend),
       accent: lerpColor(current.accent, next.accent, blend)
@@ -2533,7 +2537,6 @@ class Race {
     }
     if (player.distance >= this.road.lengthKm - 1 && !this.lastKmAnnounced) {
       this.lastKmAnnounced = true;
-      this.game.notify("¡Último kilómetro! Sprint disponible.", "urgent");
       this.game.audio.play("lastKm");
     }
     const nextDanger = this.road.nextDanger(player.distance);
@@ -2542,9 +2545,7 @@ class Race {
     this.game.hud.showDanger(showDanger, meters);
     if (showDanger && this.lastDangerKm !== nextDanger) {
       this.lastDangerKm = nextDanger;
-      const reason = this.weather.intensity > 0.7 ? "lluvia intensa" : player.grip < 48 ? "poca adherencia" : player.speed > 44 ? "velocidad alta" : "curva cerrada";
       this.game.audio.play("danger");
-      this.game.notify(`Curva peligrosa por ${reason}. Ajusta la conducción.`, "urgent");
     }
   }
 }
@@ -2578,6 +2579,14 @@ class HUD {
     this.followCardRider = null;
     this.followCardMode = "";
     this.lastFollowCardUpdate = 0;
+    this.followCardCompactAt = 0;
+    this.racePointPopupKey = "";
+    this.racePointPopupUntil = 0;
+    this.lastKmPopupShown = false;
+    this.lastKmPopupUntil = 0;
+    this.dangerPopupActive = false;
+    this.dangerPopupUntil = 0;
+    this.profileTooltipTimer = null;
     this.bindProfileMap();
     this.bindMobileViews();
   }
@@ -2673,6 +2682,11 @@ class HUD {
     const teams = group.teams.slice(0, 4).join(", ");
     this.elements.profileTooltip.textContent = `${group.label} · ${group.leader.flag || ""} ${group.leader.name} · km ${formatNumber(group.leader.distance)} · ${group.riders.length} ciclistas · ${teams} · ${groupIndex ? `+${formatGap(group.gapPreviousSeconds)} al grupo anterior · ${group.tendency}` : "cabeza"}`;
     this.elements.profileTooltip.classList.remove("is-hidden");
+    if (this.profileTooltipTimer !== null) window.clearTimeout(this.profileTooltipTimer);
+    this.profileTooltipTimer = window.setTimeout(() => {
+      this.elements.profileTooltip.classList.add("is-hidden");
+      this.profileTooltipTimer = null;
+    }, POPUP_MAX_MS);
   }
 
   setMeter(element, value) {
@@ -2681,8 +2695,17 @@ class HUD {
   }
 
   showDanger(show, meters) {
-    this.elements.dangerBanner.classList.toggle("visible", show);
-    if (show) this.elements.dangerDistance.textContent = `EN ${Math.ceil(meters / 10) * 10} m`;
+    const now = performance.now();
+    if (show && !this.dangerPopupActive) {
+      this.dangerPopupActive = true;
+      this.dangerPopupUntil = now + POPUP_MAX_MS;
+    } else if (!show) {
+      this.dangerPopupActive = false;
+      this.dangerPopupUntil = 0;
+    }
+    const visible = show && now < this.dangerPopupUntil;
+    this.elements.dangerBanner.classList.toggle("visible", visible);
+    if (visible) this.elements.dangerDistance.textContent = `EN ${Math.ceil(meters / 10) * 10} m`;
   }
 
   update() {
@@ -2827,8 +2850,17 @@ class HUD {
         : `${relay.leader.team === player.team ? "EQUIPO" : "RIVAL"} · ${relay.leader.name.split(" ").at(-1)}`
       : race.timeTrial ? "NO EN CRONO" : relayAvailable > 0 ? `${relayAvailable} cerca` : "Sin ciclistas cerca";
     this.elements.relayButton.title = `Relevos: ${this.elements.relayButtonDetail.textContent}`;
-    this.elements.lastKmOverlay.classList.toggle("active", remaining <= 1);
-    this.elements.lastKmOverlay.setAttribute("aria-hidden", String(remaining > 1));
+    const popupNow = performance.now();
+    if (remaining <= 1 && !this.lastKmPopupShown) {
+      this.lastKmPopupShown = true;
+      this.lastKmPopupUntil = popupNow + POPUP_MAX_MS;
+    } else if (remaining > 1) {
+      this.lastKmPopupShown = false;
+      this.lastKmPopupUntil = 0;
+    }
+    const showLastKmPopup = remaining <= 1 && popupNow < this.lastKmPopupUntil;
+    this.elements.lastKmOverlay.classList.toggle("active", showLastKmPopup);
+    this.elements.lastKmOverlay.setAttribute("aria-hidden", String(!showLastKmPopup));
     this.elements.finishMeters.textContent = `${Math.ceil(remaining * 1000)} m`;
     this.elements.vignette.classList.toggle("heavy", race.weather.state === "heavy");
     this.elements.directorTip.textContent = this.getDirectorTip(player, gradient, remaining);
@@ -2926,13 +2958,33 @@ class HUD {
 
   updateRacePoint(race, player) {
     const point = race.road.racePoints.find((item) => item.km > player.distance && !item.completed);
+    const now = performance.now();
+    const target = point || {
+      type: "finish",
+      km: race.road.lengthKm,
+      name: race.road.stageName,
+      pointsTable: []
+    };
+    const distance = Math.max(0, target.km - player.distance);
+    const revealDistance = target.type === "mountain" ? 10 : target.type === "sprint" ? 5 : 10;
+    if (distance >= revealDistance) {
+      this.elements.racePointCard.classList.add("is-hidden");
+      return;
+    }
+    const popupKey = `${target.type}:${target.km.toFixed(3)}`;
+    if (popupKey !== this.racePointPopupKey) {
+      this.racePointPopupKey = popupKey;
+      this.racePointPopupUntil = now + POPUP_MAX_MS;
+    }
+    const visible = now < this.racePointPopupUntil;
+    this.elements.racePointCard.classList.toggle("is-hidden", !visible);
+    if (!visible) return;
     if (!point) {
       this.elements.racePointType.textContent = "META";
       this.elements.racePointName.textContent = race.road.stageName;
-      this.elements.racePointDistance.textContent = `${formatNumber(Math.max(0, race.road.lengthKm - player.distance))} km`;
+      this.elements.racePointDistance.textContent = `${formatNumber(distance)} km`;
       return;
     }
-    const distance = point.km - player.distance;
     this.elements.racePointType.textContent = point.type === "mountain"
       ? `▲ ${point.category === "Especial" ? "ESP" : point.category}`
       : "◆ SPRINT";
@@ -2948,8 +3000,10 @@ class HUD {
     const mode = wheelTarget ? "wheel" : inspectedRider ? "follow" : "";
     if (!rider) {
       if (this.followCardRider) this.elements.followCard.classList.add("is-hidden");
+      this.elements.followCard.classList.remove("wheel-compact");
       this.followCardRider = null;
       this.followCardMode = "";
+      this.followCardCompactAt = 0;
       return;
     }
     const targetChanged = rider !== this.followCardRider || mode !== this.followCardMode;
@@ -2960,10 +3014,14 @@ class HUD {
     if (targetChanged) {
       this.followCardRider = rider;
       this.followCardMode = mode;
+      this.followCardCompactAt = wheelTarget ? now + POPUP_MAX_MS : 0;
       this.elements.followModeLabel.textContent = wheelTarget ? "◎ RUEDA" : "⌖ SIGUIENDO";
       this.elements.followRiderName.textContent = `${rider.flag || ""} ${rider.name}`;
       this.elements.followCard.style.borderLeftColor = rider.jerseyColor || rider.color;
-    } else if (now - this.lastFollowCardUpdate < 750) {
+    }
+    const wheelCompact = Boolean(wheelTarget) && now >= this.followCardCompactAt;
+    this.elements.followCard.classList.toggle("wheel-compact", wheelCompact);
+    if (!targetChanged && now - this.lastFollowCardUpdate < 750) {
       return;
     }
     this.lastFollowCardUpdate = now;
@@ -3029,6 +3087,7 @@ class Game {
     };
     window.ultimoPuertoPerformance = this.performanceStats;
     this.hud = new HUD(this);
+    this.teamOrderPopupTimer = null;
     this.storage = this.loadStorage();
     this.reducedMotion = Boolean(this.storage.reducedMotion);
     this.hapticsEnabled = Boolean(this.storage.haptics);
@@ -3338,9 +3397,17 @@ class Game {
     const willOpen = panel.classList.contains("is-hidden");
     panel.classList.toggle("is-hidden", !willOpen);
     document.getElementById("teamOrderButton").setAttribute("aria-expanded", String(willOpen));
+    if (this.teamOrderPopupTimer) window.clearTimeout(this.teamOrderPopupTimer);
+    this.teamOrderPopupTimer = willOpen
+      ? window.setTimeout(() => this.closeTeamOrders(), POPUP_MAX_MS)
+      : null;
   }
 
   closeTeamOrders() {
+    if (this.teamOrderPopupTimer) {
+      window.clearTimeout(this.teamOrderPopupTimer);
+    }
+    this.teamOrderPopupTimer = null;
     document.getElementById("teamOrderPanel").classList.add("is-hidden");
     document.getElementById("teamOrderButton").setAttribute("aria-expanded", "false");
   }
@@ -3975,6 +4042,11 @@ class Game {
       button.classList.toggle("active", button.dataset.teamOrder === "protect");
     });
     this.hud.setMobileView("race");
+    this.hud.racePointPopupKey = "";
+    this.hud.racePointPopupUntil = 0;
+    this.hud.lastKmPopupShown = false;
+    this.hud.lastKmPopupUntil = 0;
+    this.hud.showDanger(false, 0);
     this.hud.update();
     if (this.storage.tutorialSeen) this.runCountdown();
     else this.openTutorial();
@@ -4480,7 +4552,7 @@ class Game {
     element.textContent = message;
     feed.appendChild(element);
     if (type === "urgent") this.haptic([18, 20, 18]);
-    window.setTimeout(() => element.remove(), 4900);
+    window.setTimeout(() => element.remove(), type === "urgent" ? URGENT_NOTICE_MS : NOTICE_MS);
   }
 
   showResourceFeedback(items) {
@@ -4504,11 +4576,14 @@ class Game {
   inspectGroup(groupIndex) {
     const group = this.race?.groups[groupIndex];
     if (!group || !["RACING", "PAUSED"].includes(this.state)) return;
-    this.cameraInspection = { type: "group", groupIndex, rider: group.leader, until: performance.now() + 8000 };
+    const inspection = { type: "group", groupIndex, rider: group.leader, until: performance.now() + POPUP_MAX_MS };
+    this.cameraInspection = inspection;
     if (this.state === "PAUSED") this.cameraFocusKm = group.leader.distance;
     document.getElementById("returnCameraButton").classList.remove("is-hidden");
-    this.notify(`${group.label}: ${group.leader.flag || ""} ${group.leader.name}, ${group.riders.length} ciclistas, ${group.teams.slice(0, 3).join(", ")} · ${group.tendency}.`);
     this.hud.showProfileTooltip(groupIndex);
+    window.setTimeout(() => {
+      if (this.cameraInspection === inspection) this.returnCameraToPlayer();
+    }, POPUP_MAX_MS);
     if (this.state === "PAUSED") this.hud.update();
   }
 
@@ -4528,10 +4603,13 @@ class Game {
       this.returnCameraToPlayer();
       return;
     }
-    this.cameraInspection = { type: "rider", rider, until: Infinity };
+    const inspection = { type: "rider", rider, until: performance.now() + POPUP_MAX_MS };
+    this.cameraInspection = inspection;
     if (this.state === "PAUSED") this.cameraFocusKm = rider.distance;
     document.getElementById("returnCameraButton").classList.remove("is-hidden");
-    this.notify(`Siguiendo a ${rider.flag || ""} ${rider.name}.`);
+    window.setTimeout(() => {
+      if (this.cameraInspection === inspection) this.returnCameraToPlayer();
+    }, POPUP_MAX_MS);
     this.hud.update();
   }
 
@@ -4559,7 +4637,6 @@ class Game {
     cancelButton.textContent = "× RUEDA";
     cancelButton.setAttribute("aria-label", "Cancelar rueda");
     cancelButton.classList.remove("is-hidden");
-    this.notify(`Buscando la rueda de ${rider.flag || ""} ${rider.name}.`);
     this.hud.update();
   }
 
@@ -4571,6 +4648,7 @@ class Game {
     this.hud.followCardRider = null;
     this.hud.followCardMode = "";
     this.hud.lastFollowCardUpdate = 0;
+    this.hud.followCardCompactAt = 0;
     const cancelButton = document.getElementById("returnCameraButton");
     cancelButton.textContent = "⌖ TÚ";
     cancelButton.setAttribute("aria-label", "Volver a tu ciclista");
@@ -4581,10 +4659,14 @@ class Game {
 
   inspectKm(km) {
     if (!this.race || !["RACING", "PAUSED"].includes(this.state)) return;
-    this.cameraInspection = { type: "km", km: clamp(km, 0, this.race.road.lengthKm), until: performance.now() + 8000 };
+    const inspection = { type: "km", km: clamp(km, 0, this.race.road.lengthKm), until: performance.now() + POPUP_MAX_MS };
+    this.cameraInspection = inspection;
     if (this.state === "PAUSED") this.cameraFocusKm = this.cameraInspection.km;
     document.getElementById("returnCameraButton").classList.remove("is-hidden");
     this.notify(`Vista de carrera en el km ${formatNumber(km)}.`);
+    window.setTimeout(() => {
+      if (this.cameraInspection === inspection) this.returnCameraToPlayer();
+    }, POPUP_MAX_MS);
     if (this.state === "PAUSED") this.hud.update();
   }
 
@@ -4738,7 +4820,9 @@ class Game {
     const elevation = road ? road.elevationAt(this.cameraKm) : 800;
     const highMountain = clamp((elevation - 600) / 900, 0, 1);
     const biome = road?.visualBiomeAt(this.cameraKm) || { id: "green", ground: "#57874f", detail: "#2f693e", accent: "#8dad59" };
-    const ground = weatherIntensity > 0.6 ? lerpColor(biome.ground, "#3f5960", 0.4) : lerpColor(biome.ground, "#879081", highMountain * 0.2);
+    const ground = weatherIntensity > 0.6
+      ? lerpColor(biome.ground, "#789397", 0.28)
+      : lerpColor(biome.ground, "#929c8c", highMountain * 0.16);
     ctx.fillStyle = ground;
     ctx.fillRect(-30, -30, this.width + 60, this.height + 60);
 
@@ -5011,7 +5095,8 @@ class Game {
       ctx.fillRect(x - size, y - height, size * 2, height);
       ctx.fillStyle = marker % 2 ? "#87939a" : "#a46d58";
       ctx.fillRect(x - size + 3, y - height + 3, size * 2 - 6, height - 3);
-      ctx.fillStyle = "#f1d579";
+      // Reflejo frío de luz diurna: no simula ventanas encendidas.
+      ctx.fillStyle = "#c4e0e5";
       for (let row = y - height + 7; row < y - 6; row += 8) {
         ctx.fillRect(x - size + 6, row, 4, 4);
         ctx.fillRect(x + 2, row, 4, 4);
@@ -5778,7 +5863,7 @@ class Game {
       mountain: "#b5d5df", green: "#8bcde2", dry: "#ddb878"
     };
     // Incluso con lluvia intensa el cielo conserva luminosidad diurna.
-    ctx.fillStyle = weather > 0.6 ? "#91a9b0" : skyColors[biome.id];
+    ctx.fillStyle = weather > 0.6 ? "#abc4ca" : skyColors[biome.id];
     ctx.fillRect(-30, -30, this.width + 60, this.height + 60);
     this.renderLateralSkyDetails(ctx, biome, weather);
     if (biome.id === "city") {
@@ -5791,7 +5876,7 @@ class Game {
         for (let y = this.height * 0.5 - height; y < this.height * 0.45; y += 12) ctx.fillRect(x + 7, y, 5, 5);
       }
     } else {
-      ctx.fillStyle = weather > 0.6 ? lerpColor(biome.detail, "#526d67", 0.5) : biome.detail;
+      ctx.fillStyle = weather > 0.6 ? lerpColor(biome.detail, "#718b82", 0.42) : biome.detail;
       for (let x = -20; x < this.width + 30; x += 18) {
         const amplitude = biome.id === "mountain" ? 75 : biome.id === "desert" ? 28 : 38;
         const peak = this.height * 0.42 + Math.round(Math.sin(x * 0.018 + this.cameraKm) * amplitude / 6) * 6;
@@ -5804,7 +5889,7 @@ class Game {
       const km = this.cameraKm + (x - focusX) / pixelsPerKm;
       points.push({ x, y: this.sideSurfaceY(km), km });
     }
-    ctx.fillStyle = weather > 0.5 ? lerpColor(biome.ground, "#3e5960", 0.4) : biome.ground;
+    ctx.fillStyle = weather > 0.5 ? lerpColor(biome.ground, "#789399", 0.3) : biome.ground;
     ctx.beginPath();
     ctx.moveTo(-20, this.height + 20);
     points.forEach((point) => ctx.lineTo(point.x, point.y));
