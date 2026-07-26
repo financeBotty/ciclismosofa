@@ -3286,6 +3286,12 @@ class Game {
         if (!this.canControl()) return;
         this.race.player.setRiskMode(button.dataset.risk);
         document.querySelectorAll("[data-risk]").forEach((item) => item.classList.toggle("active", item === button));
+        const feedback = {
+          safe: { icon: "◈", text: "CONDUCCIÓN SEGURA" },
+          normal: { icon: "◆", text: "CONDUCCIÓN NORMAL" },
+          aggressive: { icon: "✦", text: "CONDUCCIÓN AGRESIVA" }
+        }[button.dataset.risk];
+        this.showResourceFeedback([{ ...feedback, type: "power" }]);
         this.notify(`Trazada ${button.dataset.risk}: el cambio tarda un instante.`);
       });
     });
@@ -3407,7 +3413,7 @@ class Game {
     player.attackMultiplier = 1;
     if (player.effort === 1) {
       this.showResourceFeedback([
-        { icon: "♥", text: "ENERGÍA ++", type: "positive" },
+        { icon: "♥", text: "RITMO BAJO", type: "positive" },
         { icon: "✦", text: "+ EXPLOSIVIDAD", type: "positive" }
       ]);
     } else if (player.effort === 2) {
@@ -3417,7 +3423,7 @@ class Game {
       ]);
     } else {
       this.showResourceFeedback([
-        { icon: "»", text: "VELOCIDAD ALTA", type: "power" },
+        { icon: "⚡", text: "RITMO ALTO", type: "power" },
         attackThreat
           ? { icon: "⇧", text: "IGUALA EL ATAQUE", type: "power" }
           : { icon: "♥", text: "CONSUME ENERGÍA", type: "negative" }
@@ -4421,7 +4427,11 @@ class Game {
       race.resolutionMode !== "simulated" || !this.simulationCheckpoint
     );
     document.getElementById("newRaceButton").textContent = "SALIR AL MENÚ";
-    document.getElementById("finishOverlay").classList.remove("is-hidden");
+    const finishOverlay = document.getElementById("finishOverlay");
+    finishOverlay.classList.remove("is-hidden");
+    if (typeof globalThis.requestAnimationFrame === "function") {
+      globalThis.requestAnimationFrame(() => replayButton.focus({ preventScroll: true }));
+    }
   }
 
   renderFinalClassification(elementId, riders, valueForRider) {

@@ -4317,6 +4317,9 @@ html.reduced-motion *::after {
 
 /* Resultado: continuar siempre queda arriba y las estadísticas se desplazan debajo. */
 .finish-overlay {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
   overflow: hidden;
 }
 
@@ -5227,5 +5230,117 @@ html.reduced-motion *::after {
     width: auto;
     height: auto;
     margin: 0;
+  }
+}
+
+/* Mando iconográfico: la sección aporta el significado y cada botón conserva
+   una silueta grande, estable y reconocible. Los nombres siguen disponibles
+   mediante aria-label y title. */
+.control-group-label {
+  color: #ffe078;
+  font-size: 11px;
+  letter-spacing: .12em;
+}
+
+.controls-panel .power-preset b,
+.controls-panel .power-preset small,
+.controls-panel .risk-buttons span,
+.controls-panel .race-actions .action-button > span:last-child {
+  display: none !important;
+}
+
+.controls-panel .power-preset,
+.controls-panel .risk-buttons button,
+.controls-panel .race-actions .action-button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  text-align: center;
+}
+
+.controls-panel .power-preset {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.controls-panel .power-preset i,
+.controls-panel .risk-buttons i {
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: center;
+  min-width: 0;
+  margin: 0;
+  font-size: 31px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.controls-panel .race-actions .button-icon {
+  display: grid;
+  width: 43px;
+  min-width: 43px;
+  height: 39px;
+  place-items: center;
+  margin: 0;
+  font-size: 31px;
+  line-height: 1;
+}
+
+.controls-panel .power-preset[aria-pressed="true"],
+.controls-panel .risk-buttons button.active {
+  border-color: #fff3a8;
+  color: #171200;
+  background: linear-gradient(#ffe977 0 20%, #ffcc33 21% 74%, #b97812 75%) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.4),
+    0 0 0 2px #ffdc55;
+}
+
+.controls-panel .action-button.attack:not(:disabled) .button-icon {
+  color: #fff5d6;
+}
+
+.controls-panel .action-button.sprint.ready .button-icon {
+  color: #10210b;
+}
+
+.controls-panel .action-button:disabled {
+  opacity: .5;
+}
+
+.controls-panel .action-button:disabled .button-icon {
+  color: #c1ccd2;
+}
+
+.controls-panel button:focus-visible {
+  outline: 3px solid #62d8f2;
+  outline-offset: -3px;
+}
+
+@media (max-width: 900px) {
+  .control-group-label {
+    font-size: 8px;
+    letter-spacing: .1em;
+  }
+
+  .controls-panel .power-preset i,
+  .controls-panel .risk-buttons i {
+    font-size: 24px;
+  }
+
+  .controls-panel .race-actions .button-icon {
+    width: 31px;
+    min-width: 31px;
+    height: 29px;
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 420px) {
+  .controls-panel .power-preset i,
+  .controls-panel .risk-buttons i,
+  .controls-panel .race-actions .button-icon {
+    font-size: 22px;
   }
 }

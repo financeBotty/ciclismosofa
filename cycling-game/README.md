@@ -90,7 +90,9 @@ El botón de cámara alterna entre:
 
 La preferencia queda guardada en `localStorage` y ambas vistas son compatibles con el mapa interactivo.
 
-El mando inferior separa las decisiones en tres bloques: `Ritmo` reúne Bajo, Medio y Alto; `Conducción` coloca debajo Segura, Normal y Agresiva; y `Acciones` agrupa Ataque, Sprint, Gel y Relevo. Esta jerarquía se conserva tanto en escritorio como en móvil.
+El mando inferior separa las decisiones en tres bloques iconográficos: `Ritmo` utiliza corazón, punto y rayo para Bajo, Medio y Alto; `Conducción` utiliza rombos distintos para Segura, Normal y Agresiva; y `Acciones` agrupa Ataque, Sprint, Gel y Relevo en una cuadrícula 2×2. Los botones no contienen texto visible: conservan nombre accesible, ayuda al pasar el cursor y muestran una confirmación grande al pulsarlos. Esta jerarquía se mantiene tanto en escritorio como en móvil.
+
+Al jugar o simular una etapa, el resultado se abre como una pantalla completa independiente del canvas. `Siguiente etapa` permanece arriba, recibe el foco y vuelve al dashboard con el resultado guardado; la cabecera y los controles del simulador no pueden interceptar la pulsación.
 
 Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra nombre, nacionalidad, rol, estado táctico, equipo y distancia; no existe un botón separado de “buscar rueda”. Con la carrera pausada se puede inspeccionar y seguir cualquier ciclista. El objetivo queda enmarcado y `Cancelar rueda` o `Volver a ti` devuelve el control al jugador.
 
@@ -143,6 +145,7 @@ Las tablas de puntuación son:
 - `tests/phase2-smoke.jxa`: prueba reproducible de Tour completo, tiempos por grupos, condición, perfiles, fugas y migración de guardados; se ejecuta en macOS con `osascript -l JavaScript tests/phase2-smoke.jxa`.
 - `tests/phase2-balance.jxa`: muestra de 90 Tours simulados —30 por dificultad— para vigilar victorias, top 10, general y triunfos de escapada.
 - `tests/quick-race-smoke.jxa`: valida las cuatro familias de carrera rápida, la etapa independiente y el pelotón de 100 ciclistas.
+- `tests/simulation-flow-smoke.m`: reproduce en WebKit el flujo Simular etapa → resultado → Siguiente etapa y comprueba que ninguna capa intercepta el botón.
 - `tests/phase3-smoke.jxa`: valida las cuatro órdenes de equipo, ataques, bloqueo de relevos durante un ataque rival, sprint de respuesta, tutorial, movimiento reducido y vibración.
 - `manifest.webmanifest`, `service-worker.js` y `assets/icon.svg`: instalación y caché offline del juego.
 - `assets/`: icono instalable y espacio para futuros paquetes audiovisuales; la carrera actual se dibuja en Canvas y sintetiza el sonido en el navegador.
