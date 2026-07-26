@@ -70,6 +70,7 @@
       <div id="vignette" class="weather-vignette"></div>
       <nav id="mobileViewTabs" class="mobile-view-tabs" aria-label="Vistas del juego">
         <button type="button" data-mobile-view="race" class="active" aria-selected="true" aria-label="Ver carrera"><i aria-hidden="true">▶</i><span>RUTA</span></button>
+        <button type="button" data-mobile-view="groups" aria-selected="false" aria-label="Ver grupos"><i aria-hidden="true">≡</i><span>GRUP.</span></button>
         <button type="button" data-mobile-view="classification" aria-selected="false" aria-label="Ver clasificación"><i aria-hidden="true">☷</i><span>POS.</span></button>
         <button type="button" data-mobile-view="stage" aria-selected="false" aria-label="Ver etapa"><i aria-hidden="true">▲</i><span>ETAPA</span></button>
       </nav>
@@ -92,6 +93,11 @@
           <div><span>☷ GRUPOS</span><strong id="mobileStageGroups">—</strong></div>
         </div>
       </section>
+      <section id="mobileGroupsPanel" class="mobile-view-panel mobile-groups-panel is-hidden" aria-label="Grupos de carrera">
+        <header><span>≡ GRUPOS</span><strong id="mobileGroupsCount">1</strong></header>
+        <p>Pulsa un grupo para seguir a su líder.</p>
+        <div id="mobileGroupsList" class="mobile-groups-list"></div>
+      </section>
       <div id="eventFeed" class="event-feed" aria-live="polite"></div>
       <div id="resourceFeedback" class="resource-feedback" aria-live="polite" aria-atomic="true"></div>
       <aside id="groupsPanel" class="groups-panel" aria-label="Grupos en carrera">
@@ -103,7 +109,10 @@
       </div>
       <button id="pauseButton" class="icon-button pause-button" aria-label="Pausar partida">Ⅱ</button>
       <button id="returnCameraButton" class="camera-return is-hidden" aria-label="Volver a tu ciclista">⌖ TÚ</button>
-      <button id="cameraButton" class="camera-button" type="button" aria-label="Cambiar a vista lateral" title="Cambiar a vista lateral">▣ LAT</button>
+      <div id="cameraSwitcher" class="camera-switcher" role="group" aria-label="Cámara de carrera">
+        <button id="topCameraButton" type="button" data-camera-mode="top" aria-pressed="true">CEN</button>
+        <button id="sideCameraButton" type="button" data-camera-mode="side" aria-pressed="false">LAT</button>
+      </div>
       <button id="teamOrderButton" class="team-order-button" type="button" aria-expanded="false" aria-controls="teamOrderPanel">
         <span>♟</span><b id="teamOrderCurrent">PROTEGER</b>
       </button>

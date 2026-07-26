@@ -2555,6 +2555,7 @@ class HUD {
       "directorTip", "vignette", "profileCanvas", "profileTooltip", "groupsPanel", "groupsCount", "groupsList",
       "racePointCard", "racePointType", "racePointName", "racePointDistance", "followCard", "followModeLabel", "followRiderName", "followRiderInfo",
       "mobileViewTabs", "mobileClassificationPanel", "mobileClassificationList", "mobileRacePosition",
+      "mobileGroupsPanel", "mobileGroupsCount", "mobileGroupsList",
       "mobileStagePanel", "mobileStageProgressText", "mobileStageName", "mobileStageProgressBar",
       "mobileStageDistance", "mobileStageAscent", "mobileStageMountains", "mobileStageSprints",
       "mobileStageBiome", "mobileStageWeather", "mobileStageElapsed", "mobileStageGroups"
@@ -2578,15 +2579,22 @@ class HUD {
       const button = event.target.closest("[data-mobile-view]");
       if (button) this.setMobileView(button.dataset.mobileView);
     });
+    this.elements.mobileGroupsList.addEventListener("click", (event) => {
+      const row = event.target.closest("[data-group-index]");
+      if (!row) return;
+      this.game.inspectGroup(Number(row.dataset.groupIndex));
+      this.setMobileView("race");
+    });
   }
 
   setMobileView(view) {
-    this.mobileView = ["race", "classification", "stage"].includes(view) ? view : "race";
+    this.mobileView = ["race", "groups", "classification", "stage"].includes(view) ? view : "race";
     this.elements.mobileViewTabs.querySelectorAll("[data-mobile-view]").forEach((button) => {
       const active = button.dataset.mobileView === this.mobileView;
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", String(active));
     });
+    this.elements.mobileGroupsPanel.classList.toggle("is-hidden", this.mobileView !== "groups");
     this.elements.mobileClassificationPanel.classList.toggle("is-hidden", this.mobileView !== "classification");
     this.elements.mobileStagePanel.classList.toggle("is-hidden", this.mobileView !== "stage");
     const teamButton = document.getElementById("teamOrderButton");
@@ -2837,9 +2845,10 @@ class HUD {
 
   updateGroups(race) {
     this.elements.groupsCount.textContent = race.groups.length;
+    this.elements.mobileGroupsCount.textContent = race.groups.length;
     this.elements.groupsPanel.classList.toggle("multiple", race.groups.length > 1);
     this.elements.groupsPanel.classList.toggle("context-quiet", race.groups.length <= 1);
-    this.elements.groupsList.innerHTML = race.groups.slice(0, 7).map((group, index) => {
+    const groupsMarkup = race.groups.slice(0, 7).map((group, index) => {
       const gap = index === 0 ? "0:00" : `+${this.formatGap(group.gapPreviousSeconds)}`;
       const playerClass = group.riders.includes(race.player) ? " player-group" : "";
       const leader = group.leader;
@@ -2853,6 +2862,8 @@ class HUD {
         <strong>${gap}</strong>
       </button>`;
     }).join("") + (race.groups.length > 7 ? `<div class="groups-more">+${race.groups.length - 7} grupos</div>` : "");
+    this.elements.groupsList.innerHTML = groupsMarkup;
+    this.elements.mobileGroupsList.innerHTML = groupsMarkup;
   }
 
   updateMobilePanels(race, force = false) {
@@ -3148,7 +3159,9 @@ class Game {
     document.getElementById("undoSimulationButton").addEventListener("click", () => this.undoSimulation());
     document.getElementById("newRaceButton").addEventListener("click", () => this.showMenu());
     document.getElementById("returnCameraButton").addEventListener("click", () => this.returnCameraToPlayer(true));
-    document.getElementById("cameraButton").addEventListener("click", () => this.toggleCamera());
+    document.querySelectorAll("[data-camera-mode]").forEach((button) => {
+      button.addEventListener("click", () => this.setCameraMode(button.dataset.cameraMode));
+    });
     const volumeRange = document.getElementById("volumeRange");
     const soundToggle = document.getElementById("soundToggle");
     volumeRange.value = String(Math.round(this.audio.volume * 100));
@@ -4449,7 +4462,7 @@ class Game {
     element.textContent = message;
     feed.appendChild(element);
     if (type === "urgent") this.haptic([18, 20, 18]);
-    window.setTimeout(() => element.remove(), 3300);
+    window.setTimeout(() => element.remove(), 4900);
   }
 
   showResourceFeedback(items) {
@@ -4574,25 +4587,32 @@ class Game {
   }
 
   toggleCamera() {
-    this.cameraMode = this.cameraMode === "top" ? "side" : "top";
+    this.setCameraMode(this.cameraMode === "top" ? "side" : "top");
+  }
+
+  setCameraMode(mode) {
+    if (!["top", "side"].includes(mode)) return;
+    const changed = this.cameraMode !== mode;
+    this.cameraMode = mode;
     safeStorageSet("ultimoPuerto.camera", this.cameraMode);
     this.updateCameraButton();
     if (window.innerWidth <= 900 && this.hud?.mobileView !== "race") {
       this.hud.setMobileView("race");
     }
-    this.notify(this.cameraMode === "side" ? "Cámara lateral activada." : "Cámara cenital activada.");
+    if (changed) {
+      this.notify(this.cameraMode === "side" ? "Cámara lateral activada." : "Cámara cenital activada.");
+    }
   }
 
   updateCameraButton() {
-    const button = document.getElementById("cameraButton");
-    if (!button) return;
-    const side = this.cameraMode === "side";
-    const nextView = side ? "cenital" : "lateral";
-    button.textContent = side ? "◆ CEN" : "▣ LAT";
-    button.title = `Cambiar a vista ${nextView}`;
-    button.setAttribute("aria-label", `Cambiar a vista ${nextView}`);
-    button.setAttribute("aria-pressed", String(side));
-    button.dataset.currentView = side ? "side" : "top";
+    document.querySelectorAll("[data-camera-mode]").forEach((button) => {
+      const active = button.dataset.cameraMode === this.cameraMode;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+      button.title = active
+        ? `Vista ${this.cameraMode === "side" ? "lateral" : "cenital"} activa`
+        : `Cambiar a vista ${button.dataset.cameraMode === "side" ? "lateral" : "cenital"}`;
+    });
   }
 
   resize() {

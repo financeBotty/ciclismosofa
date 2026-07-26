@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "ciclimo-tour-v9";
+const CACHE_NAME = "ciclimo-tour-v10";
 const APP_SHELL = [
   "./",
   "./index.html",

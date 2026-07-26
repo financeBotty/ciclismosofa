@@ -4,6 +4,7 @@
 static int testResult = 1;
 
 @interface MobileCameraDelegate : NSObject <WKNavigationDelegate>
+@property(nonatomic, strong) NSURL *outputURL;
 @end
 
 @implementation MobileCameraDelegate
@@ -14,19 +15,43 @@ static int testResult = 1;
          "const game = window.ciclimoTourGame;"
          "game.storage.tutorialSeen = true;"
          "game.startQuickRace();"
-         "const button = document.getElementById('cameraButton');"
+         "const switcher = document.getElementById('cameraSwitcher');"
+         "const button = document.getElementById('sideCameraButton');"
          "game.hud.setMobileView('classification');"
-         "const rect = button.getBoundingClientRect();"
-         "const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);"
+         "const rect = switcher.getBoundingClientRect();"
+         "const buttonRect = button.getBoundingClientRect();"
+         "const hit = document.elementFromPoint(buttonRect.left + buttonRect.width / 2, buttonRect.top + buttonRect.height / 2);"
          "const before = game.cameraMode;"
          "button.click();"
+         "const viewAfterCamera = game.hud.mobileView;"
+         "const feed = document.getElementById('eventFeed');"
+         "const desktopGroups = document.getElementById('groupsPanel');"
+         "let groupsVisible = true;"
+         "let groupsRows = 0;"
+         "let viewAfterGroup = game.hud.mobileView;"
+         "if (innerWidth <= 900) {"
+           "game.hud.setMobileView('groups');"
+           "groupsVisible = !document.getElementById('mobileGroupsPanel').classList.contains('is-hidden');"
+           "groupsRows = document.querySelectorAll('#mobileGroupsList [data-group-index]').length;"
+           "game.state = 'RACING';"
+           "document.querySelector('#mobileGroupsList [data-group-index]').click();"
+           "viewAfterGroup = game.hud.mobileView;"
+         "}"
+         "game.notify('ATAQUE DE PRUEBA', 'urgent');"
+         "const message = feed.querySelector('.event-message');"
          "return {"
-           "before, after: game.cameraMode, mobileView: game.hud.mobileView,"
-           "label: button.textContent, hitId: hit && hit.id,"
+           "before, after: game.cameraMode, mobileView: viewAfterCamera,"
+           "groupsVisible, groupsRows, viewAfterGroup,"
+           "desktopGroupsDisplay: getComputedStyle(desktopGroups).display,"
+           "feedZIndex: getComputedStyle(feed).zIndex,"
+           "groupsZIndex: getComputedStyle(desktopGroups).zIndex,"
+           "messageText: message && message.textContent,"
+           "messageWidth: message ? message.getBoundingClientRect().width : 0,"
+           "hitId: hit && hit.id,"
            "left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,"
            "width: rect.width, height: rect.height,"
            "viewportWidth: innerWidth, viewportHeight: innerHeight,"
-           "zIndex: getComputedStyle(button).zIndex"
+           "zIndex: getComputedStyle(switcher).zIndex"
          "};"
          "})();";
 
@@ -34,9 +59,19 @@ static int testResult = 1;
         BOOL valid = !error &&
             [result isKindOfClass:NSDictionary.class] &&
             ![result[@"before"] isEqual:result[@"after"]] &&
-            [result[@"mobileView"] isEqual:@"race"] &&
-            [result[@"hitId"] isEqual:@"cameraButton"] &&
-            [result[@"height"] doubleValue] >= 44 &&
+            ([result[@"viewportWidth"] doubleValue] > 900 ||
+                [result[@"mobileView"] isEqual:@"race"]) &&
+            ([result[@"viewportWidth"] doubleValue] > 900 ||
+                ([result[@"groupsVisible"] boolValue] &&
+                 [result[@"groupsRows"] integerValue] > 0 &&
+                 [result[@"viewAfterGroup"] isEqual:@"race"] &&
+                 [result[@"desktopGroupsDisplay"] isEqual:@"none"])) &&
+            [result[@"feedZIndex"] integerValue] > [result[@"groupsZIndex"] integerValue] &&
+            [result[@"messageText"] isEqual:@"ATAQUE DE PRUEBA"] &&
+            [result[@"messageWidth"] doubleValue] > 0 &&
+            [result[@"hitId"] isEqual:@"sideCameraButton"] &&
+            [result[@"height"] doubleValue] >=
+                ([result[@"viewportWidth"] doubleValue] <= 900 ? 44 : 38) &&
             [result[@"left"] doubleValue] >= 0 &&
             [result[@"right"] doubleValue] <= [result[@"viewportWidth"] doubleValue] &&
             [result[@"top"] doubleValue] >= 0 &&
@@ -50,7 +85,47 @@ static int testResult = 1;
             fprintf(stderr, "Fallo de cámara móvil: %s\n",
                     (error.localizedDescription ?: result.description).UTF8String);
         }
-        [NSApp terminate:nil];
+        if (!valid || !self.outputURL) {
+            [NSApp terminate:nil];
+            return;
+        }
+
+        NSString *prepareSnapshot =
+            @"(() => {"
+             "const game = window.ciclimoTourGame;"
+             "document.getElementById('countdownOverlay').className = 'countdown-overlay';"
+             "game.state = 'PAUSED';"
+             "if (innerWidth <= 900) game.hud.setMobileView('groups');"
+             "game.notify('¡ATAQUE! EL PELOTÓN REACCIONA', 'urgent');"
+             "return true;"
+             "})();";
+        [webView evaluateJavaScript:prepareSnapshot completionHandler:^(id prepared, NSError *prepareError) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{
+                WKSnapshotConfiguration *configuration = [WKSnapshotConfiguration new];
+                configuration.rect = NSMakeRect(0, 0, webView.bounds.size.width, webView.bounds.size.height);
+                [webView takeSnapshotWithConfiguration:configuration
+                                     completionHandler:^(NSImage *image, NSError *snapshotError) {
+                if (prepareError || snapshotError || !image) {
+                    fprintf(stderr, "No se pudo tomar la captura: %s\n",
+                            (prepareError ?: snapshotError).localizedDescription.UTF8String);
+                    testResult = 1;
+                } else {
+                    NSBitmapImageRep *bitmap =
+                        [[NSBitmapImageRep alloc] initWithData:image.TIFFRepresentation];
+                    NSData *png =
+                        [bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+                    if (![png writeToURL:self.outputURL atomically:YES]) {
+                        fprintf(stderr, "No se pudo guardar la captura.\n");
+                        testResult = 1;
+                    } else {
+                        printf("%s\n", self.outputURL.path.UTF8String);
+                    }
+                }
+                [NSApp terminate:nil];
+                }];
+            });
+        }];
     }];
 }
 
@@ -82,6 +157,9 @@ int main(int argc, const char *argv[]) {
         window.contentView = webView;
 
         MobileCameraDelegate *delegate = [MobileCameraDelegate new];
+        if (argc > 3) {
+            delegate.outputURL = [NSURL fileURLWithPath:@(argv[3])];
+        }
         webView.navigationDelegate = delegate;
         [webView loadFileURL:indexURL allowingReadAccessToURL:projectURL];
         [application run];

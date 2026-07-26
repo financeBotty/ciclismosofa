@@ -81,7 +81,7 @@ button:focus-visible, select:focus-visible { outline: 3px solid var(--cyan); out
 .icon-button { width: 40px; height: 40px; border: 1px solid rgba(255,255,255,.35); color: #fff; background: rgba(5,14,11,.62); border-radius: 50%; font-weight: 900; cursor: pointer; backdrop-filter: blur(8px); }
 .icon-button:hover { background: rgba(216,255,54,.18); border-color: var(--lime); }
 .event-feed { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); width: min(460px, 75%); display: grid; gap: 6px; pointer-events: none; }
-.event-message { justify-self: center; padding: 9px 16px; border-left: 3px solid var(--lime); border-radius: 4px; background: rgba(9,25,39,.9); color: #fff; font-size: 12px; font-weight: 800; box-shadow: 0 8px 30px rgba(0,0,0,.25); animation: eventIn .28s ease, eventOut .35s ease 2.8s forwards; backdrop-filter: blur(8px); }
+.event-message { justify-self: center; padding: 9px 16px; border-left: 3px solid var(--lime); border-radius: 4px; background: rgba(9,25,39,.9); color: #fff; font-size: 12px; font-weight: 800; box-shadow: 0 8px 30px rgba(0,0,0,.25); opacity: 1; animation: none; backdrop-filter: blur(8px); }
 .event-message.urgent { border-color: var(--orange); }
 @keyframes eventIn { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes eventOut { to { opacity: 0; transform: translateY(-8px); } }
@@ -4798,39 +4798,128 @@ html.reduced-motion *::after {
   }
 }
 
-/* Cámara móvil: cuarto control permanente de la barra de vistas. Queda por
-   encima de clasificación/etapa y conserva una zona táctil de 44 px. */
+/* Selector explícito de cámara y panel móvil de grupos. */
+.camera-switcher {
+  position: absolute;
+  z-index: 14;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 132px;
+  height: 40px;
+  padding: 3px;
+  border: 3px solid #05090e;
+  background: #102334;
+  box-shadow: 4px 4px 0 #05090e;
+}
+
+.camera-switcher button {
+  min-width: 0;
+  padding: 0 5px;
+  color: #b8c7cf;
+  border: 0;
+  background: #294b64;
+  font: 950 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.camera-switcher button + button {
+  border-left: 2px solid #05090e;
+}
+
+.camera-switcher button.active {
+  color: #07131f;
+  background: #62d8f2;
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.34);
+}
+
+.camera-switcher button:focus-visible {
+  outline: 3px solid #ffcc33;
+  outline-offset: 1px;
+}
+
+.event-feed {
+  z-index: 19;
+}
+
 @media (max-width: 900px) {
   .mobile-view-tabs {
-    right: 78px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    right: 94px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .race-viewport > .camera-button {
+  .race-viewport > .camera-switcher {
     z-index: 14;
     top: 3px;
     right: 3px;
     bottom: auto;
-    width: 72px;
-    min-width: 72px;
+    width: 88px;
     height: 44px;
-    padding: 0 6px;
-    overflow: visible;
-    color: #07131f;
-    border: 3px solid #05090e;
-    background: linear-gradient(#baf4ff 0 18%, #62d8f2 19% 74%, #237f9d 75%);
-    box-shadow:
-      inset 0 3px 0 rgba(255,255,255,.32),
-      inset 0 -4px 0 rgba(0,0,0,.24),
-      2px 2px 0 #05090e;
-    font-size: 11px;
-    line-height: 1;
-    text-overflow: clip;
-    white-space: nowrap;
+    padding: 3px;
+    box-shadow: 2px 2px 0 #05090e;
     touch-action: manipulation;
   }
 
-  .race-viewport > .camera-button:active {
-    transform: translate(2px, 2px);
+  .camera-switcher button {
+    min-height: 34px;
+    padding: 0 2px;
+    font-size: 10px;
+    touch-action: manipulation;
+  }
+
+  .groups-panel {
+    display: none;
+  }
+
+  .mobile-groups-panel > p {
+    margin: 0 0 9px;
+    color: #aebec8;
+    font-size: 10px;
+  }
+
+  .mobile-groups-panel {
+    padding-top: 54px;
+  }
+
+  .mobile-groups-panel > header {
+    margin-top: 0;
+  }
+
+  .mobile-groups-list {
+    display: grid;
+    gap: 6px;
+  }
+
+  .mobile-groups-list .race-group {
+    min-height: 52px;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 8px 9px;
+    border: 3px solid #05090e;
+    background: #17364d;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.1);
+    font-size: 11px;
+  }
+
+  .mobile-groups-list .race-group i {
+    width: 10px;
+    height: 24px;
+  }
+
+  .mobile-groups-list .race-group span small {
+    display: block;
+    font-size: 9px;
+  }
+
+  .mobile-groups-list .race-group strong {
+    font-size: 11px;
+  }
+
+  .event-feed {
+    top: 54px;
+    left: 8px;
+    width: calc(100% - 70px);
+    transform: none;
   }
 }

@@ -73,7 +73,7 @@ En la cámara lateral, los corredores utilizan sprites grandes y exagerados: cas
 
 En móvil, el juego utiliza una interfaz táctil propia. En vertical mantiene visibles el HUD, la carretera y los controles en tres franjas sin desplazamiento; en horizontal coloca la carrera a la izquierda y el mando a la derecha. Los botones tienen áreas táctiles amplias, el perfil y los ciclistas se pueden pulsar, y la composición respeta las zonas seguras de teléfonos con notch.
 
-La versión móvil dispone de tres pestañas que cambian la vista sin detener la carrera: `Carrera` muestra la acción, `Clasificación` presenta las posiciones y diferencias en directo, y `Etapa` reúne progreso, distancia, desnivel, puertos, sprints, escenario, clima, tiempo y número de grupos.
+La versión móvil dispone de cuatro pestañas que cambian la información sin detener la carrera: `Ruta` muestra la acción, `Grupos` separa los cortes con líder, tamaño, equipos y diferencias, `Pos.` presenta la clasificación en directo y `Etapa` reúne progreso, distancia, desnivel, puertos, sprints, escenario, clima, tiempo y número de grupos. Un selector `CEN/LAT`, siempre visible y pulsable incluso durante la cuenta atrás, cambia directamente la cámara. Los avisos de ataque y carrera ocupan una franja propia por encima de los grupos para no quedar ocultos.
 
 El modo `Movimiento reducido` elimina sacudidas de cámara, limita lluvia y salpicaduras y desactiva las transiciones decorativas. Respeta por defecto la preferencia equivalente del sistema operativo. La vibración es opcional, empieza desactivada y solo se ofrece si el navegador implementa esa función.
 

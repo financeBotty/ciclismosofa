@@ -116,10 +116,6 @@ window.innerWidth = 390;
 phase3Game.toggleCamera();
 phase3Assert(phase3Game.cameraMode === "side", "El botón móvil no activó la cámara lateral");
 phase3Assert(phase3MobileView === "race", "La cámara móvil no volvió a la vista de carrera");
-phase3Assert(
-  document.getElementById("cameraButton").textContent === "◆ CEN",
-  "El botón móvil no indicó el siguiente cambio a cámara cenital"
-);
 phase3Game.toggleCamera();
 phase3Assert(phase3Game.cameraMode === "top", "El botón móvil no recuperó la cámara cenital");
 window.innerWidth = 1280;
