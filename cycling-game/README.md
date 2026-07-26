@@ -21,6 +21,8 @@ El repositorio incluye `.github/workflows/pages.yml`. Cada envío a la rama `mai
 
 Las rutas del HTML, el manifiesto y el *service worker* son relativas, de modo que funcionan dentro de la subcarpeta `/ciclismosofa/`. La primera vez hay que abrir `Settings → Pages` en GitHub y elegir `GitHub Actions` como origen de publicación. Después basta con subir los cambios a `main` y revisar el proceso `Publicar Ciclimo Tour en GitHub Pages` en la pestaña `Actions`.
 
+La raíz del repositorio contiene además una entrada de compatibilidad que redirige a `cycling-game/`. De este modo el juego también abre si Pages está configurado accidentalmente como `Deploy from a branch`, aunque el modo recomendado sigue siendo `GitHub Actions`.
+
 GitHub Pages sirve el juego mediante HTTPS, por lo que la instalación y el modo sin conexión quedan habilitados tras la primera visita. Las tres partidas se guardan en el almacenamiento local del navegador: una partida de `localhost` o `file://` no se copia automáticamente a la versión publicada, y tampoco se sincroniza entre dispositivos.
 
 La portada es una pantalla independiente del simulador y permite elegir claramente entre **Tour** y **Carrera rápida**, además de configurar dificultad, clima y tipo de corredor. Se puede competir como **todoterreno**, **escalador**, **sprinter** o **rodador**.
