@@ -269,6 +269,9 @@ class Road {
   constructor(random, lengthKm, options = {}) {
     this.random = random;
     this.lengthKm = lengthKm;
+    // Ciclimo Tour transcurre siempre de día. El clima puede reducir la luz,
+    // pero nunca cambia la etapa a tarde, noche o amanecer.
+    this.timeOfDay = "day";
     const stageNames = ["Ruta de las Cumbres", "Clásica del Viento", "Desafío de los Puertos", "Gran Fondo de la Sierra", "Camino de las Águilas"];
     this.stageName = options.name || stageNames[Math.floor(random.next() * stageNames.length)];
     this.baseElevation = 250 + Math.floor(random.next() * 450);
@@ -415,7 +418,12 @@ class Road {
       let biome = biomes[Math.floor(this.random.next() * biomes.length)];
       if (biome.id === previousBiome) biome = biomes[(biomes.indexOf(biome) + 1) % biomes.length];
       const zoneLength = 18 + this.random.next() * 30;
-      this.sceneryZones.push({ startKm: km, endKm: Math.min(this.lengthKm, km + zoneLength), ...biome });
+      this.sceneryZones.push({
+        startKm: km,
+        endKm: Math.min(this.lengthKm, km + zoneLength),
+        timeOfDay: "day",
+        ...biome
+      });
       previousBiome = biome.id;
       km += zoneLength;
     }
@@ -5669,8 +5677,8 @@ class Game {
       ctx.fillRect(sunX - 11, sunY - 12, 14, 8);
       ctx.fillRect(sunX - 18, sunY - 3, 5, 8);
     }
-    const cloudColor = weather > 0.45 ? "#8fa2a8" : "#d8e6e4";
-    const cloudShadow = weather > 0.45 ? "#657980" : "#afc9ca";
+    const cloudColor = weather > 0.45 ? "#b4c5ca" : "#e4efed";
+    const cloudShadow = weather > 0.45 ? "#899fa6" : "#b9d0d1";
     const span = this.width + 240;
     for (let cloud = 0; cloud < 6; cloud += 1) {
       const rawX = cloud * 211 - this.cameraKm * (5 + cloud % 3) + this.race.elapsed * (1 + cloud % 2);
@@ -5686,8 +5694,8 @@ class Game {
     }
     ctx.globalAlpha = 1;
     if (biome.id !== "city") {
-      const farColor = weather > 0.55 ? "#64777a" : lerpColor(biome.detail, "#a9bec0", 0.48);
-      const nearColor = weather > 0.55 ? "#536868" : lerpColor(biome.detail, "#728f80", 0.25);
+      const farColor = weather > 0.55 ? "#7f999a" : lerpColor(biome.detail, "#b8ced0", 0.52);
+      const nearColor = weather > 0.55 ? "#687f7d" : lerpColor(biome.detail, "#7e9a8b", 0.3);
       for (const [layer, color] of [[0, farColor], [1, nearColor]]) {
         ctx.fillStyle = color;
         const baseY = this.height * (layer ? 0.46 : 0.38);
@@ -5756,18 +5764,20 @@ class Game {
     const pixelsPerKm = clamp(this.width / 1.35, 520, 1050);
     const biome = this.race.road.visualBiomeAt(this.cameraKm);
     const skyColors = {
-      forest: "#6b9ca7", city: "#8799a4", desert: "#e2b766",
-      mountain: "#91abb7", green: "#78b7ce", dry: "#c6a06a"
+      forest: "#8fc4d5", city: "#acd2df", desert: "#edc679",
+      mountain: "#b5d5df", green: "#8bcde2", dry: "#ddb878"
     };
-    ctx.fillStyle = weather > 0.6 ? "#71868e" : skyColors[biome.id];
+    // Incluso con lluvia intensa el cielo conserva luminosidad diurna.
+    ctx.fillStyle = weather > 0.6 ? "#91a9b0" : skyColors[biome.id];
     ctx.fillRect(-30, -30, this.width + 60, this.height + 60);
     this.renderLateralSkyDetails(ctx, biome, weather);
     if (biome.id === "city") {
       for (let x = -10; x < this.width + 20; x += 34) {
         const height = 55 + Math.abs(Math.floor(Math.sin(x + this.cameraKm) * 45));
-        ctx.fillStyle = x % 3 ? "#465762" : "#655b5b";
+        ctx.fillStyle = x % 3 ? "#71838c" : "#8b7f79";
         ctx.fillRect(x, this.height * 0.48 - height, 30, height + this.height * 0.3);
-        ctx.fillStyle = "#d5bb69";
+        // Reflejos azules de día, en vez de ventanas amarillas iluminadas.
+        ctx.fillStyle = x % 3 ? "#b9dbe2" : "#d5e3df";
         for (let y = this.height * 0.5 - height; y < this.height * 0.45; y += 12) ctx.fillRect(x + 7, y, 5, 5);
       }
     } else {

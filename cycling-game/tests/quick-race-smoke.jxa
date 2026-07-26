@@ -66,6 +66,11 @@ quickAssert(quickGame.tour.roster.length === 100, "La carrera rápida no tiene 1
 
 const quickRace = quickGame.createCurrentRace({ simulationOnly: true });
 quickAssert(quickRace.cyclists.length === 100, "El simulador no recibió los 100 ciclistas");
+quickAssert(quickRace.road.timeOfDay === "day", "La etapa no está fijada en horario diurno");
+quickAssert(
+  quickRace.road.sceneryZones.every((zone) => zone.timeOfDay === "day"),
+  "Algún escenario de la etapa no está marcado como diurno"
+);
 quickAssert(
   quickRace.timeTrial === (quickGame.tour.stages[0].type === "itt"),
   "El modo contrarreloj no coincide con la etapa generada"

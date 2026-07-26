@@ -81,7 +81,7 @@ El modo `Movimiento reducido` elimina sacudidas de cámara, limita lluvia y salp
 
 El escenario utiliza vegetación en varias capas y concentraciones de público distintas según el lugar: multitudes en puertos y llegada, grupos en metas volantes y aficionados sueltos en ciudad. Los botones tienen acabado de recreativa con carcasa oscura, luces, profundidad, colores por acción y recorrido visual al pulsarlos. Los ciclistas se dibujan un 25 % más pequeños para dar más aire y profundidad a los grupos, manteniendo intacta su zona táctil.
 
-El escenario se construye con varias capas de píxeles: cielo, sol, nubes móviles, cordilleras en paralaje, terreno, vegetación, flores, piedras, edificios y carretera. Cada bioma posee texturas de suelo propias. El asfalto incluye parches, grietas y reflejos cuando llueve, mientras que los márgenes incorporan grava, hitos, barreras y carteles kilométricos.
+El escenario se construye con varias capas de píxeles: cielo, sol, nubes móviles, cordilleras en paralaje, terreno, vegetación, flores, piedras, edificios y carretera. Todas las etapas y todos los biomas transcurren de día; la lluvia puede nublar el cielo, pero nunca activa una variante nocturna. Cada bioma posee texturas de suelo propias. El asfalto incluye parches, grietas y reflejos cuando llueve, mientras que los márgenes incorporan grava, hitos, barreras y carteles kilométricos.
 
 El botón de cámara alterna entre:
 
@@ -89,6 +89,8 @@ El botón de cámara alterna entre:
 - **Lateral**: ciclistas de perfil y representación directa de las subidas y bajadas.
 
 La preferencia queda guardada en `localStorage` y ambas vistas son compatibles con el mapa interactivo.
+
+El mando inferior separa las decisiones en tres bloques: `Ritmo` reúne Bajo, Medio y Alto; `Conducción` coloca debajo Segura, Normal y Agresiva; y `Acciones` agrupa Ataque, Sprint, Gel y Relevo. Esta jerarquía se conserva tanto en escritorio como en móvil.
 
 Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra nombre, nacionalidad, rol, estado táctico, equipo y distancia; no existe un botón separado de “buscar rueda”. Con la carrera pausada se puede inspeccionar y seguir cualquier ciclista. El objetivo queda enmarcado y `Cancelar rueda` o `Volver a ti` devuelve el control al jugador.
 

@@ -5011,3 +5011,221 @@ html.reduced-motion *::after {
     grid-row: 2;
   }
 }
+
+/* Jerarquía final del mando: ritmo y conducción en el bloque central,
+   acciones puntuales en un tercer bloque independiente. */
+.controls-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(250px, .65fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 9px;
+}
+
+.driving-controls {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.control-category {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: 15px minmax(0, 1fr);
+  gap: 4px;
+  padding: 5px;
+  border: 2px solid #05090e;
+  background: #0b2030;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.07);
+}
+
+.control-group-label {
+  display: block;
+  overflow: hidden;
+  color: #ffe078;
+  font-size: 9px;
+  font-weight: 950;
+  line-height: 15px;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controls-panel .effort-control,
+.controls-panel .risk-panel,
+.controls-panel .action-grid {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.controls-panel .effort-control {
+  display: block;
+  padding: 0;
+}
+
+.controls-panel .power-presets,
+.controls-panel .risk-buttons {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.controls-panel .risk-panel {
+  position: static;
+  display: block;
+  padding: 0 !important;
+}
+
+.controls-panel .risk-buttons {
+  position: static;
+  inset: auto;
+}
+
+.controls-panel .power-preset,
+.controls-panel .risk-buttons button {
+  min-height: 0;
+  padding: 3px 5px;
+}
+
+.controls-panel .power-preset {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  justify-content: center;
+  text-align: center;
+}
+
+.controls-panel .power-preset i,
+.controls-panel .risk-buttons i {
+  min-width: 18px;
+  font-size: 17px;
+}
+
+.actions-category {
+  grid-template-rows: 15px minmax(0, 1fr);
+}
+
+.controls-panel .race-actions {
+  display: grid;
+  height: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.controls-panel .race-actions .action-button {
+  min-height: 0;
+  padding: 4px 7px;
+}
+
+@media (min-width: 901px) {
+  .game-shell {
+    grid-template-rows: 134px minmax(0, 1fr) 190px;
+  }
+
+  .control-deck {
+    height: 190px;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 720px) {
+  .game-shell {
+    grid-template-rows: 116px minmax(0, 1fr) 170px;
+  }
+
+  .control-deck {
+    height: 170px;
+  }
+
+  .control-category {
+    grid-template-rows: 12px minmax(0, 1fr);
+    gap: 2px;
+    padding: 3px;
+  }
+
+  .control-group-label {
+    font-size: 8px;
+    line-height: 12px;
+  }
+}
+
+@media (max-width: 900px) {
+  .controls-panel {
+    grid-template-columns: minmax(0, 1.35fr) minmax(132px, .65fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .driving-controls {
+    gap: 4px;
+  }
+
+  .control-category {
+    grid-template-rows: 11px minmax(0, 1fr);
+    gap: 2px;
+    padding: 2px;
+    border-width: 1px;
+  }
+
+  .control-group-label {
+    padding-left: 2px;
+    font-size: 7px;
+    line-height: 11px;
+  }
+
+  .controls-panel .power-presets,
+  .controls-panel .risk-buttons,
+  .controls-panel .race-actions {
+    gap: 3px;
+  }
+
+  .controls-panel .power-preset,
+  .controls-panel .risk-buttons button,
+  .controls-panel .race-actions .action-button {
+    min-height: 0;
+    padding: 2px;
+  }
+
+  .controls-panel .power-preset,
+  .controls-panel .risk-buttons button {
+    flex-direction: row;
+    gap: 3px;
+  }
+
+  .controls-panel .power-preset i,
+  .controls-panel .risk-buttons i,
+  .controls-panel .race-actions .button-icon {
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  .controls-panel .power-preset b,
+  .controls-panel .risk-buttons span,
+  .controls-panel .race-actions .action-button > span:last-child,
+  .controls-panel .race-actions .action-button > span:last-child > b {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .controls-panel {
+    grid-template-columns: minmax(0, 1.45fr) minmax(112px, .55fr);
+  }
+
+  .controls-panel .race-actions .action-button {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .controls-panel .race-actions .button-icon {
+    width: auto;
+    height: auto;
+    margin: 0;
+  }
+}

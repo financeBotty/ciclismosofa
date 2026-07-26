@@ -419,34 +419,39 @@
       </div>
 
       <div class="controls-panel">
-        <div class="control-row control-row-top">
-          <div class="effort-control">
-            <span class="power-title">⚡ RITMO</span>
-            <div class="power-presets" role="group" aria-label="Nivel de potencia">
-              <button type="button" class="power-preset low" data-effort="1" aria-pressed="false"><i aria-hidden="true">♥</i><b>BAJO</b><small>Recupera rápido</small></button>
-              <button type="button" class="power-preset medium active" data-effort="2" aria-pressed="true"><i aria-hidden="true">●</i><b>MEDIO</b><small>Ritmo de grupo</small></button>
-              <button type="button" class="power-preset high" data-effort="4" aria-pressed="false"><i aria-hidden="true">⚡</i><b>ALTO</b><small>Más velocidad</small></button>
+        <div class="driving-controls">
+          <div class="control-category effort-category">
+            <span class="control-group-label">⚡ RITMO</span>
+            <div class="effort-control">
+              <div class="power-presets" role="group" aria-label="Nivel de potencia">
+                <button type="button" class="power-preset low" data-effort="1" aria-pressed="false"><i aria-hidden="true">♥</i><b>BAJO</b><small>Recupera rápido</small></button>
+                <button type="button" class="power-preset medium active" data-effort="2" aria-pressed="true"><i aria-hidden="true">●</i><b>MEDIO</b><small>Ritmo de grupo</small></button>
+                <button type="button" class="power-preset high" data-effort="4" aria-pressed="false"><i aria-hidden="true">⚡</i><b>ALTO</b><small>Más velocidad</small></button>
+              </div>
+              <div class="power-readout"><strong id="effortName">MEDIO</strong><span id="effortNumber">RECUPERA ENERGÍA</span></div>
             </div>
-            <div class="power-readout"><strong id="effortName">MEDIO</strong><span id="effortNumber">RECUPERA ENERGÍA</span></div>
           </div>
-          <div class="action-grid attack-actions">
-            <button id="attackButton" class="action-button attack" aria-label="Atacar"><span class="button-icon">!</span><span>ATAQUE<small>Consume explosividad</small></span></button>
-            <button id="sprintButton" class="action-button sprint" aria-label="Sprint" disabled><span class="button-icon">»</span><span>SPRINT<small>Solo cerca de meta</small></span></button>
+
+          <div class="control-category risk-category">
+            <span class="control-group-label">◆ CONDUCCIÓN</span>
+            <div class="risk-panel">
+              <div class="risk-buttons" role="group" aria-label="Nivel de riesgo">
+                <button data-risk="safe" aria-label="Conducción segura"><i>◈</i><span>SEGURA<small>Menos velocidad</small></span></button>
+                <button data-risk="normal" class="active" aria-label="Conducción normal"><i>◆</i><span>NORMAL<small>Equilibrada</small></span></button>
+                <button data-risk="aggressive" aria-label="Conducción agresiva"><i>✦</i><span>AGRESIVA<small>Más riesgo</small></span></button>
+              </div>
+              <div class="race-tip"><span>DIRECTOR</span><p id="directorTip">Mantente a rueda durante el llano y guarda fuerzas para el puerto.</p></div>
+            </div>
           </div>
         </div>
-        <div class="control-row control-row-bottom">
-          <div class="action-grid support-actions">
-            <button id="relayButton" class="action-button relay" aria-label="Dar relevos" aria-pressed="false"><span class="button-icon">⇄</span><span><b>RELEVO</b><small id="relayButtonDetail">Busca ciclistas cerca</small></span></button>
+
+        <div class="control-category actions-category">
+          <span class="control-group-label">● ACCIONES</span>
+          <div class="action-grid race-actions">
+            <button id="attackButton" class="action-button attack" aria-label="Atacar"><span class="button-icon">!</span><span>ATAQUE<small>Consume explosividad</small></span></button>
+            <button id="sprintButton" class="action-button sprint" aria-label="Sprint" disabled><span class="button-icon">»</span><span>SPRINT<small>Solo cerca de meta</small></span></button>
             <button id="gelButton" class="action-button" aria-label="Tomar gel"><span class="button-icon">▰</span><span>GEL<small id="gelButtonDetail">3 disponibles</small></span></button>
-          </div>
-          <div class="risk-panel">
-            <span class="panel-label">◆ TRAZADA</span>
-            <div class="risk-buttons" role="group" aria-label="Nivel de riesgo">
-              <button data-risk="safe" aria-label="Conducción segura"><i>◈</i><span>SEGURA<small>Menos velocidad</small></span></button>
-              <button data-risk="normal" class="active" aria-label="Conducción normal"><i>◆</i><span>NORMAL<small>Equilibrada</small></span></button>
-              <button data-risk="aggressive" aria-label="Conducción agresiva"><i>✦</i><span>AGRESIVA<small>Más riesgo</small></span></button>
-            </div>
-            <div class="race-tip"><span>DIRECTOR</span><p id="directorTip">Mantente a rueda durante el llano y guarda fuerzas para el puerto.</p></div>
+            <button id="relayButton" class="action-button relay" aria-label="Dar relevos" aria-pressed="false"><span class="button-icon">⇄</span><span><b>RELEVO</b><small id="relayButtonDetail">Busca ciclistas cerca</small></span></button>
           </div>
         </div>
       </div>
