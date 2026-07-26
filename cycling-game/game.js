@@ -4577,6 +4577,9 @@ class Game {
     this.cameraMode = this.cameraMode === "top" ? "side" : "top";
     safeStorageSet("ultimoPuerto.camera", this.cameraMode);
     this.updateCameraButton();
+    if (window.innerWidth <= 900 && this.hud?.mobileView !== "race") {
+      this.hud.setMobileView("race");
+    }
     this.notify(this.cameraMode === "side" ? "Cámara lateral activada." : "Cámara cenital activada.");
   }
 
@@ -4584,9 +4587,12 @@ class Game {
     const button = document.getElementById("cameraButton");
     if (!button) return;
     const side = this.cameraMode === "side";
-    button.textContent = side ? "▣ LAT" : "◆ CEN";
-    button.title = side ? "Vista lateral" : "Vista cenital";
-    button.setAttribute("aria-label", side ? "Vista lateral" : "Vista cenital");
+    const nextView = side ? "cenital" : "lateral";
+    button.textContent = side ? "◆ CEN" : "▣ LAT";
+    button.title = `Cambiar a vista ${nextView}`;
+    button.setAttribute("aria-label", `Cambiar a vista ${nextView}`);
+    button.setAttribute("aria-pressed", String(side));
+    button.dataset.currentView = side ? "side" : "top";
   }
 
   resize() {

@@ -108,6 +108,21 @@ phase3Game.hud = { showDanger() {} };
 phase3Game.cameraShake = 0;
 phase3Game.showResourceFeedback = () => {};
 phase3Game.finishRace = () => {};
+phase3Game.cameraMode = "top";
+let phase3MobileView = "";
+phase3Game.hud.setMobileView = (view) => { phase3MobileView = view; };
+phase3Game.hud.mobileView = "classification";
+window.innerWidth = 390;
+phase3Game.toggleCamera();
+phase3Assert(phase3Game.cameraMode === "side", "El botón móvil no activó la cámara lateral");
+phase3Assert(phase3MobileView === "race", "La cámara móvil no volvió a la vista de carrera");
+phase3Assert(
+  document.getElementById("cameraButton").textContent === "◆ CEN",
+  "El botón móvil no indicó el siguiente cambio a cámara cenital"
+);
+phase3Game.toggleCamera();
+phase3Assert(phase3Game.cameraMode === "top", "El botón móvil no recuperó la cámara cenital");
+window.innerWidth = 1280;
 const playerTeam = phase3Game.race.teamByName.get(phase3Game.race.player.team);
 const phase3Player = phase3Game.race.player;
 const phase3Rival = phase3Game.race.cyclists.find((rider) => rider.team !== phase3Player.team);
@@ -216,6 +231,7 @@ JSON.stringify({
   vibrations: phase3Vibrations,
   relayBlockedAttack: true,
   responseSprint: true,
+  mobileCamera: phase3Game.cameraMode,
   tutorialSteps: TUTORIAL_STEPS.length,
   countdowns: phase3Countdowns
 });
