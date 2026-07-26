@@ -44,6 +44,9 @@ static int testResult = 1;
            "groupsVisible, groupsRows, viewAfterGroup,"
            "desktopGroupsDisplay: getComputedStyle(desktopGroups).display,"
            "gapDisplay: getComputedStyle(document.querySelector('.gap-block')).display,"
+           "brandDisplay: getComputedStyle(document.querySelector('.stage-brand')).display,"
+           "actionDetailDisplay: getComputedStyle(document.querySelector('#attackButton small')).display,"
+           "headerHeight: document.querySelector('.broadcast-header').getBoundingClientRect().height,"
            "feedZIndex: getComputedStyle(feed).zIndex,"
            "groupsZIndex: getComputedStyle(desktopGroups).zIndex,"
            "messageText: message && message.textContent,"
@@ -60,8 +63,11 @@ static int testResult = 1;
         BOOL valid = !error &&
             [result isKindOfClass:NSDictionary.class] &&
             ![result[@"before"] isEqual:result[@"after"]] &&
+            [result[@"brandDisplay"] isEqual:@"none"] &&
             ([result[@"viewportWidth"] doubleValue] > 900 ||
                 [result[@"mobileView"] isEqual:@"race"]) &&
+            ([result[@"viewportWidth"] doubleValue] <= 900 ||
+                [result[@"actionDetailDisplay"] isEqual:@"none"]) &&
             ([result[@"viewportWidth"] doubleValue] > 900 ||
                 ([result[@"groupsVisible"] boolValue] &&
                  [result[@"groupsRows"] integerValue] > 0 &&

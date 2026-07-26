@@ -4927,3 +4927,87 @@ html.reduced-motion *::after {
     transform: none;
   }
 }
+
+/* Cabecera esencial: el nombre de etapa y el rótulo LIVE ya están en el
+   dashboard; durante la carrera dejamos solo datos y altimetría. */
+.broadcast-header .stage-brand {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  .game-shell {
+    grid-template-rows: 134px minmax(0, 1fr) 235px;
+  }
+
+  .broadcast-header {
+    height: 134px;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 52px 68px;
+    gap: 4px;
+    padding: 5px clamp(14px, 2.1vw, 34px);
+  }
+
+  .broadcast-header .race-data {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .broadcast-header .profile-wrap {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .broadcast-header .profile-wrap canvas {
+    height: 48px;
+  }
+
+  /* En escritorio el detalle permanece en title/ayuda contextual, pero no
+     ocupa una segunda línea dentro de los mandos. */
+  .control-deck .power-preset small,
+  .control-deck .action-button small,
+  .control-deck .risk-buttons small {
+    display: none !important;
+  }
+
+  .control-deck .power-preset,
+  .control-deck .action-button,
+  .control-deck .risk-buttons button {
+    justify-content: center;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 720px) {
+  .game-shell {
+    grid-template-rows: 116px minmax(0, 1fr) 158px;
+  }
+
+  .broadcast-header {
+    height: 116px;
+    grid-template-rows: 46px 58px;
+  }
+
+  .broadcast-header .profile-wrap canvas {
+    height: 39px;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .game-shell {
+    grid-template-rows: 104px minmax(220px, 1fr) 198px;
+  }
+
+  .broadcast-header {
+    height: 104px;
+    grid-template-rows: 42px 54px;
+    gap: 2px;
+  }
+
+  .broadcast-header .race-data {
+    grid-row: 1;
+  }
+
+  .broadcast-header .profile-wrap {
+    grid-row: 2;
+  }
+}

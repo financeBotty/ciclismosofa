@@ -57,6 +57,8 @@ El ciclista avanza automáticamente. La estrategia se controla con botones visib
 
 La interfaz de carrera utiliza un lenguaje visual compacto: `♥` energía, `⚡` explosividad, `▰` nutrición o gel, `◎` adherencia, `!` riesgo, `↯` rebufo, `▲` puerto y `◆` sprint intermedio. Las acciones conservan una sola palabra visible y muestran sus cifras detalladas como ayuda contextual, evitando repetir instrucciones dentro de cada botón.
 
+Durante la carrera la cabecera omite el nombre de etapa y el rótulo `LIVE`, ya presentes antes de la salida, para dedicar el espacio a posición, distancia, pendiente y mapa. En escritorio los mandos inferiores muestran únicamente icono y acción; sus datos dinámicos siguen disponibles como ayuda contextual sin ocupar una segunda línea.
+
 El panel inferior prioriza la lectura visual: muestra únicamente las cuatro barras grandes de energía, explosividad, nutrición y adherencia. La posición y el grupo pasan a la cabecera de carrera, mientras que los antiguos indicadores pequeños de rebufo, riesgo, geles y velocidad desaparecen. Los diez controles se reparten en dos filas de cinco: ritmo, ataque y sprint arriba; relevo, gel y trazada abajo. En escritorio conservan también una explicación breve sin recortes.
 
 Cada cambio táctico produce indicadores flotantes de recursos. Bajar a esfuerzo 1–2 muestra ahorro de energía y recuperación de explosividad; subir a 4–5 avisa del aumento de velocidad y consumo. Ataques, sprint, selección de rueda y geles muestran también sus beneficios o costes. Cuando el gel hace efecto aparecen sus valores reales: `+32 nutrición` y `+5 energía`.
