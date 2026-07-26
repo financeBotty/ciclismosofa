@@ -1,0 +1,224 @@
+ObjC.import("Foundation");
+
+const projectPath = "/Users/mmp/Ciclismosofa/cycling-game/game.js";
+const sourceString = $.NSString.stringWithContentsOfFileEncodingError(
+  projectPath,
+  $.NSUTF8StringEncoding,
+  null
+);
+if (!sourceString) throw new Error("No se pudo leer game.js");
+const source = ObjC.unwrap(sourceString).replace(
+  /\nwindow\.CiclimoTourRace[\s\S]*$/,
+  ""
+);
+
+const tests = String.raw`
+const phase3Assert = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+const phase3Memory = new Map();
+globalThis.localStorage = {
+  getItem: (key) => phase3Memory.has(key) ? phase3Memory.get(key) : null,
+  setItem: (key, value) => phase3Memory.set(key, String(value)),
+  removeItem: (key) => phase3Memory.delete(key)
+};
+globalThis.window = {
+  innerWidth: 1280,
+  matchMedia: () => ({ matches: false }),
+  setTimeout: (callback) => { callback(); return 1; }
+};
+globalThis.performance = { now: () => Date.now() };
+let phase3Vibrations = 0;
+globalThis.navigator = { vibrate: () => { phase3Vibrations += 1; return true; } };
+const phase3Classes = new Set();
+const phase3Element = () => ({
+  value: "",
+  textContent: "",
+  innerHTML: "",
+  disabled: false,
+  dataset: {},
+  classList: {
+    add: (...names) => names.forEach((name) => phase3Classes.add(name)),
+    remove: (...names) => names.forEach((name) => phase3Classes.delete(name)),
+    toggle: (name, force) => {
+      if (force === true) phase3Classes.add(name);
+      else if (force === false) phase3Classes.delete(name);
+      else if (phase3Classes.has(name)) phase3Classes.delete(name);
+      else phase3Classes.add(name);
+    },
+    contains: (name) => phase3Classes.has(name)
+  },
+  append() {},
+  appendChild() {},
+  replaceChildren() {},
+  setAttribute() {},
+  remove() {},
+  querySelector: () => phase3Element()
+});
+const phase3Elements = new Map();
+const phase3Controls = {
+  difficultySelect: Object.assign(phase3Element(), { value: "normal" }),
+  weatherSelect: Object.assign(phase3Element(), { value: "dry" }),
+  riderProfileSelect: Object.assign(phase3Element(), { value: "allrounder" })
+};
+globalThis.document = {
+  documentElement: phase3Element(),
+  getElementById: (id) => {
+    if (phase3Controls[id]) return phase3Controls[id];
+    if (!phase3Elements.has(id)) phase3Elements.set(id, phase3Element());
+    return phase3Elements.get(id);
+  },
+  querySelectorAll: () => [],
+  createElement: () => phase3Element()
+};
+
+const phase3Game = Object.create(Game.prototype);
+phase3Game.activeSaveSlot = null;
+phase3Game.storage = {
+  bestPosition: null, bestTime: null, races: 0, wins: 0,
+  difficulty: "normal", weather: "dry", playerProfile: "allrounder",
+  reducedMotion: false, haptics: true, tutorialSeen: false
+};
+phase3Game.reducedMotion = false;
+phase3Game.hapticsEnabled = true;
+phase3Game.lastHapticAt = -1000;
+phase3Game.audio = { play() {} };
+phase3Game.notify = () => {};
+phase3Game.saveTour = () => true;
+phase3Game.renderSaveSlots = () => {};
+phase3Game.tour = {
+  seed: 86420,
+  slot: null,
+  stageIndex: 0,
+  stages: createTourCalendar(86420),
+  roster: null,
+  totals: new Map(),
+  conditions: new Map(),
+  stageResults: [],
+  playerProfile: "allrounder",
+  jerseyAssignments: {},
+  leaders: {},
+  completedStages: 0
+};
+phase3Game.ensureTourRoster();
+phase3Game.tour.stageIndex = phase3Game.tour.stages.findIndex((stage) => stage.type !== "itt");
+phase3Game.race = phase3Game.createCurrentRace({ simulationOnly: true });
+phase3Game.state = "RACING";
+phase3Game.hud = { showDanger() {} };
+phase3Game.cameraShake = 0;
+phase3Game.showResourceFeedback = () => {};
+phase3Game.finishRace = () => {};
+const playerTeam = phase3Game.race.teamByName.get(phase3Game.race.player.team);
+const phase3Player = phase3Game.race.player;
+const phase3Rival = phase3Game.race.cyclists.find((rider) => rider.team !== phase3Player.team);
+const phase3RelayPartner = playerTeam.riders.find((rider) => rider !== phase3Player);
+const originalResponseState = {
+  playerDistance: phase3Player.distance,
+  rivalDistance: phase3Rival.distance,
+  partnerDistance: phase3RelayPartner.distance
+};
+phase3Player.distance = 8;
+phase3Rival.distance = 8.025;
+phase3RelayPartner.distance = 7.99;
+phase3Rival.attacking = 2.8;
+phase3Rival.speed = phase3Player.speed + 8;
+phase3Game.race.elapsed = 30;
+phase3Game.race.lastRivalAttackTime = 30;
+phase3Game.race.updateRanking();
+phase3Assert(
+  phase3Game.race.activeRivalAttackForPlayer() === phase3Rival,
+  "No se detectó el ataque rival que debía responder el jugador"
+);
+phase3Assert(phase3Game.race.startRelay() === false, "RELEVO detuvo un ataque rival");
+phase3Assert(
+  phase3Game.race.relay.blockedByAttack === phase3Rival && !phase3Game.race.relay.active,
+  "El ataque no bloqueó correctamente el inicio de relevos"
+);
+phase3Player.sprintAllowed = true;
+phase3Assert(
+  phase3Player.sprintNow(1.08, "RESPUESTA", 0.2),
+  "SPRINT no estuvo disponible para responder al ataque"
+);
+phase3Player.update(0.21, {
+  game: phase3Game,
+  race: phase3Game.race,
+  road: phase3Game.race.road,
+  weather: phase3Game.race.weather,
+  simulationScale: phase3Game.race.simulationScale
+});
+phase3Assert(!phase3Player.sprinting, "El sprint de respuesta no terminó en el tiempo previsto");
+phase3Rival.attacking = 0;
+phase3Player.distance = originalResponseState.playerDistance;
+phase3Rival.distance = originalResponseState.rivalDistance;
+phase3RelayPartner.distance = originalResponseState.partnerDistance;
+phase3Game.race.updateRanking();
+
+[
+  ["chase", "PERSEGUIR"],
+  ["attack", "ATACAR"],
+  ["conserve", "RECUPERAR"],
+  ["protect", "PROTEGER"]
+].forEach(([order, expectedState]) => {
+  phase3Game.setTeamOrder(order);
+  phase3Assert(phase3Game.race.playerTeamOrder === order, "No se guardó la orden " + order);
+  phase3Assert(playerTeam.plan.state === expectedState, "La orden " + order + " no cambió la IA");
+});
+phase3Assert(phase3Game.race.playerTeamOrderChanges === 4, "No se contaron los cambios de orden");
+
+phase3Game.setTeamOrder("attack");
+phase3Game.race.difficultyConfig.errorRate = 0;
+const phase3Attacker = playerTeam.attackers[0] || playerTeam.climbers[0];
+phase3Attacker.distance = phase3Game.race.leader.distance - 0.01;
+phase3Attacker.energy = 90;
+phase3Attacker.explosive = 90;
+phase3Attacker.attackCooldown = 0;
+phase3Attacker.decisionTimer = 0;
+phase3Game.race.updateRanking();
+phase3Attacker.update(0.05, {
+  game: phase3Game,
+  race: phase3Game.race,
+  road: phase3Game.race.road,
+  weather: phase3Game.race.weather,
+  simulationScale: phase3Game.race.simulationScale
+});
+phase3Assert(phase3Attacker.attacking > 0,
+  "La orden ATACAR no produjo una acción del compañero: " +
+  JSON.stringify({
+    plan: playerTeam.plan.state,
+    tactical: phase3Attacker.tacticalState,
+    role: phase3Attacker.role,
+    energy: phase3Attacker.energy,
+    explosive: phase3Attacker.explosive,
+    gap: phase3Game.race.leader.distance - phase3Attacker.distance,
+    cooldown: phase3Attacker.attackCooldown
+  }));
+phase3Game.setTeamOrder("protect");
+
+phase3Game.reducedMotion = true;
+phase3Game.applyAccessibilityPreferences();
+phase3Assert(phase3Classes.has("reduced-motion"), "No se aplicó movimiento reducido");
+phase3Game.haptic(20);
+phase3Assert(phase3Vibrations === 1, "La vibración activada no respondió");
+
+let phase3Countdowns = 0;
+phase3Game.runCountdown = () => { phase3Countdowns += 1; };
+phase3Game.openTutorial();
+phase3Assert(phase3Game.state === "TUTORIAL", "El tutorial no detuvo la salida");
+for (let index = 1; index < TUTORIAL_STEPS.length; index += 1) phase3Game.nextTutorialStep();
+phase3Game.nextTutorialStep();
+phase3Assert(phase3Game.storage.tutorialSeen === true, "El tutorial no quedó completado");
+phase3Assert(phase3Countdowns === 1, "La cuenta atrás no arrancó después del tutorial");
+
+JSON.stringify({
+  teamOrders: phase3Game.race.playerTeamOrderChanges,
+  finalTeamState: playerTeam.plan.state,
+  reducedMotion: phase3Game.reducedMotion,
+  vibrations: phase3Vibrations,
+  relayBlockedAttack: true,
+  responseSprint: true,
+  tutorialSteps: TUTORIAL_STEPS.length,
+  countdowns: phase3Countdowns
+});
+`;
+
+eval(source + "\n" + tests);

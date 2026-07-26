@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Ciclimo Tour</title>
+  <rect width="512" height="512" rx="72" fill="#07131f"/>
+  <path d="M0 378L98 272L166 330L270 178L350 266L418 154L512 256V512H0Z" fill="#173951"/>
+  <path d="M0 421L108 315L172 368L274 214L352 302L422 194L512 294V512H0Z" fill="#2f657b"/>
+  <circle cx="149" cy="339" r="70" fill="none" stroke="#05090e" stroke-width="25"/>
+  <circle cx="365" cy="339" r="70" fill="none" stroke="#05090e" stroke-width="25"/>
+  <path d="M149 339L222 219L289 339H149L205 280H319L365 339M222 219L286 219" fill="none" stroke="#ffcc33" stroke-width="24" stroke-linecap="square" stroke-linejoin="bevel"/>
+  <circle cx="244" cy="139" r="38" fill="#f0b18c" stroke="#05090e" stroke-width="17"/>
+  <path d="M209 130Q245 79 293 126H247Z" fill="#ffcc33" stroke="#05090e" stroke-width="14"/>
+  <path d="M222 181L290 214L259 274L190 236Z" fill="#9acd32" stroke="#05090e" stroke-width="18"/>
+  <path d="M279 210L340 243M221 221L176 277M250 271L303 322M216 264L169 322" fill="none" stroke="#f0b18c" stroke-width="20" stroke-linecap="square"/>
+  <path d="M61 68H451V119H61Z" fill="#ffcc33" stroke="#05090e" stroke-width="14"/>
+  <text x="256" y="105" fill="#07131f" font-family="monospace" font-size="42" font-weight="900" text-anchor="middle">CICLIMO</text>
+</svg>

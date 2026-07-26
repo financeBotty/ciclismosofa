@@ -1,0 +1,283 @@
+ObjC.import("Foundation");
+
+const projectPath = "/Users/mmp/Ciclismosofa/cycling-game/game.js";
+const sourceString = $.NSString.stringWithContentsOfFileEncodingError(
+  projectPath,
+  $.NSUTF8StringEncoding,
+  null
+);
+if (!sourceString) throw new Error("No se pudo leer game.js");
+
+const source = ObjC.unwrap(sourceString).replace(
+  /\nwindow\.CiclimoTourRace[\s\S]*$/,
+  ""
+);
+
+const tests = String.raw`
+const phase2Assert = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+const phase2Memory = new Map();
+globalThis.localStorage = {
+  getItem: (key) => phase2Memory.has(key) ? phase2Memory.get(key) : null,
+  setItem: (key, value) => phase2Memory.set(key, String(value)),
+  removeItem: (key) => phase2Memory.delete(key)
+};
+const phase2Controls = {
+  difficultySelect: { value: "normal" },
+  weatherSelect: { value: "dry" },
+  riderProfileSelect: { value: "allrounder" }
+};
+const phase2Element = () => ({
+  value: "",
+  textContent: "",
+  innerHTML: "",
+  disabled: false,
+  dataset: {},
+  classList: { add() {}, remove() {}, toggle() {} },
+  append() {},
+  appendChild() {},
+  replaceChildren() {},
+  setAttribute() {},
+  querySelector: () => phase2Element()
+});
+const phase2Elements = new Map();
+globalThis.document = {
+  getElementById: (id) => {
+    if (phase2Controls[id]) return phase2Controls[id];
+    if (!phase2Elements.has(id)) phase2Elements.set(id, phase2Element());
+    return phase2Elements.get(id);
+  },
+  createElement: () => phase2Element()
+};
+
+const phase2Game = Object.create(Game.prototype);
+phase2Game.activeSaveSlot = null;
+phase2Game.storage = {
+  bestPosition: null, bestTime: null, races: 0, wins: 0,
+  difficulty: "normal", weather: "dry", playerProfile: "allrounder"
+};
+phase2Game.audio = { play() {} };
+phase2Game.notify = () => {};
+phase2Game.renderSaveSlots = () => {};
+phase2Game.saveTour = () => true;
+phase2Game.tour = {
+  seed: 246813579,
+  slot: null,
+  stageIndex: 0,
+  stages: createTourCalendar(246813579),
+  roster: null,
+  totals: new Map(),
+  conditions: new Map(),
+  stageResults: [],
+  playerProfile: "allrounder",
+  jerseyAssignments: {},
+  leaders: {},
+  completedStages: 0
+};
+phase2Game.ensureTourRoster();
+phase2Assert(phase2Game.tour.roster.length === 100, "El pelotón no tiene 100 corredores");
+phase2Assert(phase2Game.tour.conditions.size === 100, "Faltan estados de forma iniciales");
+
+const phase2RoadUniqueCounts = [];
+const phase2IttUniqueCounts = [];
+for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
+  phase2Game.tour.stageIndex = stageIndex;
+  const race = phase2Game.createCurrentRace({ simulationOnly: true });
+  race.resolutionMode = "simulated";
+  const random = new SeededRandom((race.seed ^ 0x9e3779b9) >>> 0);
+  const breakaway = phase2Game.createInstantBreakaway(race, random);
+  race.simulatedBreakaway = breakaway;
+  const scored = race.cyclists.map((rider) => ({
+    rider,
+    score: phase2Game.instantStageScore(rider, race.stageDefinition, random) +
+      (breakaway.bonuses.get(rider) || 0)
+  })).sort((a, b) => b.score - a.score);
+  const baseSpeed = race.timeTrial ? 42
+    : race.stageDefinition.profile === "mountain" ? 33
+      : race.stageDefinition.profile === "flat" ? 44 : 38;
+  scored.forEach(({ rider, score }, index) => {
+    const speed = baseSpeed * clamp(0.9 + (score - 70) * 0.0042, 0.84, 1.12);
+    rider.finishTime = race.stageDefinition.lengthKm / speed * 3600 / race.simulationScale + index * 0.045;
+    rider.distance = race.road.lengthKm;
+    rider.finished = true;
+    rider.speed = speed;
+    rider.energy = clamp(
+      72 + (rider.endurance - 78) * 0.8 - race.stageDefinition.lengthKm * 0.13 -
+      race.road.totalAscent / 170,
+      8,
+      88
+    );
+  });
+  const ranking = scored.map((entry) => entry.rider);
+  race.ranking = ranking;
+  race.finishOrder = [...ranking];
+  breakaway.won = breakaway.riders.includes(ranking[0]);
+  phase2Game.race = race;
+  const rawTime = (rider) => rider.finishTime;
+  const official = phase2Game.officialStageTimes(ranking, rawTime);
+  const uniqueCount = new Set([...official.values()].map((time) => time.toFixed(6))).size;
+  if (race.timeTrial) phase2IttUniqueCounts.push(uniqueCount);
+  else phase2RoadUniqueCounts.push(uniqueCount);
+  const officialTime = (rider) => official.get(rider);
+  phase2Game.recordStageResult(ranking, officialTime);
+  phase2Game.updateTourStandings(ranking, officialTime);
+}
+
+phase2Assert(phase2Game.tour.stageResults.length === 10, "El historial no contiene las 10 etapas");
+phase2Assert(
+  [...phase2Game.tour.totals.values()].every((total) => total.stages === 10),
+  "La general no acumuló las 10 etapas"
+);
+phase2Assert(
+  phase2RoadUniqueCounts.every((count) => count < 100),
+  "Alguna etapa en línea no agrupó tiempos"
+);
+phase2Assert(
+  phase2IttUniqueCounts.every((count) => count === 100),
+  "La contrarreloj agrupó tiempos que deben ser individuales"
+);
+phase2Assert(
+  [...phase2Game.tour.conditions.values()].every((condition) =>
+    Number.isFinite(condition.fatigue) && condition.fatigue >= 0 && condition.fatigue <= 82 &&
+    Number.isFinite(condition.form) && condition.form >= -8 && condition.form <= 8
+  ),
+  "La forma o la fatiga salió de rango"
+);
+const phase2FinalPlayerCondition = { ...phase2Game.tour.conditions.get(0) };
+
+const phase2RoadIndex = phase2Game.tour.stages.findIndex((stage) => stage.type !== "itt");
+phase2Game.tour.stageIndex = phase2RoadIndex;
+phase2Game.showResourceFeedback = () => {};
+phase2Game.finishRace = () => {};
+phase2Game.cameraShake = 0;
+phase2Game.hud = { showDanger() {} };
+const phase2PhysicalRace = phase2Game.createCurrentRace({ simulationOnly: true });
+phase2Game.race = phase2PhysicalRace;
+for (let tick = 0; tick < 1800 && !phase2PhysicalRace.player.finished; tick += 1) {
+  phase2PhysicalRace.update(0.05);
+}
+phase2Assert(phase2PhysicalRace.breakawayDirector.falseMoveDone, "No se produjo el amago inicial");
+phase2Assert(phase2PhysicalRace.breakawayDirector.attempts >= 1, "La IA no lanzó la fuga obligatoria");
+phase2Assert(
+  phase2PhysicalRace.breakawayDirector.historyRiders.length >= 3,
+  "La fuga no conservó participantes para el historial"
+);
+const phase2BreakawayAudit = {
+  attempts: phase2PhysicalRace.breakawayDirector.attempts,
+  established: phase2PhysicalRace.breakawayDirector.hasHadBreakaway,
+  riders: phase2PhysicalRace.breakawayDirector.historyRiders.length,
+  reformations: phase2PhysicalRace.breakawayDirector.reformations
+};
+
+const phase2Save = phase2Game.serializeTour();
+phase2Memory.set("ciclimoTour.save.1", JSON.stringify(phase2Save));
+phase2Assert(phase2Game.readSaveSlot(1) !== null, "El guardado nuevo no se valida");
+
+const phase2Legacy = JSON.parse(JSON.stringify(phase2Save));
+delete phase2Legacy.tour.conditions;
+delete phase2Legacy.tour.stageResults;
+delete phase2Legacy.tour.playerProfile;
+phase2Memory.set("ciclimoTour.save.2", JSON.stringify(phase2Legacy));
+phase2Assert(phase2Game.readSaveSlot(2) !== null, "El guardado anterior dejó de ser compatible");
+phase2Game.restoreTour(phase2Legacy, 2);
+phase2Assert(phase2Game.tour.conditions.size === 100, "La migración no reconstruyó la forma");
+phase2Assert(phase2Game.tour.stageResults.length === 0, "La migración creó historial falso");
+phase2Assert(phase2Game.tour.playerProfile === "allrounder", "La migración no aplicó el perfil seguro");
+
+const phase2ProfileStats = {};
+Object.keys(PLAYER_PROFILES).forEach((profileName) => {
+  phase2Controls.riderProfileSelect.value = profileName;
+  const profileGame = Object.create(Game.prototype);
+  profileGame.activeSaveSlot = null;
+  profileGame.saveTour = () => true;
+  profileGame.tour = {
+    seed: 13579,
+    slot: null,
+    stageIndex: 0,
+    stages: createTourCalendar(13579),
+    roster: null,
+    totals: new Map(),
+    conditions: new Map(),
+    stageResults: [],
+    playerProfile: profileName,
+    jerseyAssignments: {},
+    leaders: {},
+    completedStages: 0
+  };
+  profileGame.ensureTourRoster();
+  const rider = profileGame.tour.roster[0];
+  phase2Assert(rider.climbing === PLAYER_PROFILES[profileName].climbing, "Perfil mal aplicado: " + profileName);
+  phase2Assert(rider.sprint === PLAYER_PROFILES[profileName].sprint, "Sprint de perfil incorrecto: " + profileName);
+  phase2ProfileStats[profileName] = [rider.climbing, rider.sprint, rider.endurance];
+});
+
+phase2Controls.riderProfileSelect.value = "allrounder";
+const phase2FinishGame = Object.create(Game.prototype);
+phase2FinishGame.activeSaveSlot = null;
+phase2FinishGame.simulationCheckpoint = null;
+phase2FinishGame.storage = {
+  bestPosition: null, bestTime: null, races: 0, wins: 0,
+  difficulty: "normal", weather: "dry", playerProfile: "allrounder"
+};
+phase2FinishGame.audio = { play() {} };
+phase2FinishGame.notify = () => {};
+phase2FinishGame.renderSaveSlots = () => {};
+phase2FinishGame.saveTour = () => true;
+phase2FinishGame.tour = {
+  seed: 97531,
+  slot: null,
+  stageIndex: 0,
+  stages: createTourCalendar(97531),
+  roster: null,
+  totals: new Map(),
+  conditions: new Map(),
+  stageResults: [],
+  playerProfile: "allrounder",
+  jerseyAssignments: {},
+  leaders: {},
+  completedStages: 0
+};
+phase2FinishGame.ensureTourRoster();
+const phase2FinishRace = phase2FinishGame.createCurrentRace({ simulationOnly: true });
+phase2FinishRace.resolutionMode = "simulated";
+const phase2FinishRandom = new SeededRandom(424242);
+const phase2FinishRanking = [...phase2FinishRace.cyclists]
+  .sort((a, b) => phase2FinishGame.instantStageScore(b, phase2FinishRace.stageDefinition, phase2FinishRandom) -
+    phase2FinishGame.instantStageScore(a, phase2FinishRace.stageDefinition, phase2FinishRandom));
+phase2FinishRanking.forEach((rider, index) => {
+  rider.finishTime = 100 + index * 0.08;
+  rider.finished = true;
+  rider.distance = phase2FinishRace.road.lengthKm;
+  rider.energy = 58;
+});
+phase2FinishRace.ranking = phase2FinishRanking;
+phase2FinishRace.finishOrder = [...phase2FinishRanking];
+phase2FinishRace.elapsed = 115;
+phase2FinishRace.simulatedBreakaway = phase2FinishGame.createInstantBreakaway(
+  phase2FinishRace,
+  new SeededRandom(434343)
+);
+phase2FinishGame.race = phase2FinishRace;
+phase2FinishGame.state = "SIMULATING";
+phase2FinishGame.finishRace();
+phase2Assert(phase2FinishGame.tour.completedStages === 1, "finishRace no avanzó el Tour");
+phase2Assert(phase2FinishGame.tour.stageResults.length === 1, "finishRace no guardó el historial");
+phase2Assert(phase2FinishRace.officialTimes instanceof Map, "finishRace no generó tiempos oficiales");
+
+JSON.stringify({
+  stages: 10,
+  roadUniqueTimes: phase2RoadUniqueCounts,
+  ittUniqueTimes: phase2IttUniqueCounts,
+  finalPlayerCondition: phase2FinalPlayerCondition,
+  physicalBreakaway: phase2BreakawayAudit,
+  integratedFinish: {
+    completedStages: phase2FinishGame.tour.completedStages,
+    history: phase2FinishGame.tour.stageResults.length,
+    officialTimes: phase2FinishRace.officialTimes.size
+  },
+  profiles: phase2ProfileStats
+});
+`;
+
+eval(source + "\n" + tests);

@@ -1,0 +1,21 @@
+{
+  "name": "Ciclimo Tour",
+  "short_name": "Ciclimo",
+  "description": "Juego arcade de ciclismo y estrategia en un Tour de diez etapas.",
+  "lang": "es",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07131f",
+  "theme_color": "#08110e",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

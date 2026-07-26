@@ -1,0 +1,50 @@
+name: Publicar Ciclimo Tour en GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Preparar sitio estático
+        run: |
+          mkdir -p _site/assets
+          cp cycling-game/index.html _site/
+          cp cycling-game/styles.css _site/
+          cp cycling-game/game.js _site/
+          cp cycling-game/manifest.webmanifest _site/
+          cp cycling-game/service-worker.js _site/
+          cp cycling-game/assets/icon.svg _site/assets/
+          touch _site/.nojekyll
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir sitio
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,119 @@
+ObjC.import("Foundation");
+
+const projectPath = "/Users/mmp/Ciclismosofa/cycling-game/game.js";
+const sourceString = $.NSString.stringWithContentsOfFileEncodingError(
+  projectPath,
+  $.NSUTF8StringEncoding,
+  null
+);
+if (!sourceString) throw new Error("No se pudo leer game.js");
+const source = ObjC.unwrap(sourceString).replace(
+  /\nwindow\.CiclimoTourRace[\s\S]*$/,
+  ""
+);
+
+const audit = String.raw`
+const balanceMemory = new Map();
+globalThis.localStorage = {
+  getItem: (key) => balanceMemory.has(key) ? balanceMemory.get(key) : null,
+  setItem: (key, value) => balanceMemory.set(key, String(value)),
+  removeItem: (key) => balanceMemory.delete(key)
+};
+const balanceControls = {
+  difficultySelect: { value: "normal" },
+  weatherSelect: { value: "dry" },
+  riderProfileSelect: { value: "allrounder" }
+};
+globalThis.document = {
+  getElementById: (id) => balanceControls[id] || { value: "" }
+};
+
+const simulateTourForBalance = (difficulty, seed) => {
+  balanceControls.difficultySelect.value = difficulty;
+  const game = Object.create(Game.prototype);
+  game.activeSaveSlot = null;
+  game.saveTour = () => true;
+  game.tour = {
+    seed,
+    slot: null,
+    stageIndex: 0,
+    stages: createTourCalendar(seed),
+    roster: null,
+    totals: new Map(),
+    conditions: new Map(),
+    stageResults: [],
+    playerProfile: "allrounder",
+    jerseyAssignments: {},
+    leaders: {},
+    completedStages: 0
+  };
+  game.ensureTourRoster();
+  const positions = [];
+  let breakawayWins = 0;
+  for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
+    game.tour.stageIndex = stageIndex;
+    const race = game.createCurrentRace({ simulationOnly: true });
+    race.resolutionMode = "simulated";
+    const random = new SeededRandom((race.seed ^ 0x9e3779b9) >>> 0);
+    const breakaway = game.createInstantBreakaway(race, random);
+    race.simulatedBreakaway = breakaway;
+    const scored = race.cyclists.map((rider) => ({
+      rider,
+      score: game.instantStageScore(rider, race.stageDefinition, random) +
+        (breakaway.bonuses.get(rider) || 0)
+    })).sort((a, b) => b.score - a.score);
+    const baseSpeed = race.timeTrial ? 42
+      : race.stageDefinition.profile === "mountain" ? 33
+        : race.stageDefinition.profile === "flat" ? 44 : 38;
+    scored.forEach(({ rider, score }, index) => {
+      const speed = baseSpeed * clamp(0.9 + (score - 70) * 0.0042, 0.84, 1.12);
+      rider.finishTime = race.stageDefinition.lengthKm / speed * 3600 / race.simulationScale + index * 0.045;
+      rider.energy = clamp(
+        72 + (rider.endurance - 78) * 0.8 - race.stageDefinition.lengthKm * 0.13 -
+        race.road.totalAscent / 170,
+        8,
+        88
+      );
+      rider.finished = true;
+      rider.distance = race.road.lengthKm;
+    });
+    const ranking = scored.map((entry) => entry.rider);
+    breakaway.won = breakaway.riders.includes(ranking[0]);
+    if (breakaway.won) breakawayWins += 1;
+    race.ranking = ranking;
+    race.finishOrder = [...ranking];
+    game.race = race;
+    const official = game.officialStageTimes(ranking, (rider) => rider.finishTime);
+    game.updateTourStandings(ranking, (rider) => official.get(rider));
+    positions.push(ranking.indexOf(race.player) + 1);
+  }
+  const gcPosition = game.getTourRanking("time").findIndex((entry) => entry.tourId === 0) + 1;
+  return { positions, gcPosition, breakawayWins };
+};
+
+const balanceResult = {};
+["easy", "normal", "hard"].forEach((difficulty, difficultyIndex) => {
+  const samples = [];
+  for (let tourIndex = 0; tourIndex < 30; tourIndex += 1) {
+    samples.push(simulateTourForBalance(
+      difficulty,
+      (1234567 + difficultyIndex * 1000003 + tourIndex * 65537) >>> 0
+    ));
+  }
+  const stagePositions = samples.flatMap((sample) => sample.positions);
+  const gcPositions = samples.map((sample) => sample.gcPosition);
+  balanceResult[difficulty] = {
+    stages: stagePositions.length,
+    stageWins: stagePositions.filter((position) => position === 1).length,
+    stageTop10: stagePositions.filter((position) => position <= 10).length,
+    averageStagePosition: stagePositions.reduce((sum, position) => sum + position, 0) / stagePositions.length,
+    tourWins: gcPositions.filter((position) => position === 1).length,
+    tourTop10: gcPositions.filter((position) => position <= 10).length,
+    averageGcPosition: gcPositions.reduce((sum, position) => sum + position, 0) / gcPositions.length,
+    breakawayWins: samples.reduce((sum, sample) => sum + sample.breakawayWins, 0)
+  };
+});
+JSON.stringify(balanceResult);
+`;
+
+eval(source + "\n" + audit);

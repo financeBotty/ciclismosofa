@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#08110e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="description" content="Ciclimo Tour, un juego arcade de ciclismo y estrategia en tiempo real.">
+  <meta name="application-name" content="Ciclimo Tour">
+  <title>Ciclimo Tour — Ciclismo arcade</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="gameShell" class="game-shell">
+    <header class="broadcast-header" aria-label="Información de carrera">
+      <div class="stage-brand">
+        <span class="live-pill"><i></i> LIVE</span>
+        <div>
+          <p class="eyebrow" id="stageEyebrow">VUELTA SIERRA NORTE · ETAPA GENERADA</p>
+          <h1 id="stageName">Ciclimo Tour</h1>
+        </div>
+      </div>
+
+      <div class="race-data">
+        <div class="data-block position-tile">
+          <span class="label" aria-label="Posición">POSICIÓN</span>
+          <strong id="positionValue">1<sup>º</sup></strong>
+          <em id="groupValue">PELOTÓN</em>
+        </div>
+        <div class="data-block main-distance">
+          <span class="label" aria-label="Kilómetro actual">● KM</span>
+          <strong><span id="currentKm">0,0</span> <small>/ <span id="totalKm">—</span> KM</small></strong>
+        </div>
+        <div class="data-block">
+          <span class="label" aria-label="Distancia hasta la meta">🏁 META</span>
+          <strong id="remainingKm">60,0 km</strong>
+        </div>
+        <div class="data-block">
+          <span class="label" aria-label="Pendiente">↗ %</span>
+          <strong id="gradientValue">0,0 %</strong>
+        </div>
+        <div class="data-block altitude-block">
+          <span class="label" aria-label="Altitud">▲ M</span>
+          <strong id="altitudeValue">610 m</strong>
+        </div>
+        <div class="data-block weather-block">
+          <span class="weather-icon" id="weatherIcon" aria-hidden="true">☀</span>
+          <span><span class="label">CLIMA</span><strong id="weatherValue">SECO</strong></span>
+        </div>
+        <div class="data-block gap-block">
+          <span class="label" id="leaderGapLabel">CABEZA</span>
+          <strong id="leaderGap">MISMO TIEMPO</strong>
+        </div>
+      </div>
+
+      <div class="profile-wrap" aria-label="Perfil de la etapa">
+        <canvas id="profileCanvas" width="420" height="64" role="img" tabindex="0" aria-label="Mapa interactivo de grupos en la etapa"></canvas>
+        <div id="profileTooltip" class="profile-tooltip is-hidden"></div>
+        <div class="profile-labels"><span id="startElevationLabel">SALIDA</span><span id="ascentValue">DESNIVEL</span><span id="finishElevationLabel">META</span></div>
+      </div>
+    </header>
+
+    <section class="race-viewport" aria-label="Vista de carrera">
+      <canvas id="gameCanvas" aria-label="Carrera ciclista animada"></canvas>
+      <div id="vignette" class="weather-vignette"></div>
+      <nav id="mobileViewTabs" class="mobile-view-tabs" aria-label="Vistas del juego">
+        <button type="button" data-mobile-view="race" class="active" aria-selected="true" aria-label="Ver carrera"><i aria-hidden="true">▶</i><span>RUTA</span></button>
+        <button type="button" data-mobile-view="classification" aria-selected="false" aria-label="Ver clasificación"><i aria-hidden="true">☷</i><span>POS.</span></button>
+        <button type="button" data-mobile-view="stage" aria-selected="false" aria-label="Ver etapa"><i aria-hidden="true">▲</i><span>ETAPA</span></button>
+      </nav>
+      <section id="mobileClassificationPanel" class="mobile-view-panel mobile-classification-panel is-hidden" aria-label="Clasificación en directo">
+        <header><span>☷ RANKING</span><strong id="mobileRacePosition">—</strong></header>
+        <ol id="mobileClassificationList"></ol>
+      </section>
+      <section id="mobileStagePanel" class="mobile-view-panel mobile-stage-panel is-hidden" aria-label="Estadísticas de la etapa">
+        <header><span>▲ ETAPA</span><strong id="mobileStageProgressText">0%</strong></header>
+        <h2 id="mobileStageName">—</h2>
+        <div class="mobile-stage-progress"><i id="mobileStageProgressBar"></i></div>
+        <div class="mobile-stage-stats">
+          <div><span>↔ KM</span><strong id="mobileStageDistance">—</strong></div>
+          <div><span>↗ DESNIVEL</span><strong id="mobileStageAscent">—</strong></div>
+          <div><span>▲ PUERTOS</span><strong id="mobileStageMountains">—</strong></div>
+          <div><span>◆ SPRINTS</span><strong id="mobileStageSprints">—</strong></div>
+          <div><span>▧ ZONA</span><strong id="mobileStageBiome">—</strong></div>
+          <div><span>☀ CLIMA</span><strong id="mobileStageWeather">—</strong></div>
+          <div><span>◷ TIEMPO</span><strong id="mobileStageElapsed">—</strong></div>
+          <div><span>☷ GRUPOS</span><strong id="mobileStageGroups">—</strong></div>
+        </div>
+      </section>
+      <div id="eventFeed" class="event-feed" aria-live="polite"></div>
+      <div id="resourceFeedback" class="resource-feedback" aria-live="polite" aria-atomic="true"></div>
+      <aside id="groupsPanel" class="groups-panel" aria-label="Grupos en carrera">
+        <div class="groups-title"><span>☷ GRUPOS</span><strong id="groupsCount">1</strong></div>
+        <div id="groupsList" class="groups-list"></div>
+      </aside>
+      <div id="dangerBanner" class="danger-banner" role="status">
+        <span>!</span><div><small>ATENCIÓN</small><strong>CURVA PELIGROSA</strong><em id="dangerDistance">EN 200 m</em></div>
+      </div>
+      <button id="pauseButton" class="icon-button pause-button" aria-label="Pausar partida">Ⅱ</button>
+      <button id="returnCameraButton" class="camera-return is-hidden" aria-label="Volver a tu ciclista">⌖ TÚ</button>
+      <button id="cameraButton" class="camera-button" aria-label="Vista cenital" title="Vista cenital">◆ CEN</button>
+      <button id="teamOrderButton" class="team-order-button" type="button" aria-expanded="false" aria-controls="teamOrderPanel">
+        <span>♟</span><b id="teamOrderCurrent">PROTEGER</b>
+      </button>
+      <aside id="teamOrderPanel" class="team-order-panel is-hidden" aria-label="Órdenes al equipo">
+        <header><span>♟ EQUIPO SOLARIS</span><button id="closeTeamOrderButton" type="button" aria-label="Cerrar órdenes">×</button></header>
+        <div role="group" aria-label="Orden táctica">
+          <button type="button" data-team-order="protect" class="active"><i>◆</i><span>PROTEGER<small>Quédate arropado</small></span></button>
+          <button type="button" data-team-order="chase"><i>»</i><span>CAZAR<small>Gregarios al frente</small></span></button>
+          <button type="button" data-team-order="attack"><i>!</i><span>ATACAR<small>Mueve escaladores</small></span></button>
+          <button type="button" data-team-order="conserve"><i>♥</i><span>GUARDAR<small>Ahorrar equipo</small></span></button>
+        </div>
+      </aside>
+      <div id="followCard" class="follow-card is-hidden">
+        <span id="followModeLabel">RUEDA OBJETIVO</span>
+        <strong id="followRiderName">—</strong>
+        <em id="followRiderInfo">—</em>
+      </div>
+
+      <div id="racePointCard" class="race-point-card">
+        <span id="racePointType">PRÓXIMO PUNTO</span>
+        <strong id="racePointName">—</strong>
+        <em id="racePointDistance">—</em>
+      </div>
+
+      <div id="lastKmOverlay" class="last-km-overlay" aria-hidden="true">
+        <span>ÚLTIMO KILÓMETRO</span>
+        <strong id="finishMeters">1.000 m</strong>
+      </div>
+
+      <div id="menuOverlay" class="screen-overlay menu-overlay">
+        <div class="menu-card">
+          <p class="eyebrow accent">CICLISMO ARCADE + ESTRATEGIA</p>
+          <h2>CICLIMO<br><span>TOUR</span></h2>
+          <p class="menu-copy">Elige un Tour completo o sal directamente a disputar una etapa aleatoria con 100 ciclistas.</p>
+          <div class="game-mode-choice" role="tablist" aria-label="Modo de juego">
+            <button id="tourModeButton" type="button" class="active" role="tab" aria-selected="true" aria-controls="tourModePanel">
+              <i>▣</i><span>TOUR<small>10 etapas y clasificaciones</small></span>
+            </button>
+            <button id="quickModeButton" type="button" role="tab" aria-selected="false" aria-controls="quickModePanel">
+              <i>⚡</i><span>CARRERA RÁPIDA<small>Una etapa aleatoria</small></span>
+            </button>
+          </div>
+          <div class="menu-section-label">⚙ CONFIGURACIÓN</div>
+          <div class="menu-options">
+            <label>DIFICULTAD
+              <select id="difficultySelect">
+                <option value="easy">Dominguero</option>
+                <option value="normal" selected>Pro</option>
+                <option value="hard">Leyenda</option>
+              </select>
+            </label>
+            <label>CLIMA
+              <select id="weatherSelect">
+                <option value="dynamic" selected>Dinámico</option>
+                <option value="dry">Seco</option>
+                <option value="rain">Lluvia</option>
+              </select>
+            </label>
+            <label class="profile-option">CORREDOR
+              <select id="riderProfileSelect">
+                <option value="allrounder" selected>Todoterreno</option>
+                <option value="climber">Escalador</option>
+                <option value="sprinter">Sprinter</option>
+                <option value="rouleur">Rodador</option>
+              </select>
+            </label>
+          </div>
+          <div class="audio-options">
+            <label for="volumeRange">VOLUMEN
+              <input id="volumeRange" type="range" min="0" max="100" step="5" value="55">
+            </label>
+            <button id="soundToggle" type="button" aria-pressed="false">SONIDO · ON</button>
+          </div>
+          <div class="accessibility-options" aria-label="Accesibilidad y ayuda">
+            <button id="reducedMotionToggle" type="button" aria-pressed="false">MOVIMIENTO · ON</button>
+            <button id="hapticsToggle" type="button" aria-pressed="false">VIBRACIÓN · OFF</button>
+            <button id="tutorialResetButton" type="button">? TUTORIAL</button>
+          </div>
+          <div id="tourModePanel" class="mode-panel" role="tabpanel" aria-labelledby="tourModeButton">
+            <section class="save-slots" aria-label="Partidas guardadas">
+              <header><span>▣ PARTIDAS DEL TOUR</span><small>AUTOGUARDADO TRAS CADA ETAPA</small></header>
+              <article class="save-slot" data-save-slot="1">
+                <strong>SLOT 1</strong>
+                <span><b data-slot-status>VACÍO</b><small data-slot-meta>Nuevo calendario aleatorio</small></span>
+                <button type="button" class="slot-action" data-slot-action="1">NUEVO</button>
+                <button type="button" class="slot-delete" data-slot-delete="1" aria-label="Borrar slot 1" disabled>×</button>
+              </article>
+              <article class="save-slot" data-save-slot="2">
+                <strong>SLOT 2</strong>
+                <span><b data-slot-status>VACÍO</b><small data-slot-meta>Nuevo calendario aleatorio</small></span>
+                <button type="button" class="slot-action" data-slot-action="2">NUEVO</button>
+                <button type="button" class="slot-delete" data-slot-delete="2" aria-label="Borrar slot 2" disabled>×</button>
+              </article>
+              <article class="save-slot" data-save-slot="3">
+                <strong>SLOT 3</strong>
+                <span><b data-slot-status>VACÍO</b><small data-slot-meta>Nuevo calendario aleatorio</small></span>
+                <button type="button" class="slot-action" data-slot-action="3">NUEVO</button>
+                <button type="button" class="slot-delete" data-slot-delete="3" aria-label="Borrar slot 3" disabled>×</button>
+              </article>
+            </section>
+          </div>
+          <div id="quickModePanel" class="mode-panel quick-mode-panel is-hidden" role="tabpanel" aria-labelledby="quickModeButton">
+            <div>
+              <span>⚡ ETAPA NUEVA</span>
+              <strong>CUALQUIER TERRENO</strong>
+              <p>Puede salir contrarreloj, llana, media montaña o alta montaña. Sin guardar Tour.</p>
+            </div>
+            <button id="quickRaceButton" type="button"><i>▶</i><span>GENERAR Y CORRER<small>100 ciclistas · resultado completo</small></span></button>
+          </div>
+          <div class="record-strip">
+            <span>MEJOR RESULTADO <strong id="bestPosition">—</strong></span>
+            <span>CARRERAS <strong id="raceCount">0</strong></span>
+            <span>VICTORIAS <strong id="winCount">0</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="tourDashboard" class="tour-dashboard is-hidden" aria-label="Dashboard del Tour">
+        <div class="dashboard-shell">
+          <header class="dashboard-header">
+            <button id="dashboardBackButton" type="button" aria-label="Volver a la portada">← PORTADA</button>
+            <div>
+              <span id="dashboardSlot">SLOT 1</span>
+              <h2>CICLIMO TOUR</h2>
+            </div>
+            <strong id="dashboardProgress">ETAPA 1 / 10</strong>
+          </header>
+          <main class="dashboard-grid">
+            <section class="next-stage-card">
+              <div class="dashboard-section-title"><span id="dashboardStageSectionLabel">SIGUIENTE ETAPA</span><b id="dashboardStageType">LLANA</b></div>
+              <h3 id="dashboardStageName">—</h3>
+              <div class="next-stage-stats">
+                <div><span>↔</span><small id="dashboardDistanceLabel">DISTANCIA</small><strong id="dashboardStageDistance">—</strong></div>
+                <div><span>↗</span><small id="dashboardAscentLabel">DESNIVEL</small><strong id="dashboardStageAscent">—</strong></div>
+                <div><span>▲</span><small id="dashboardMountainsLabel">PUERTOS</small><strong id="dashboardStageMountains">—</strong></div>
+                <div><span>◆</span><small id="dashboardSprintsLabel">SPRINTS</small><strong id="dashboardStageSprints">—</strong></div>
+              </div>
+              <p id="dashboardStageScenery" class="dashboard-stage-scenery">—</p>
+              <div class="stage-choice">
+                <button id="playStageButton" type="button" class="dashboard-play"><i>▶</i><span>JUGAR ETAPA<small>Abrir el simulador</small></span></button>
+                <button id="simulateStageButton" type="button" class="dashboard-simulate"><i>⚡</i><span>SIMULAR ETAPA<small>Generar y guardar resultado</small></span></button>
+                <button id="dashboardNewTourButton" type="button" class="dashboard-new-tour is-hidden"><i>↻</i><span>NUEVO TOUR<small>Reiniciar este slot</small></span></button>
+              </div>
+            </section>
+
+            <section class="tour-calendar-card">
+              <div class="dashboard-section-title"><span>RECORRIDO</span><b>10 ETAPAS</b></div>
+              <ol id="dashboardCalendar" class="dashboard-calendar"></ol>
+              <article id="dashboardStageHistory" class="dashboard-stage-history is-hidden" aria-live="polite">
+                <header>
+                  <span id="historyStageLabel">ETAPA</span>
+                  <button id="closeStageHistoryButton" type="button" aria-label="Cerrar resultado de etapa">×</button>
+                </header>
+                <h3 id="historyStageName">—</h3>
+                <div id="historyStagePodium" class="history-stage-podium"></div>
+                <p id="historyStagePlayer">—</p>
+                <small id="historyStageBreakaway">—</small>
+              </article>
+            </section>
+
+            <section class="dashboard-standings">
+              <div class="dashboard-section-title"><span>CLASIFICACIONES</span><b id="dashboardPlayerGc">SIN CLASIFICAR</b></div>
+              <div class="dashboard-standing-grid">
+                <article class="dashboard-standing yellow"><h3>● GENERAL</h3><ol id="dashboardGcList"></ol></article>
+                <article class="dashboard-standing green"><h3>◆ PUNTOS</h3><ol id="dashboardPointsList"></ol></article>
+                <article class="dashboard-standing polka"><h3>● MONTAÑA</h3><ol id="dashboardMountainList"></ol></article>
+                <article class="dashboard-standing white"><h3>○ JÓVENES</h3><ol id="dashboardYoungList"></ol></article>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+
+      <div id="countdownOverlay" class="countdown-overlay" aria-live="assertive"></div>
+
+      <section id="tutorialOverlay" class="tutorial-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+        <article>
+          <div id="tutorialProgress" class="tutorial-progress">1 / 4</div>
+          <span id="tutorialIcon" class="tutorial-icon" aria-hidden="true">♥</span>
+          <p class="eyebrow accent">GUÍA RÁPIDA</p>
+          <h2 id="tutorialTitle">CONTROLA EL ESFUERZO</h2>
+          <p id="tutorialText">Bajo y Medio recuperan. Alto permite avanzar, pero consume energía.</p>
+          <div class="tutorial-actions">
+            <button id="skipTutorialButton" type="button">OMITIR</button>
+            <button id="nextTutorialButton" type="button">SIGUIENTE ▶</button>
+          </div>
+        </article>
+      </section>
+
+      <div id="pauseOverlay" class="screen-overlay pause-overlay is-hidden">
+        <div class="compact-card">
+          <p class="eyebrow accent">CARRERA DETENIDA</p>
+          <h2>PAUSA</h2>
+          <button id="resumeButton" class="primary-button"><span>CONTINUAR</span><b>▶</b></button>
+          <button id="quitButton" class="text-button">Volver al menú</button>
+        </div>
+      </div>
+
+      <div id="finishOverlay" class="screen-overlay finish-overlay is-hidden">
+        <div class="results-card">
+          <div class="results-actions" aria-label="Acciones del resultado">
+            <button id="replayButton" class="primary-button"><span>VOLVER A JUGAR</span><b>↻</b></button>
+            <button id="undoSimulationButton" class="undo-button is-hidden" type="button">↶ DESHACER SIMULACIÓN</button>
+            <button id="newRaceButton" class="secondary-button">NUEVA CARRERA</button>
+          </div>
+          <div class="result-hero">
+            <p class="eyebrow accent" id="resultEyebrow">CLASIFICACIÓN OFICIAL</p>
+            <div><span id="finalPosition">1º</span><div><small>TU RESULTADO</small><strong id="resultMessage">¡VICTORIA!</strong></div></div>
+            <p id="finalTime">01:28:42</p>
+          </div>
+          <div class="stage-podium">
+            <div class="podium-heading">
+              <span>PODIO DE ETAPA</span>
+              <strong id="podiumStageName">CICLIMO TOUR</strong>
+            </div>
+            <svg id="stagePodiumSvg" viewBox="0 0 720 286" role="img" aria-labelledby="podiumSvgTitle podiumSvgDesc">
+              <title id="podiumSvgTitle">Podio de la etapa</title>
+              <desc id="podiumSvgDesc">Los tres primeros ciclistas de la etapa</desc>
+              <defs>
+                <pattern id="podiumPixels" width="8" height="8" patternUnits="userSpaceOnUse">
+                  <rect width="8" height="8" fill="#13283a"></rect>
+                  <rect width="4" height="4" fill="#183044"></rect>
+                </pattern>
+              </defs>
+              <rect width="720" height="286" fill="url(#podiumPixels)"></rect>
+              <path d="M0 224H720V286H0Z" fill="#09141e"></path>
+              <g class="podium-place podium-second" data-podium-place="1" transform="translate(88 0)">
+                <circle class="podium-head" cx="96" cy="106" r="18"></circle>
+                <path class="podium-jersey" d="M70 132L83 119H109L122 132L116 177H76Z"></path>
+                <path class="podium-limb" d="M79 139L58 166M113 139L134 166M87 175L79 208M105 175L113 208"></path>
+                <rect class="podium-block" x="28" y="208" width="136" height="78"></rect>
+                <text class="podium-rank" x="96" y="264">2</text>
+                <text class="podium-flag" x="96" y="54"></text>
+                <text class="podium-name" x="96" y="82"></text>
+              </g>
+              <g class="podium-place podium-first" data-podium-place="0" transform="translate(264 0)">
+                <path class="podium-crown" d="M74 65L82 45L96 61L110 45L118 65Z"></path>
+                <circle class="podium-head" cx="96" cy="92" r="18"></circle>
+                <path class="podium-jersey" d="M70 118L83 105H109L122 118L116 163H76Z"></path>
+                <path class="podium-limb" d="M79 125L55 94M113 125L137 94M87 161L79 194M105 161L113 194"></path>
+                <rect class="podium-block" x="20" y="194" width="152" height="92"></rect>
+                <text class="podium-rank" x="96" y="258">1</text>
+                <text class="podium-flag" x="96" y="25"></text>
+                <text class="podium-name" x="96" y="55"></text>
+              </g>
+              <g class="podium-place podium-third" data-podium-place="2" transform="translate(448 0)">
+                <circle class="podium-head" cx="96" cy="119" r="18"></circle>
+                <path class="podium-jersey" d="M70 145L83 132H109L122 145L116 190H76Z"></path>
+                <path class="podium-limb" d="M79 152L58 179M113 152L134 179M87 188L79 221M105 188L113 221"></path>
+                <rect class="podium-block" x="28" y="221" width="136" height="65"></rect>
+                <text class="podium-rank" x="96" y="269">3</text>
+                <text class="podium-flag" x="96" y="67"></text>
+                <text class="podium-name" x="96" y="95"></text>
+              </g>
+            </svg>
+          </div>
+          <div class="results-body">
+            <div class="final-classifications">
+              <section class="classification-card stage-ranking">
+                <h3><span>🏁</span> GANADOR DE ETAPA</h3>
+                <ol id="classificationList" class="classification-list"></ol>
+              </section>
+              <section class="classification-card mountain-ranking">
+                <h3><span>▲</span> MONTAÑA · ETAPA</h3>
+                <ol id="mountainClassificationList" class="classification-list points-list"></ol>
+              </section>
+              <section class="classification-card sprint-ranking">
+                <h3><span>◆</span> SPRINT · ETAPA</h3>
+                <ol id="sprintClassificationList" class="classification-list points-list"></ol>
+              </section>
+            </div>
+            <div class="tour-classifications" aria-label="Clasificaciones del Tour">
+              <section class="classification-card gc-ranking">
+                <h3><span>●</span> AMARILLO · GENERAL</h3>
+                <ol id="gcClassificationList" class="classification-list"></ol>
+              </section>
+              <section class="classification-card tour-points-ranking">
+                <h3><span>◆</span> VERDE · PUNTOS</h3>
+                <ol id="tourPointsClassificationList" class="classification-list points-list"></ol>
+              </section>
+              <section class="classification-card tour-mountain-ranking">
+                <h3><span>●</span> LUNARES · MONTAÑA</h3>
+                <ol id="tourMountainClassificationList" class="classification-list points-list"></ol>
+              </section>
+              <section class="classification-card young-ranking">
+                <h3><span>○</span> BLANCO · JÓVENES ≤25</h3>
+                <ol id="youngClassificationList" class="classification-list"></ol>
+              </section>
+            </div>
+            <div id="playerStats" class="player-stats"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="control-deck" aria-label="Controles y estado del ciclista">
+      <div class="metrics-panel">
+        <div class="metrics-grid">
+          <div class="metric energy" aria-label="Energía"><div><span aria-hidden="true">♥</span><strong id="energyValue">100</strong></div><div class="meter"><i id="energyBar"></i></div></div>
+          <div class="metric power" aria-label="Explosividad"><div><span aria-hidden="true">⚡</span><strong id="powerValue">100</strong></div><div class="meter"><i id="powerBar"></i></div></div>
+          <div class="metric nutrition" aria-label="Nutrición"><div><span aria-hidden="true">▰</span><strong id="nutritionValue">100</strong></div><div class="meter"><i id="nutritionBar"></i></div></div>
+          <div class="metric grip" aria-label="Adherencia"><div><span aria-hidden="true">◎</span><strong id="gripValue">100</strong></div><div class="meter"><i id="gripBar"></i></div></div>
+        </div>
+      </div>
+
+      <div class="controls-panel">
+        <div class="control-row control-row-top">
+          <div class="effort-control">
+            <span class="power-title">⚡ RITMO</span>
+            <div class="power-presets" role="group" aria-label="Nivel de potencia">
+              <button type="button" class="power-preset low" data-effort="1" aria-pressed="false"><i aria-hidden="true">♥</i><b>BAJO</b><small>Recupera rápido</small></button>
+              <button type="button" class="power-preset medium active" data-effort="2" aria-pressed="true"><i aria-hidden="true">●</i><b>MEDIO</b><small>Ritmo de grupo</small></button>
+              <button type="button" class="power-preset high" data-effort="4" aria-pressed="false"><i aria-hidden="true">⚡</i><b>ALTO</b><small>Más velocidad</small></button>
+            </div>
+            <div class="power-readout"><strong id="effortName">MEDIO</strong><span id="effortNumber">RECUPERA ENERGÍA</span></div>
+          </div>
+          <div class="action-grid attack-actions">
+            <button id="attackButton" class="action-button attack" aria-label="Atacar"><span class="button-icon">!</span><span>ATAQUE<small>Consume explosividad</small></span></button>
+            <button id="sprintButton" class="action-button sprint" aria-label="Sprint" disabled><span class="button-icon">»</span><span>SPRINT<small>Solo cerca de meta</small></span></button>
+          </div>
+        </div>
+        <div class="control-row control-row-bottom">
+          <div class="action-grid support-actions">
+            <button id="relayButton" class="action-button relay" aria-label="Dar relevos" aria-pressed="false"><span class="button-icon">⇄</span><span><b>RELEVO</b><small id="relayButtonDetail">Busca ciclistas cerca</small></span></button>
+            <button id="gelButton" class="action-button" aria-label="Tomar gel"><span class="button-icon">▰</span><span>GEL<small id="gelButtonDetail">3 disponibles</small></span></button>
+          </div>
+          <div class="risk-panel">
+            <span class="panel-label">◆ TRAZADA</span>
+            <div class="risk-buttons" role="group" aria-label="Nivel de riesgo">
+              <button data-risk="safe" aria-label="Conducción segura"><i>◈</i><span>SEGURA<small>Menos velocidad</small></span></button>
+              <button data-risk="normal" class="active" aria-label="Conducción normal"><i>◆</i><span>NORMAL<small>Equilibrada</small></span></button>
+              <button data-risk="aggressive" aria-label="Conducción agresiva"><i>✦</i><span>AGRESIVA<small>Más riesgo</small></span></button>
+            </div>
+            <div class="race-tip"><span>DIRECTOR</span><p id="directorTip">Mantente a rueda durante el llano y guarda fuerzas para el puerto.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
