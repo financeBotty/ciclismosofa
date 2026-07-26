@@ -4844,6 +4844,10 @@ html.reduced-motion *::after {
 }
 
 @media (max-width: 900px) {
+  .broadcast-header .gap-block {
+    display: none;
+  }
+
   .mobile-view-tabs {
     right: 94px;
     grid-template-columns: repeat(4, minmax(0, 1fr));

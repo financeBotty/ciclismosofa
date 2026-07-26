@@ -43,6 +43,7 @@ static int testResult = 1;
            "before, after: game.cameraMode, mobileView: viewAfterCamera,"
            "groupsVisible, groupsRows, viewAfterGroup,"
            "desktopGroupsDisplay: getComputedStyle(desktopGroups).display,"
+           "gapDisplay: getComputedStyle(document.querySelector('.gap-block')).display,"
            "feedZIndex: getComputedStyle(feed).zIndex,"
            "groupsZIndex: getComputedStyle(desktopGroups).zIndex,"
            "messageText: message && message.textContent,"
@@ -65,7 +66,8 @@ static int testResult = 1;
                 ([result[@"groupsVisible"] boolValue] &&
                  [result[@"groupsRows"] integerValue] > 0 &&
                  [result[@"viewAfterGroup"] isEqual:@"race"] &&
-                 [result[@"desktopGroupsDisplay"] isEqual:@"none"])) &&
+                 [result[@"desktopGroupsDisplay"] isEqual:@"none"] &&
+                 [result[@"gapDisplay"] isEqual:@"none"])) &&
             [result[@"feedZIndex"] integerValue] > [result[@"groupsZIndex"] integerValue] &&
             [result[@"messageText"] isEqual:@"ATAQUE DE PRUEBA"] &&
             [result[@"messageWidth"] doubleValue] > 0 &&
