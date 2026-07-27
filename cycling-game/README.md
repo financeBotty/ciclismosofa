@@ -46,12 +46,12 @@ Un Tour terminado permanece disponible en su slot mediante `Ver Tour`. Abre su c
 
 El ciclista avanza automáticamente. La estrategia se controla con botones visibles y pulsando directamente sobre los rivales:
 
-- **Bajo / Medio / Alto**: cambian directamente la potencia. Bajo recupera más, Medio conserva el pelotón y Alto permite avanzar a costa de energía.
+- **Bajo / Medio / Alto**: cambian directamente la potencia. Bajo recupera energía con cualquier pendiente mientras quede nutrición; Medio pierde energía lentamente en llano o subida y solo recupera en descensos desde `−1,5 %`; Alto consume con claridad y gasta un 15–25 % más al rodar aislado, pero no consume energía cuesta abajo.
 - **Atacar**: consume explosividad y da potencia durante unos segundos.
 - **Sprint**: se habilita en el último kilómetro y antes de una meta volante.
 - **Dar relevos**: forma una rotación con hasta cuatro ciclistas próximos. El juego alterna automáticamente quién tira y quién rueda a rebufo. Los compañeros colaboran sin atacar mientras participan; los rivales pueden romper el acuerdo con un ataque. Un relevo no neutraliza ese ataque: hay que igualar su velocidad con `ALTO`, responder con `ATAQUE` o usar el sprint de respuesta.
 - **Equipo**: en una etapa en línea abre el panel `♟ EQUIPO` y ordena a Solaris protegerte, cazar la fuga, atacar con escaladores y atacante, o guardar fuerzas. La orden modifica directamente el estado táctico y el esfuerzo de tus nueve compañeros. No aparece en contrarreloj.
-- **Buscar rueda**: pulsa directamente sobre el ciclista que quieras seguir. Tu corredor intentará colocarse detrás; vuelve a pulsarlo o usa `Cancelar rueda` para liberar el objetivo.
+- **Buscar rueda**: pulsa directamente sobre el ciclista que quieras seguir. Tu corredor intentará colocarse detrás; vuelve a pulsarlo o toca la propia ficha `RUEDA` para liberar el objetivo.
 - **Comer gel**: recupera nutrición tras un pequeño retraso. Hay tres.
 - **Segura / Normal / Agresiva**: modifica el equilibrio entre velocidad, adherencia y riesgo.
 
@@ -61,7 +61,7 @@ Durante la carrera la cabecera omite el nombre de etapa y el rótulo `LIVE`, ya 
 
 El panel inferior prioriza la lectura visual: muestra únicamente las cuatro barras grandes de energía, explosividad, nutrición y adherencia. La posición y el grupo pasan a la cabecera de carrera, mientras que los antiguos indicadores pequeños de rebufo, riesgo, geles y velocidad desaparecen. Los diez controles se reparten en dos filas de cinco: ritmo, ataque y sprint arriba; relevo, gel y trazada abajo. En escritorio conservan también una explicación breve sin recortes.
 
-Cada cambio táctico produce indicadores flotantes de recursos. Bajar a esfuerzo 1–2 muestra ahorro de energía y recuperación de explosividad; subir a 4–5 avisa del aumento de velocidad y consumo. Ataques, sprint, selección de rueda y geles muestran también sus beneficios o costes. Cuando el gel hace efecto aparecen sus valores reales: `+32 nutrición` y `+5 energía`.
+Cada cambio táctico produce indicadores flotantes de recursos. Bajo y Medio recuperan explosividad, pero únicamente Bajo regenera energía fuera de los descensos. Alto avisa del aumento de velocidad, del consumo creciente y del coste adicional cuando el ciclista está aislado. Ataques, sprint, selección de rueda y geles muestran también sus beneficios o costes. Cuando el gel hace efecto aparecen sus valores reales: `+32 nutrición` y `+5 energía`.
 
 Las capas informativas de carrera son temporales: ningún aviso, ficha contextual, advertencia, panel táctico ni indicador de punto puntuable permanece más de cinco segundos. Los avisos normales duran algo más de tres segundos y los urgentes algo más de cuatro. Después la carretera vuelve a quedar despejada; solo permanecen los controles y los indicadores compactos de acciones que siguen activas.
 
@@ -77,7 +77,7 @@ En la cámara lateral, los corredores utilizan sprites grandes y exagerados: cas
 
 En móvil, el juego utiliza una interfaz táctil propia. En vertical mantiene visibles el HUD, la carretera y los controles en tres franjas sin desplazamiento; en horizontal coloca la carrera a la izquierda y el mando a la derecha. Los botones tienen áreas táctiles amplias, el perfil y los ciclistas se pueden pulsar, y la composición respeta las zonas seguras de teléfonos con notch.
 
-La versión móvil dispone de cuatro pestañas que cambian la información sin detener la carrera: `Ruta` muestra la acción, `Grupos` separa los cortes con líder, tamaño, equipos y diferencias, `Pos.` presenta la clasificación en directo y `Etapa` reúne progreso, distancia, desnivel, puertos, sprints, escenario, clima, tiempo y número de grupos. Un selector `CEN/LAT`, siempre visible y pulsable incluso durante la cuenta atrás, cambia directamente la cámara. Los avisos de ataque y carrera ocupan una franja propia por encima de los grupos para no quedar ocultos.
+La versión móvil dispone de cuatro pestañas que cambian la información sin detener la carrera: `Ruta` muestra la acción, `Grupos` separa los cortes con líder, tamaño, equipos y diferencias, `Pos.` presenta la clasificación en directo y `Etapa` reúne progreso, distancia, desnivel, puertos, sprints, escenario, clima, tiempo y número de grupos. La barra de pestañas permanece por encima de los paneles y cada categoría incluye además un botón `Ruta`, de modo que siempre existen dos formas de volver al simulador. Un selector `CEN/LAT`, siempre visible y pulsable incluso durante la cuenta atrás, cambia directamente la cámara.
 
 El modo `Movimiento reducido` elimina sacudidas de cámara, limita lluvia y salpicaduras y desactiva las transiciones decorativas. Respeta por defecto la preferencia equivalente del sistema operativo. La vibración es opcional, empieza desactivada y solo se ofrece si el navegador implementa esa función.
 
@@ -96,7 +96,7 @@ El mando inferior separa las decisiones en tres bloques iconográficos: `Ritmo` 
 
 Al jugar o simular una etapa, el resultado se abre como una pantalla completa independiente del canvas. `Siguiente etapa` permanece arriba, recibe el foco y vuelve al dashboard con el resultado guardado; la cabecera y los controles del simulador no pueden interceptar la pulsación.
 
-Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra durante menos de cinco segundos su nombre, nacionalidad, rol, equipo y distancia; después la ficha se reduce al indicador `RUEDA`. No existe un botón separado de “buscar rueda”. Con la carrera pausada se puede inspeccionar temporalmente cualquier ciclista. El objetivo queda enmarcado y `Cancelar rueda` o `Volver a ti` devuelve el control al jugador.
+Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra durante menos de cinco segundos su nombre, nacionalidad, rol, equipo y distancia; después la misma ficha se reduce al único indicador `RUEDA`. La ficha es pulsable y cancela el objetivo, por lo que no aparece un segundo botón de rueda. Con la carrera pausada se puede inspeccionar temporalmente cualquier ciclista.
 
 Las últimas rampas de cada puerto y el último kilómetro concentran público pixel-art. Los aficionados cambian la posición de los brazos para animar, utilizan ropa de distintos colores y rodean el arco y la línea de meta.
 
@@ -112,7 +112,7 @@ Las caídas no se deciden con una tirada aislada. Primero se calcula un riesgo a
 
 Los corredores utilizan evitación predictiva de colisiones. Calculan la velocidad de cierre y el tiempo hasta alcanzar al ciclista precedente, buscan el carril con más espacio y frenan cuando están encerrados. Un contacto real separa las bicicletas, reduce la velocidad y la energía y aumenta el riesgo de caída.
 
-Los relevos reúnen al jugador con ciclistas de su mismo grupo que estén a menos de 220 metros y con energía suficiente. Cada turno dura unos cinco segundos: quien pasa al frente rueda en Alto y los demás se ordenan a su rueda. Elegir otra potencia, atacar, esprintar o seleccionar una rueda concreta termina la rotación. Un rival puede aprovechar su turno para atacar; un compañero participante tiene esa acción bloqueada. Mientras haya un ataque rival activo no se puede iniciar otro relevo para cancelarlo. El botón indica `NO FRENA ATAQUE`; el jugador debe alcanzar la velocidad del atacante. Durante esos segundos el sprint queda disponible en cualquier punto de la etapa como respuesta corta.
+Los relevos reúnen al jugador con ciclistas de su mismo grupo que estén a menos de 220 metros y con energía suficiente. Cada turno dura unos cinco segundos: quien pasa al frente rueda en Alto y los demás se ordenan a su rueda. Esa rueda interna no abre la ficha `RUEDA` ni genera avisos en cada rotación; el estado permanece en el botón de Relevo. Elegir otra potencia, atacar, esprintar o seleccionar una rueda concreta termina la rotación. Un rival puede aprovechar su turno para atacar; un compañero participante tiene esa acción bloqueada. Mientras haya un ataque rival activo no se puede iniciar otro relevo para cancelarlo. El botón indica `NO FRENA ATAQUE`; el jugador debe alcanzar la velocidad del atacante.
 
 La clasificación se divide dinámicamente por distancia, tendencia y tamaño del corte. Los bloques pequeños se fusionan con el pelotón más cercano salvo que tengan ventaja real, evitando falsos grupos por pequeños estiramientos. Se muestran como máximo cuatro grupos tácticamente relevantes. El panel y las etiquetas sobre la carretera muestran líder y nacionalidad, integrantes, equipos presentes, diferencia respecto al grupo anterior y tendencia. Cuando el jugador lidera, la cabecera muestra su ventaja sobre el primer grupo perseguidor.
 
@@ -126,7 +126,7 @@ La altimetría utiliza una relación física coherente: un tramo al `1 %` gana e
 
 Los cinco primeros corredores de cada puerto o meta volante reciben puntos. Ganar un punto intermedio concede solo tres segundos de moral: no regenera energía ni explosividad, por lo que disputar todos los sprints tiene un coste real. La IA identifica estos objetivos y adapta sus ataques y sprints; el resultado del jugador aparece en las estadísticas finales.
 
-Una fuga empieza a provocar respuesta táctica desde unos seis segundos de corte, aunque todavía no aparezca como grupo independiente en el mapa. Entre dos y seis equipos organizan la persecución según el perfil, la dificultad y el tamaño de la ventaja. Un líder aislado pierde la protección aerodinámica, rueda algo más lento y consume más energía; hacer relevos permite repartir ese coste.
+Una fuga empieza a provocar respuesta táctica desde unos seis segundos de corte, aunque todavía no aparezca como grupo independiente en el mapa. Entre dos y seis equipos organizan la persecución según el perfil, la dificultad y el tamaño de la ventaja. Cualquier corredor sin rebufo, relevos ni compañía útil en un radio longitudinal de 40 metros comienza a sufrir exposición; esta crece progresivamente hasta 140 metros y aumenta un 15–25 % el consumo de Alto. Hacer relevos elimina esa penalización. La contrarreloj conserva su balance propio y queda excluida.
 
 Todas las etapas en línea lanzan una escapada coordinada durante los primeros kilómetros, pero su momento varía. Antes puede haber un amago que obligue al pelotón a decidir si reacciona. La IA selecciona entre cuatro y siete corredores de equipos distintos, priorizando atacantes y gregarios; un compañero del jugador puede entrar y, tras consolidarse el corte, otro corredor puede intentar enlazar desde el pelotón. Los fugados colaboran mediante relevos hasta consolidar la ventaja. Si el grupo es neutralizado demasiado pronto puede producirse un segundo movimiento. La ventaja no está garantizada hasta meta: los equipos sin representación organizan la persecución y los fugados acumulan fatiga. Las contrarrelojes quedan excluidas porque sus salidas son individuales.
 
@@ -149,6 +149,7 @@ Las tablas de puntuación son:
 - `tests/quick-race-smoke.jxa`: valida las cuatro familias de carrera rápida, la etapa independiente y el pelotón de 100 ciclistas.
 - `tests/simulation-flow-smoke.m`: reproduce en WebKit el flujo Simular etapa → resultado → Siguiente etapa y comprueba que ninguna capa intercepta el botón.
 - `tests/phase3-smoke.jxa`: valida las cuatro órdenes de equipo, ataques, bloqueo de relevos durante un ataque rival, sprint de respuesta, tutorial, movimiento reducido y vibración.
+- `tests/energy-rules-smoke.jxa`: comprueba recuperación de Bajo en subida, pérdida lenta de Medio en llano, recuperación de Medio en descenso, Alto gratuito cuesta abajo y penalización por aislamiento.
 - `manifest.webmanifest`, `service-worker.js` y `assets/icon.svg`: instalación y caché offline del juego.
 - `assets/`: icono instalable y espacio para futuros paquetes audiovisuales; la carrera actual se dibuja en Canvas y sintetiza el sonido en el navegador.
 

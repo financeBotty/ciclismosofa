@@ -66,6 +66,8 @@ const SAVE_VERSION = 1;
 const POPUP_MAX_MS = 4800;
 const NOTICE_MS = 3200;
 const URGENT_NOTICE_MS = 4200;
+const RECOVERY_DESCENT_GRADIENT = -1.5;
+const ISOLATION_HIGH_EFFORT_LOAD = 0.2;
 const STAGE_POINTS = [50, 30, 20, 15, 12, 10, 8, 6, 4, 2];
 const PLAYER_PROFILES = {
   allrounder: {
@@ -94,7 +96,7 @@ const TEAM_ORDERS = {
 const TUTORIAL_STEPS = [
   {
     icon: "♥", title: "CONTROLA EL ESFUERZO",
-    text: "Bajo recupera más energía; Medio conserva la posición; Alto permite avanzar, pero consume tus reservas."
+    text: "Bajo recupera energía; Medio solo recupera bajando; Alto no gasta en descenso, pero consume más si ruedas aislado."
   },
   {
     icon: "◎", title: "ELIGE UNA RUEDA",
@@ -912,7 +914,7 @@ class Cyclist {
     const sprintBonus = this.sprinting && this.explosive > 0 ? (7.2 + this.sprint * 0.05) * this.sprintMultiplier : 0;
     const draftingBonus = this.draft * 0.035;
     const moraleBonus = this.moraleTimer > 0 ? 0.45 : 0;
-    const leaderExposure = context.race?.leaderExposureFor(this) || 0;
+    const isolationExposure = context.race?.isolationExposureFor(this) || 0;
     const teamworkBonus = this.teamworkBonus || 0;
     const roleTerrainBonus = this.role === "sprinter" && road.stageProfile === "flat" && remaining < 10
       ? 3.8
@@ -925,7 +927,7 @@ class Cyclist {
     const weatherPenalty = weather.intensity * (1.2 + Math.abs(road.curvatureAt(this.distance)));
     const energyFactor = 0.62 + this.energy * 0.0038;
     this.targetSpeed = clamp(
-      (37 + (this.balanceBonus || 0) + effortBonus + attackBonus + sprintBonus + draftingBonus + riskBonus + moraleBonus + teamworkBonus + (this.breakawayBonus || 0) + (this.conditionBonus || 0) + (this.relayBonus || 0) + roleTerrainBonus - climbPenalty - fatiguePenalty - nutritionPenalty - weatherPenalty - leaderExposure * 0.9 - this.avoidanceBrake) * energyFactor,
+      (37 + (this.balanceBonus || 0) + effortBonus + attackBonus + sprintBonus + draftingBonus + riskBonus + moraleBonus + teamworkBonus + (this.breakawayBonus || 0) + (this.conditionBonus || 0) + (this.relayBonus || 0) + roleTerrainBonus - climbPenalty - fatiguePenalty - nutritionPenalty - weatherPenalty - isolationExposure * 0.9 - this.avoidanceBrake) * energyFactor,
       10, 76
     );
     if (this.crashTimer > 0) {
@@ -950,15 +952,19 @@ class Cyclist {
     const nutritionLoad = this.nutrition < 28 ? 0.22 : 0;
     const enduranceFactor = clamp(1.18 - (this.endurance || 70) * 0.0045, 0.78, 0.9);
     const progressiveHighLoad = this.effort >= 4 ? clamp((this.highEffortTime - 10) * 0.018, 0, 0.38) : 0;
-    const exposureLoad = leaderExposure * 0.14;
+    const descending = gradient <= RECOVERY_DESCENT_GRADIENT;
+    const exposureLoad = this.effort >= 4 && !descending
+      ? isolationExposure * ISOLATION_HIGH_EFFORT_LOAD
+      : 0;
     const energyRate = Math.max(0.02, (effortLoad + climbLoad + aggressionLoad + rainLoad + nutritionLoad + progressiveHighLoad + exposureLoad - draftSaving) * enduranceFactor);
     const canRecover = this.recoversEnergy && this.attacking <= 0 && !this.sprinting && this.crashTimer <= 0;
     const nutritionFactor = clamp((this.nutrition - 18) / 55, 0, 1);
-    const climbRecoveryFactor = clamp(1 - Math.max(0, gradient - 2.5) / 3.5, 0, 1);
     const recoveryRate = canRecover && this.effort === 1
-      ? 0.17 * nutritionFactor * climbRecoveryFactor
-      : canRecover && this.effort === 2 ? 0.078 * nutritionFactor * climbRecoveryFactor : 0;
-    const energyChange = recoveryRate - energyRate * 0.21;
+      ? 0.17 * nutritionFactor
+      : canRecover && this.effort === 2 && descending ? 0.078 * nutritionFactor : 0;
+    // En descenso, rodar en Alto no añade coste energético. Ataque y sprint
+    // siguen pagando su coste específico en explosividad.
+    const energyChange = this.effort >= 4 && descending ? 0 : recoveryRate - energyRate * 0.21;
     this.energy = clamp(this.energy + energyChange * dt, 0, 100);
     this.fatigue = clamp(this.fatigue + energyRate * dt * 0.12 - (this.effort === 1 ? dt * 0.065 : this.effort === 2 ? dt * 0.028 : 0), 0, 100);
     this.nutrition = clamp(this.nutrition - dt * (0.075 + this.effort * 0.008), 0, 100);
@@ -1922,13 +1928,6 @@ class Race {
     this.relay.turnTimer = 4.8;
     if (this.relay.leader === this.player) {
       this.player.relayTurns += 1;
-      if (!this.simulationOnly) {
-        this.game.showResourceFeedback([{ icon: "⇄", text: "TU TURNO DE RELEVO", type: "power" }]);
-        this.game.notify("Tu turno: pasa al frente y mantén el ritmo.");
-      }
-    } else if (!this.simulationOnly) {
-      const relation = this.relay.leader.team === this.player.team ? "compañero" : "rival";
-      this.game.notify(`${this.relay.leader.flag || ""} ${this.relay.leader.name} (${relation}) toma el relevo.`);
     }
   }
 
@@ -2062,13 +2061,20 @@ class Race {
     return this.ranking.indexOf(cyclist) + 1;
   }
 
+  isolationExposureFor(cyclist) {
+    if (!cyclist || cyclist.finished || this.timeTrial || cyclist.draft >= 12 || this.isRelayParticipant(cyclist)) return 0;
+    const nearby = this.proximityCache.get(cyclist) || [];
+    const nearestDistance = nearby.reduce((nearest, rider) =>
+      rider.finished ? nearest : Math.min(nearest, Math.abs(rider.distance - cyclist.distance)), Infinity);
+    // Hasta 40 m se considera que hay compañía útil. Entre 40 y 140 m la
+    // exposición crece gradualmente para evitar saltos bruscos de consumo.
+    return Number.isFinite(nearestDistance)
+      ? clamp((nearestDistance - 0.04) / 0.1, 0, 1)
+      : 1;
+  }
+
   leaderExposureFor(cyclist) {
-    if (!cyclist || cyclist.finished || this.ranking[0] !== cyclist) return 0;
-    const second = this.ranking.find((rider) => rider !== cyclist && !rider.finished);
-    if (!second) return 0;
-    const referenceSpeed = Math.max(22, (cyclist.speed + second.speed) / 2);
-    const gapSeconds = Math.max(0, cyclist.distance - second.distance) / referenceSpeed * 3600;
-    return clamp((gapSeconds - 2) / 6, 0, 1);
+    return this.isolationExposureFor(cyclist);
   }
 
   sprintWindowFor(rider) {
@@ -2596,6 +2602,9 @@ class HUD {
       const button = event.target.closest("[data-mobile-view]");
       if (button) this.setMobileView(button.dataset.mobileView);
     });
+    document.querySelectorAll("[data-return-to-race]").forEach((button) => {
+      button.addEventListener("click", () => this.setMobileView("race"));
+    });
     this.elements.mobileGroupsList.addEventListener("click", (event) => {
       const row = event.target.closest("[data-group-index]");
       if (!row) return;
@@ -2611,9 +2620,15 @@ class HUD {
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", String(active));
     });
-    this.elements.mobileGroupsPanel.classList.toggle("is-hidden", this.mobileView !== "groups");
-    this.elements.mobileClassificationPanel.classList.toggle("is-hidden", this.mobileView !== "classification");
-    this.elements.mobileStagePanel.classList.toggle("is-hidden", this.mobileView !== "stage");
+    [
+      [this.elements.mobileGroupsPanel, "groups"],
+      [this.elements.mobileClassificationPanel, "classification"],
+      [this.elements.mobileStagePanel, "stage"]
+    ].forEach(([panel, panelView]) => {
+      const hidden = this.mobileView !== panelView;
+      panel.classList.toggle("is-hidden", hidden);
+      panel.setAttribute("aria-hidden", String(hidden));
+    });
     const teamButton = document.getElementById("teamOrderButton");
     if (teamButton && window.innerWidth <= 900) {
       teamButton.classList.toggle("is-hidden", this.mobileView !== "race" || Boolean(this.game.race?.timeTrial));
@@ -2760,34 +2775,38 @@ class HUD {
       player.grip > 72 && race.weather.intensity < 0.25 && player.riskAccumulator < 1
     );
     const nutritionFactor = clamp((player.nutrition - 18) / 55, 0, 1);
-    const climbRecoveryFactor = clamp(1 - Math.max(0, gradient - 2.5) / 3.5, 0, 1);
-    const canRecover = nutritionFactor > 0.08 && climbRecoveryFactor > 0.08 && player.attacking <= 0 && !player.sprinting;
+    const descending = gradient <= RECOVERY_DESCENT_GRADIENT;
+    const canRecover = nutritionFactor > 0.08 && player.attacking <= 0 && !player.sprinting;
     const enduranceFactor = clamp(1.18 - (player.endurance || 70) * 0.0045, 0.78, 0.9);
     const commonLoad = Math.max(0, gradient) * 0.035 +
       (player.riskMode === "aggressive" ? 0.08 : 0) + race.weather.intensity * 0.06 +
-      (player.nutrition < 28 ? 0.22 : 0) + race.leaderExposureFor(player) * 0.14 -
-      player.draft * 0.0042;
+      (player.nutrition < 28 ? 0.22 : 0) - player.draft * 0.0042;
     const estimatedEnergy = (effort) => {
       const effortLoad = effort === 1 ? 0.08 : effort === 2 ? 0.22 : 0.76;
       const progressive = effort === 4 ? clamp((player.highEffortTime - 10) * 0.018, 0, 0.38) : 0;
-      const drain = Math.max(0.02, (effortLoad + commonLoad + progressive) * enduranceFactor) * 0.21;
+      const isolationLoad = effort >= 4 && !descending
+        ? race.isolationExposureFor(player) * ISOLATION_HIGH_EFFORT_LOAD
+        : 0;
+      const drain = Math.max(0.02, (effortLoad + commonLoad + progressive + isolationLoad) * enduranceFactor) * 0.21;
       const recovery = canRecover && effort === 1
-        ? 0.17 * nutritionFactor * climbRecoveryFactor
-        : canRecover && effort === 2 ? 0.078 * nutritionFactor * climbRecoveryFactor : 0;
-      return recovery - drain;
+        ? 0.17 * nutritionFactor
+        : canRecover && effort === 2 && descending ? 0.078 * nutritionFactor : 0;
+      return effort >= 4 && descending ? 0 : recovery - drain;
     };
     const signedRate = (value) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}`;
     const effortName = player.effort <= 1 ? "BAJO" : player.effort <= 2 ? "MEDIO" : "ALTO";
     const effortDescription = player.effort <= 1
-      ? (canRecover ? "Recuperación rápida" : "Sin recuperación")
+      ? (canRecover ? "Recupera en cualquier terreno" : "Sin recuperación")
       : player.effort <= 2
-        ? (canRecover ? "Ritmo de grupo y recuperación" : "Ritmo de grupo")
-        : player.highEffortTime > 10 ? "Consumo de energía creciente" : "Consume energía";
+        ? (canRecover && descending ? "Recupera en descenso" : "Consumo muy lento")
+        : descending ? "Sin consumo energético en descenso"
+          : race.isolationExposureFor(player) > 0.05 ? "Consume más por ir aislado"
+            : player.highEffortTime > 10 ? "Consumo de energía creciente" : "Consume energía";
     const effortEffect = player.effort <= 1
       ? (canRecover ? "♥ ↑↑" : "♥ —")
       : player.effort <= 2
-        ? (canRecover ? "♥ ↑" : "●")
-        : player.highEffortTime > 10 ? "♥ ↓↓" : "♥ ↓";
+        ? (canRecover && descending ? "♥ ↑" : "♥ ↓")
+        : descending ? "♥ —" : player.highEffortTime > 10 ? "♥ ↓↓" : "♥ ↓";
     this.elements.effortName.textContent = effortName;
     this.elements.effortNumber.textContent = effortEffect;
     this.elements.effortNumber.title = effortDescription;
@@ -2994,7 +3013,12 @@ class HUD {
   }
 
   updateFollowedRider(race) {
-    const wheelTarget = race.player.wheelTarget;
+    // Los relevos usan wheelTarget internamente para ordenar la fila. Esa
+    // referencia no debe abrir/cerrar la ficha de la rueda elegida por el
+    // jugador en cada cambio de turno.
+    const relayWheel = race.player.relayWheelTarget &&
+      race.player.wheelTarget === race.player.relayWheelTarget;
+    const wheelTarget = relayWheel ? null : race.player.wheelTarget;
     const inspectedRider = this.game.cameraInspection?.type === "rider" ? this.game.cameraInspection.rider : null;
     const rider = wheelTarget || inspectedRider;
     const mode = wheelTarget ? "wheel" : inspectedRider ? "follow" : "";
@@ -3018,6 +3042,10 @@ class HUD {
       this.elements.followModeLabel.textContent = wheelTarget ? "◎ RUEDA" : "⌖ SIGUIENDO";
       this.elements.followRiderName.textContent = `${rider.flag || ""} ${rider.name}`;
       this.elements.followCard.style.borderLeftColor = rider.jerseyColor || rider.color;
+      this.elements.followCard.setAttribute(
+        "aria-label",
+        wheelTarget ? `Cancelar rueda de ${rider.name}` : `Volver a tu ciclista desde ${rider.name}`
+      );
     }
     const wheelCompact = Boolean(wheelTarget) && now >= this.followCardCompactAt;
     this.elements.followCard.classList.toggle("wheel-compact", wheelCompact);
@@ -3046,8 +3074,10 @@ class HUD {
           : "El rival está colaborando, pero puede romper el relevo con un ataque.";
     }
     if (remaining <= 1) return "Elige bien el momento: un sprint demasiado largo vaciará tu explosividad.";
-    if (this.game.race?.leaderExposureFor(player) > 0.55) {
-      return "Vas solo y gastas más contra el viento. Busca relevos o el pelotón organizará la caza.";
+    if (this.game.race?.isolationExposureFor(player) > 0.55) {
+      return player.effort >= 4 && gradient > RECOVERY_DESCENT_GRADIENT
+        ? "Ritmo Alto en solitario: gastas más energía. Busca compañía o relevos."
+        : "Vas aislado: usar Alto fuera de un descenso añadirá consumo energético.";
     }
     if (player.avoiding) return "Tráfico delante: el ciclista está buscando hueco o igualando la velocidad.";
     if (player.nutrition < 35 && player.gels > 0) return "La nutrición está baja. Toma un gel antes del puerto.";
@@ -3226,6 +3256,10 @@ class Game {
     document.getElementById("undoSimulationButton").addEventListener("click", () => this.undoSimulation());
     document.getElementById("newRaceButton").addEventListener("click", () => this.showMenu());
     document.getElementById("returnCameraButton").addEventListener("click", () => this.returnCameraToPlayer(true));
+    document.getElementById("followCard").addEventListener("click", () => {
+      if (this.race?.player.wheelTarget && !this.race.player.relayWheelTarget) this.cancelWheelTarget();
+      else if (this.cameraInspection) this.returnCameraToPlayer();
+    });
     document.querySelectorAll("[data-camera-mode]").forEach((button) => {
       button.addEventListener("click", () => this.setCameraMode(button.dataset.cameraMode));
     });
@@ -3328,7 +3362,6 @@ class Game {
           { icon: "◎", text: `${teammates} EQUIPO · ${rivals} RIVALES`, type: "power" }
         ]);
         this.audio.play("power");
-        this.notify(`Relevos con ${partners.length} ciclistas. Los rivales pueden atacar; tus compañeros no.`);
       } else if (this.race.relay.blockedByAttack) {
         const attacker = this.race.relay.blockedByAttack;
         this.notify(
@@ -3478,6 +3511,9 @@ class Game {
     player.responseSprintTimer = 0;
     player.attacking = 0;
     player.attackMultiplier = 1;
+    const gradient = this.race.road.getGradient(player.distance);
+    const descending = gradient <= RECOVERY_DESCENT_GRADIENT;
+    const isolated = this.race.isolationExposureFor(player) > 0.05;
     if (player.effort === 1) {
       this.showResourceFeedback([
         { icon: "♥", text: "RITMO BAJO", type: "positive" },
@@ -3485,7 +3521,9 @@ class Game {
       ]);
     } else if (player.effort === 2) {
       this.showResourceFeedback([
-        { icon: "♥", text: "ENERGÍA +", type: "positive" },
+        descending
+          ? { icon: "♥", text: "RECUPERA EN DESCENSO", type: "positive" }
+          : { icon: "♥", text: "ENERGÍA ↓ LENTO", type: "negative" },
         { icon: "◆", text: "RITMO MEDIO", type: "power" }
       ]);
     } else {
@@ -3493,7 +3531,11 @@ class Game {
         { icon: "⚡", text: "RITMO ALTO", type: "power" },
         attackThreat
           ? { icon: "⇧", text: "IGUALA EL ATAQUE", type: "power" }
-          : { icon: "♥", text: "CONSUME ENERGÍA", type: "negative" }
+          : descending
+            ? { icon: "♥", text: "SIN GASTO EN DESCENSO", type: "positive" }
+            : isolated
+              ? { icon: "♥", text: "GASTO EXTRA · AISLADO", type: "negative" }
+              : { icon: "♥", text: "CONSUME ENERGÍA", type: "negative" }
       ]);
       if (attackThreat) {
         this.notify(
@@ -4634,9 +4676,9 @@ class Game {
     player.seekingWheel = true;
     this.cameraInspection = null;
     const cancelButton = document.getElementById("returnCameraButton");
-    cancelButton.textContent = "× RUEDA";
-    cancelButton.setAttribute("aria-label", "Cancelar rueda");
-    cancelButton.classList.remove("is-hidden");
+    cancelButton.textContent = "⌖ TÚ";
+    cancelButton.setAttribute("aria-label", "Volver a tu ciclista");
+    cancelButton.classList.add("is-hidden");
     this.hud.update();
   }
 

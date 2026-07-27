@@ -1,0 +1,90 @@
+ObjC.import("Foundation");
+
+const projectPath = "/Users/mmp/Ciclismosofa/cycling-game/game.js";
+const sourceString = $.NSString.stringWithContentsOfFileEncodingError(
+  projectPath,
+  $.NSUTF8StringEncoding,
+  null
+);
+if (!sourceString) throw new Error("No se pudo leer game.js");
+
+const source = ObjC.unwrap(sourceString).replace(
+  /\nwindow\.CiclimoTourRace[\s\S]*$/,
+  ""
+);
+
+const tests = String.raw`
+const energyAssert = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+
+globalThis.window = { innerWidth: 1280 };
+globalThis.performance = { now: () => Date.now() };
+globalThis.document = {
+  getElementById: () => ({
+    value: "",
+    textContent: "",
+    classList: { add() {}, remove() {}, toggle() {} },
+    setAttribute() {},
+    querySelector: () => ({ textContent: "" })
+  })
+};
+
+const riderData = {
+  name: "Prueba", nationality: "ES", flag: "🇪🇸",
+  team: "Solaris", color: "#ffcc33", role: "leader", roleLabel: "LÍDER",
+  climbing: 82, sprint: 83, endurance: 85, technique: 82,
+  aggression: 78, intelligence: 86
+};
+
+const simulateEnergy = (effort, gradient, isolated, seconds = 20) => {
+  const rider = new PlayerCyclist(riderData);
+  rider.energy = 50;
+  rider.explosive = 50;
+  rider.nutrition = 100;
+  rider.effort = effort;
+  const context = {
+    simulationScale: 0,
+    weather: { intensity: 0 },
+    road: {
+      lengthKm: 100,
+      stageProfile: "flat",
+      getGradient: () => gradient,
+      curvatureAt: () => 0
+    },
+    race: {
+      isolationExposureFor: () => isolated,
+      leaderExposureFor: () => isolated
+    }
+  };
+  for (let second = 0; second < seconds; second += 1) rider.updateCommon(1, context);
+  return { energy: rider.energy, explosive: rider.explosive };
+};
+
+const lowUphill = simulateEnergy(1, 7, 1);
+const mediumFlat = simulateEnergy(2, 0, 0);
+const mediumDownhill = simulateEnergy(2, -3, 1);
+const highDownhill = simulateEnergy(4, -3, 1);
+const highProtected = simulateEnergy(4, 0, 0);
+const highIsolated = simulateEnergy(4, 0, 1);
+
+energyAssert(lowUphill.energy > 50, "Bajo no recuperó energía en subida");
+energyAssert(mediumFlat.energy < 50, "Medio recuperó energía en llano");
+energyAssert(mediumDownhill.energy > 50, "Medio no recuperó energía en descenso");
+energyAssert(Math.abs(highDownhill.energy - 50) < 0.0001, "Alto consumió energía en descenso");
+energyAssert(highIsolated.energy < highProtected.energy,
+  "El aislamiento no aumentó el consumo en Alto");
+energyAssert(lowUphill.explosive > 50 && mediumFlat.explosive > 50,
+  "Bajo y Medio no recuperaron explosividad");
+
+JSON.stringify({
+  lowUphill,
+  mediumFlat,
+  mediumDownhill,
+  highDownhill,
+  highProtected,
+  highIsolated
+});
+`;
+
+eval(source + "\n" + tests);
