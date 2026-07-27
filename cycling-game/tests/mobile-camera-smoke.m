@@ -22,6 +22,12 @@ static int testResult = 1;
          "game.race.player.relayWheelTarget = null;"
          "game.hud.update();"
          "const singleWheelIndicator = !followCard.classList.contains('is-hidden') && returnButton.classList.contains('is-hidden');"
+         "const wheelRect = followCard.getBoundingClientRect();"
+         "const wheelIndicatorCompact = followCard.classList.contains('wheel-compact') && wheelRect.height <= 30 && wheelRect.width <= 100;"
+         "const wheelNoAge = !followCard.textContent.toLowerCase().includes('años');"
+         "game.hud.followCardUntil = performance.now() - 1;"
+         "game.hud.update();"
+         "const wheelIndicatorExpires = followCard.classList.contains('is-hidden');"
          "followCard.click();"
          "const wheelCancelledFromCard = !game.race.player.wheelTarget;"
          "game.race.player.wheelTarget = wheelTarget;"
@@ -40,8 +46,16 @@ static int testResult = 1;
          "routeButton.click();"
          "const viewAfterRoute = game.hud.mobileView;"
          "game.hud.setMobileView('classification');"
-         "document.querySelector('#mobileClassificationPanel [data-return-to-race]').click();"
+         "routeButton.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));"
+         "const viewAfterPointerRoute = game.hud.mobileView;"
+         "game.hud.setMobileView('classification');"
+         "const panelReturn = document.querySelector('#mobileClassificationPanel [data-return-to-race]');"
+         "panelReturn.click();"
          "const viewAfterPanelReturn = game.hud.mobileView;"
+         "game.hud.setMobileView('classification');"
+         "panelReturn.dispatchEvent(new Event('touchend', { bubbles: true, cancelable: true }));"
+         "const viewAfterTouchReturn = game.hud.mobileView;"
+         "const panelsHiddenAfterTouch = [...document.querySelectorAll('.mobile-view-panel')].every((panel) => panel.classList.contains('is-hidden'));"
          "game.hud.setMobileView('classification');"
          "const rect = switcher.getBoundingClientRect();"
          "const buttonRect = button.getBoundingClientRect();"
@@ -66,8 +80,9 @@ static int testResult = 1;
          "const message = feed.querySelector('.event-message');"
          "return {"
            "before, after: game.cameraMode, mobileView: viewAfterCamera,"
-           "singleWheelIndicator, wheelCancelledFromCard, relayWheelHidden,"
-           "viewAfterRoute, viewAfterPanelReturn, routeHitView: routeHit && routeHit.closest('[data-mobile-view]') && routeHit.closest('[data-mobile-view]').dataset.mobileView,"
+           "singleWheelIndicator, wheelIndicatorCompact, wheelNoAge, wheelIndicatorExpires, wheelCancelledFromCard, relayWheelHidden,"
+           "viewAfterRoute, viewAfterPointerRoute, viewAfterPanelReturn, viewAfterTouchReturn, panelsHiddenAfterTouch,"
+           "routeHitView: routeHit && routeHit.closest('[data-mobile-view]') && routeHit.closest('[data-mobile-view]').dataset.mobileView,"
            "groupsVisible, groupsRows, viewAfterGroup,"
            "desktopGroupsDisplay: getComputedStyle(desktopGroups).display,"
            "gapDisplay: getComputedStyle(document.querySelector('.gap-block')).display,"
@@ -91,6 +106,9 @@ static int testResult = 1;
             [result isKindOfClass:NSDictionary.class] &&
             ![result[@"before"] isEqual:result[@"after"]] &&
             [result[@"singleWheelIndicator"] boolValue] &&
+            [result[@"wheelIndicatorCompact"] boolValue] &&
+            [result[@"wheelNoAge"] boolValue] &&
+            [result[@"wheelIndicatorExpires"] boolValue] &&
             [result[@"wheelCancelledFromCard"] boolValue] &&
             [result[@"relayWheelHidden"] boolValue] &&
             [result[@"brandDisplay"] isEqual:@"none"] &&
@@ -98,7 +116,10 @@ static int testResult = 1;
                 [result[@"mobileView"] isEqual:@"race"]) &&
             ([result[@"viewportWidth"] doubleValue] > 900 ||
                 ([result[@"viewAfterRoute"] isEqual:@"race"] &&
+                 [result[@"viewAfterPointerRoute"] isEqual:@"race"] &&
                  [result[@"viewAfterPanelReturn"] isEqual:@"race"] &&
+                 [result[@"viewAfterTouchReturn"] isEqual:@"race"] &&
+                 [result[@"panelsHiddenAfterTouch"] boolValue] &&
                  [result[@"routeHitView"] isEqual:@"race"])) &&
             ([result[@"viewportWidth"] doubleValue] <= 900 ||
                 [result[@"actionDetailDisplay"] isEqual:@"none"]) &&
@@ -137,6 +158,12 @@ static int testResult = 1;
              "const game = window.ciclimoTourGame;"
              "document.getElementById('countdownOverlay').className = 'countdown-overlay';"
              "game.state = 'PAUSED';"
+             "const visualClimb = game.race.road.mountains[0];"
+             "game.cameraFocusKm = visualClimb"
+               " ? Math.max(0, visualClimb.km - 0.35)"
+               " : Math.max(0, game.race.road.lengthKm - 0.22);"
+             "game.race.player.distance = game.cameraFocusKm;"
+             "game.render();"
              "if (innerWidth <= 900) game.hud.setMobileView('groups');"
              "game.notify('¡ATAQUE! EL PELOTÓN REACCIONA', 'urgent');"
              "return true;"

@@ -42,6 +42,8 @@ visualGame.cameraFocusKm = 50;
 visualGame.race = { road: { elevationAt: (km) => 500 + (km - 50) * 80 } };
 const visualRise = visualGame.sideSurfaceY(50) - visualGame.sideSurfaceY(51);
 assertMountain(visualRise >= 60, "La pendiente lateral no se aprecia suficientemente");
+const visualRoadAngle = visualGame.sideRoadAngleAt(50, 800);
+assertMountain(visualRoadAngle < -0.04, "La bicicleta lateral no acompaña el ángulo de subida");
 
 const riderData = {
   name: "Test", team: "Solaris", color: "#ffcc33", role: "leader",
@@ -68,6 +70,7 @@ JSON.stringify({
   longest: Number(Math.max(...climbs.map((climb) => climb.lengthKm)).toFixed(2)),
   steepest: Number(Math.max(...climbs.map((climb) => climb.averageGradient)).toFixed(2)),
   visualRise: Number(visualRise.toFixed(1)),
+  visualRoadAngle: Number(visualRoadAngle.toFixed(3)),
   speedLossAt8Percent: Number(speedLoss.toFixed(1))
 });
 `;

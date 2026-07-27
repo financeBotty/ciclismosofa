@@ -204,12 +204,69 @@ phase3Assert(phase3Attacker.attacking > 0,
     cooldown: phase3Attacker.attackCooldown
   }));
 phase3Game.setTeamOrder("protect");
+const phase3ProtectionPuller = playerTeam.plan.pullers[0];
+phase3Assert(phase3ProtectionPuller, "PROTEGER no asignó ningún gregario");
+phase3Player.distance = 20;
+phase3Player.lateral = 0;
+phase3Player.targetLateral = 0;
+phase3Player.effort = 2;
+phase3ProtectionPuller.distance = 19.94;
+phase3ProtectionPuller.lateral = 0;
+phase3ProtectionPuller.targetWheel = phase3Player;
+phase3Game.race.applyTeamProtectionInstruction(phase3ProtectionPuller);
+phase3Assert(
+  phase3ProtectionPuller.protectionPuller &&
+  phase3ProtectionPuller.targetWheel === null &&
+  phase3ProtectionPuller.effort === 5 &&
+  phase3ProtectionPuller.sacrificing,
+  "El gregario no pasó delante para proteger al líder"
+);
+playerTeam.plan.pullers.forEach((rider, index) => {
+  rider.distance = phase3Player.distance - 0.045 - index * 0.018;
+  rider.energy = 82;
+  rider.explosive = 80;
+  rider.decisionTimer = 0;
+});
+for (let tick = 0; tick < 240; tick += 1) phase3Game.race.update(0.05);
+const integratedProtectors = playerTeam.plan.pullers.filter((rider) => {
+  const gap = rider.distance - phase3Player.distance;
+  return gap > 0.006 && gap < 0.12;
+});
+phase3Assert(integratedProtectors.length >= 1,
+  "Los gregarios no consiguieron pasar y mantener una rueda delante durante la carrera");
+phase3ProtectionPuller.distance = 20.03;
+phase3Player.distance = 20;
+phase3ProtectionPuller.lateral = 0;
+phase3Game.race.applyTeamProtectionInstruction(phase3ProtectionPuller);
+phase3Game.race.updatePlayerTeamProtection();
+phase3Assert(phase3Player.teamProtection > 0.2 && phase3Game.race.activePlayerProtectors >= 1,
+  "El gregario colocado delante no redujo el desgaste del líder");
+
+phase3Player.energy = 80;
+phase3ProtectionPuller.energy = 80;
+phase3Player.draft = 0;
+phase3ProtectionPuller.draft = 0;
+const protectionContext = {
+  road: {
+    lengthKm: 180, stageProfile: "flat",
+    getGradient: () => 0, curvatureAt: () => 0
+  },
+  weather: { intensity: 0 },
+  simulationScale: 0,
+  race: { isolationExposureFor: () => 0 }
+};
+phase3ProtectionPuller.updateCommon(2, protectionContext);
+phase3Player.updateCommon(2, protectionContext);
+phase3Assert(phase3ProtectionPuller.energy < phase3Player.energy - 0.1,
+  "El gregario no asumió más desgaste que el líder protegido");
 
 phase3Game.reducedMotion = true;
 phase3Game.applyAccessibilityPreferences();
 phase3Assert(phase3Classes.has("reduced-motion"), "No se aplicó movimiento reducido");
+phase3Game.lastHapticAt = -1000;
+const phase3VibrationsBeforeCheck = phase3Vibrations;
 phase3Game.haptic(20);
-phase3Assert(phase3Vibrations === 1, "La vibración activada no respondió");
+phase3Assert(phase3Vibrations === phase3VibrationsBeforeCheck + 1, "La vibración activada no respondió");
 
 let phase3Countdowns = 0;
 phase3Game.runCountdown = () => { phase3Countdowns += 1; };
@@ -223,6 +280,9 @@ phase3Assert(phase3Countdowns === 1, "La cuenta atrás no arrancó después del 
 JSON.stringify({
   teamOrders: phase3Game.race.playerTeamOrderChanges,
   finalTeamState: playerTeam.plan.state,
+  activeProtectors: phase3Game.race.activePlayerProtectors,
+  protectedEnergy: Number(phase3Player.energy.toFixed(2)),
+  pullerEnergy: Number(phase3ProtectionPuller.energy.toFixed(2)),
   reducedMotion: phase3Game.reducedMotion,
   vibrations: phase3Vibrations,
   relayBlockedAttack: true,

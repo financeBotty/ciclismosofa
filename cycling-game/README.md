@@ -52,8 +52,8 @@ El ciclista avanza automáticamente. La estrategia se controla con botones visib
 - **Atacar**: consume explosividad y da potencia durante unos segundos.
 - **Sprint**: se habilita en el último kilómetro y antes de una meta volante.
 - **Dar relevos**: forma una rotación con hasta cuatro ciclistas próximos. El juego alterna automáticamente quién tira y quién rueda a rebufo. Los compañeros colaboran sin atacar mientras participan; los rivales pueden romper el acuerdo con un ataque. Un relevo no neutraliza ese ataque: hay que igualar su velocidad con `ALTO`, responder con `ATAQUE` o usar el sprint de respuesta.
-- **Equipo**: en una etapa en línea abre el panel `♟ EQUIPO` y ordena al club elegido protegerte, cazar la fuga, atacar con escaladores y atacante, o guardar fuerzas. La orden modifica directamente el estado táctico y el esfuerzo de tus nueve compañeros. No aparece en contrarreloj.
-- **Buscar rueda**: pulsa directamente sobre el ciclista que quieras seguir. Tu corredor intentará colocarse detrás; vuelve a pulsarlo o toca la propia ficha `RUEDA` para liberar el objetivo.
+- **Equipo**: en una etapa en línea abre el panel `♟ EQUIPO` y ordena al club elegido protegerte, cazar la fuga, atacar con escaladores y atacante, o guardar fuerzas. Con `PROTEGER`, hasta tres gregarios regresan a tu posición, te adelantan y mantienen una línea corta delante: su rebufo reduce tu consumo de energía mientras ellos ruedan a mayor esfuerzo y acumulan más cansancio. El botón indica cuántos están tirando. No aparece en contrarreloj.
+- **Buscar rueda**: pulsa directamente sobre el ciclista que quieras seguir. Tu corredor intentará colocarse detrás; vuelve a pulsarlo para liberar el objetivo. Al engancharse aparece brevemente una única señal compacta `RUEDA`.
 - **Comer gel**: recupera nutrición tras un pequeño retraso. Hay tres.
 - **Segura / Normal / Agresiva**: modifica el equilibrio entre velocidad, adherencia y riesgo.
 
@@ -98,9 +98,11 @@ El mando inferior separa las decisiones en tres bloques iconográficos: `Ritmo` 
 
 Al jugar o simular una etapa, el resultado se abre como una pantalla completa independiente del canvas. `Siguiente etapa` permanece arriba, recibe el foco y vuelve al dashboard con el resultado guardado; la cabecera y los controles del simulador no pueden interceptar la pulsación.
 
-Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra durante menos de cinco segundos su nombre, nacionalidad, rol, equipo y distancia; después la misma ficha se reduce al único indicador `RUEDA`. La ficha es pulsable y cancela el objetivo, por lo que no aparece un segundo botón de rueda. Con la carrera pausada se puede inspeccionar temporalmente cualquier ciclista.
+Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra una única señal `RUEDA`, compacta y de unos 1,6 segundos. No se muestra una segunda notificación de rebufo ni información de edad. Con la carrera pausada se puede inspeccionar temporalmente cualquier ciclista.
 
 Las últimas rampas de cada puerto, las metas volantes y los tres kilómetros finales concentran público pixel-art en varias filas. Los aficionados cambian la posición de los brazos para animar, utilizan ropa de distintos colores y rodean arcos ampliados y la línea de meta.
+
+La cámara lateral utiliza una calzada ancha y público ampliado, colocado detrás del arcén. Las bicicletas permanecen dentro del asfalto y se inclinan con el ángulo de la carretera. La vegetación cercana se genera con menos densidad y queda anclada al terreno para desplazarse de forma estable, mientras el cielo, las montañas y los biomas del fondo continúan cambiando durante la etapa.
 
 Al terminar cada etapa, la pantalla oficial muestra el resultado de la jornada y las cuatro clasificaciones acumuladas: general por tiempo, regularidad por puntos, montaña y jóvenes de 25 años o menos. La llegada concede `50–30–20–15–12–10–8–6–4–2` puntos a los diez primeros, además de los puntos obtenidos en metas volantes. Los líderes visten amarillo, verde, blanco con lunares rojos y blanco; si un corredor domina varias tablas, los maillots inferiores pasan al siguiente ciclista elegible para que los cuatro sean visibles. Un podio SVG de estética 16-bit presenta a los tres primeros de la etapa.
 
