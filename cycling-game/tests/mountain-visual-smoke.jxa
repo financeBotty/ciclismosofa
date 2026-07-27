@@ -44,6 +44,14 @@ const visualRise = visualGame.sideSurfaceY(50) - visualGame.sideSurfaceY(51);
 assertMountain(visualRise >= 60, "La pendiente lateral no se aprecia suficientemente");
 const visualRoadAngle = visualGame.sideRoadAngleAt(50, 800);
 assertMountain(visualRoadAngle < -0.04, "La bicicleta lateral no acompaña el ángulo de subida");
+assertMountain(SIDE_ROAD_ASPHALT_WIDTH >= 42 && SIDE_ROAD_SHOULDER_WIDTH >= 54,
+  "La carretera lateral sigue siendo demasiado estrecha");
+assertMountain(Math.abs(visualGame.sideLaneOffset(1)) <= SIDE_ROAD_ASPHALT_WIDTH / 2 - 8,
+  "Un cambio de carril puede sacar al ciclista del asfalto lateral");
+assertMountain(SIDE_FINISH_GATE_HEIGHT >= 180,
+  "La meta lateral puede quedar oculta por el público");
+assertMountain(typeof visualGame.renderLateralRoadsideProps === "function",
+  "No se renderizan vehículos y bicicletas de aficionados");
 
 const riderData = {
   name: "Test", team: "Solaris", color: "#ffcc33", role: "leader",
@@ -71,6 +79,8 @@ JSON.stringify({
   steepest: Number(Math.max(...climbs.map((climb) => climb.averageGradient)).toFixed(2)),
   visualRise: Number(visualRise.toFixed(1)),
   visualRoadAngle: Number(visualRoadAngle.toFixed(3)),
+  lateralRoadWidth: SIDE_ROAD_ASPHALT_WIDTH,
+  finishGateHeight: SIDE_FINISH_GATE_HEIGHT,
   speedLossAt8Percent: Number(speedLoss.toFixed(1))
 });
 `;

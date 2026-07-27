@@ -69,6 +69,10 @@ const NOTICE_MS = 3200;
 const URGENT_NOTICE_MS = 4200;
 const RECOVERY_DESCENT_GRADIENT = -1.5;
 const ISOLATION_HIGH_EFFORT_LOAD = 0.2;
+const SIDE_ROAD_SHOULDER_WIDTH = 56;
+const SIDE_ROAD_ASPHALT_WIDTH = 43;
+const SIDE_ROAD_LANE_DEPTH = 3;
+const SIDE_FINISH_GATE_HEIGHT = 190;
 const STAGE_POINTS = [50, 30, 20, 15, 12, 10, 8, 6, 4, 2];
 const PLAYER_PROFILES = {
   allrounder: {
@@ -6274,6 +6278,10 @@ class Game {
     return clamp(Math.atan2(rise, sampleKm * 2 * pixelsPerKm), -0.34, 0.34);
   }
 
+  sideLaneOffset(lateral) {
+    return clamp(lateral, -0.9, 0.9) * SIDE_ROAD_LANE_DEPTH;
+  }
+
   renderLateralSkyDetails(ctx, biome, weather) {
     if (weather < 0.65) {
       const sunX = Math.round(this.width * 0.79 / 4) * 4;
@@ -6423,12 +6431,12 @@ class Game {
     ctx.fill();
     this.renderLateralTerrainDetails(ctx, focusX, pixelsPerKm);
     ctx.strokeStyle = "#d3c8ae";
-    ctx.lineWidth = 38;
+    ctx.lineWidth = SIDE_ROAD_SHOULDER_WIDTH;
     ctx.beginPath();
     points.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
     ctx.stroke();
     ctx.strokeStyle = weather > 0 ? "#414a4d" : "#60666a";
-    ctx.lineWidth = 29;
+    ctx.lineWidth = SIDE_ROAD_ASPHALT_WIDTH;
     ctx.stroke();
     ctx.strokeStyle = "rgba(250,248,230,.7)";
     ctx.lineWidth = 3;
@@ -6444,8 +6452,8 @@ class Game {
       if (x < -20 || x > this.width + 20) continue;
       const y = this.sideSurfaceY(point.km);
       const sprintGate = point.type === "sprint";
-      const gateWidth = sprintGate ? 104 : 64;
-      const gateHeight = sprintGate ? 108 : 72;
+      const gateWidth = sprintGate ? 120 : 72;
+      const gateHeight = sprintGate ? 142 : 88;
       ctx.fillStyle = "#101820";
       ctx.fillRect(Math.round(x - gateWidth / 2 - 5), Math.round(y - gateHeight), 9, gateHeight);
       ctx.fillRect(Math.round(x + gateWidth / 2 - 4), Math.round(y - gateHeight), 9, gateHeight);
@@ -6459,6 +6467,7 @@ class Game {
     }
 
     this.renderLateralSpectators(ctx, focusX, pixelsPerKm);
+    this.renderLateralRoadsideProps(ctx, focusX, pixelsPerKm);
     this.renderLateralFinish(ctx, focusX, pixelsPerKm);
 
     const renderRiders = this.race.timeTrial ? [this.race.player] : this.race.cyclists;
@@ -6468,7 +6477,7 @@ class Game {
       // En una vista lateral el cambio de carril solo aporta una pequeña
       // profundidad. Un desplazamiento mayor sacaba las ruedas del asfalto,
       // especialmente cuando la línea de carretera estaba inclinada.
-      y: this.sideSurfaceY(rider.distance) + clamp(rider.lateral, -0.9, 0.9) * 4
+      y: this.sideSurfaceY(rider.distance) + this.sideLaneOffset(rider.lateral)
     })).filter((item) => item.x > -120 && item.x < this.width + 120)
       .sort((a, b) => a.rider.lateral - b.rider.lateral);
     for (const item of visible) {
@@ -6613,6 +6622,86 @@ class Game {
     }
   }
 
+  renderLateralRoadsideProps(ctx, focusX, pixelsPerKm) {
+    const visibleRange = this.width / pixelsPerKm;
+    const spacing = 0.17;
+    const first = Math.floor((this.cameraKm - visibleRange) / spacing);
+    const last = Math.ceil((this.cameraKm + visibleRange) / spacing);
+    for (let marker = first; marker <= last; marker += 1) {
+      const km = marker * spacing;
+      if (km < 0 || km > this.race.road.lengthKm) continue;
+      const density = this.race.road.spectatorDensityAt(km);
+      if (density < 0.24 && Math.abs(marker) % 4 !== 0) continue;
+      const x = Math.round(focusX + (km - this.cameraKm) * pixelsPerKm);
+      if (x < -70 || x > this.width + 70) continue;
+      const y = Math.round(this.sideSurfaceY(km) - SIDE_ROAD_ASPHALT_WIDTH / 2 - 5);
+      const variant = Math.abs(marker) % 7;
+      const bodyColors = ["#df5a52", "#58b7d4", "#f0c744", "#ece7d8", "#70a56b"];
+
+      if (variant === 0) {
+        // Autocaravana aparcada en los puertos y zonas de público.
+        ctx.fillStyle = "#17212a";
+        ctx.fillRect(x - 25, y - 25, 52, 25);
+        ctx.fillStyle = "#eee9da";
+        ctx.fillRect(x - 22, y - 22, 46, 19);
+        ctx.fillStyle = "#61b9d1";
+        ctx.fillRect(x - 17, y - 18, 13, 8);
+        ctx.fillRect(x + 2, y - 18, 12, 8);
+        ctx.fillStyle = "#df5a52";
+        ctx.fillRect(x - 22, y - 7, 46, 5);
+        ctx.fillStyle = "#17212a";
+        ctx.fillRect(x - 17, y - 5, 10, 7);
+        ctx.fillRect(x + 11, y - 5, 10, 7);
+      } else if (variant <= 3) {
+        // Coches de aficionados, orientados en el sentido de carrera.
+        const color = bodyColors[variant];
+        ctx.fillStyle = "#17212a";
+        ctx.fillRect(x - 22, y - 13, 44, 13);
+        ctx.fillStyle = color;
+        ctx.fillRect(x - 19, y - 15, 34, 12);
+        ctx.fillRect(x - 10, y - 22, 19, 8);
+        ctx.fillStyle = "#bde1e8";
+        ctx.fillRect(x - 7, y - 20, 7, 6);
+        ctx.fillRect(x + 2, y - 20, 6, 6);
+        ctx.fillStyle = "#101820";
+        ctx.fillRect(x - 15, y - 5, 8, 7);
+        ctx.fillRect(x + 10, y - 5, 8, 7);
+      } else {
+        // Bicicleta apoyada y un aficionado animando junto a ella.
+        ctx.strokeStyle = "#101820";
+        ctx.lineWidth = 3;
+        for (const wheelX of [x - 13, x + 13]) {
+          ctx.beginPath();
+          ctx.arc(wheelX, y - 8, 8, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = bodyColors[variant - 3];
+        ctx.beginPath();
+        ctx.moveTo(x - 13, y - 8);
+        ctx.lineTo(x - 1, y - 19);
+        ctx.lineTo(x + 4, y - 8);
+        ctx.lineTo(x - 13, y - 8);
+        ctx.moveTo(x + 4, y - 8);
+        ctx.lineTo(x + 13, y - 8);
+        ctx.lineTo(x + 7, y - 20);
+        ctx.lineTo(x - 1, y - 19);
+        ctx.stroke();
+        const fanX = x + 27;
+        const wave = Math.floor(this.race.elapsed * 5 + marker) % 2;
+        ctx.fillStyle = "#d59a70";
+        ctx.fillRect(fanX - 3, y - 43, 7, 7);
+        ctx.fillStyle = bodyColors[variant - 3];
+        ctx.fillRect(fanX - 6, y - 35, 12, 18);
+        ctx.fillStyle = "#17212a";
+        ctx.fillRect(fanX - 5, y - 17, 4, 17);
+        ctx.fillRect(fanX + 2, y - 17, 4, 17);
+        ctx.fillStyle = "#d59a70";
+        ctx.fillRect(fanX - 12, y - 34 - wave * 7, 7, 4);
+        ctx.fillRect(fanX + 5, y - 41 + wave * 7, 7, 4);
+      }
+    }
+  }
+
   renderLateralSpectators(ctx, focusX, pixelsPerKm) {
     const visibleRange = this.width / pixelsPerKm;
     const spacing = 0.02;
@@ -6628,7 +6717,7 @@ class Game {
       if (x < -10 || x > this.width + 10) continue;
       // El público se sitúa en el arcén del fondo, no sobre el centro de la
       // calzada. Así los ciclistas no parecen atravesarlo al subir.
-      const y = this.sideSurfaceY(km) - 17;
+      const y = this.sideSurfaceY(km) - SIDE_ROAD_ASPHALT_WIDTH / 2 - 2;
       const wave = Math.floor(this.race.elapsed * 6 + marker) % 2;
       const rows = density > 0.82 ? [2, 1, 0] : density > 0.7 && marker % 2 === 0 ? [1, 0] : [0];
       for (const row of rows) {
@@ -6650,6 +6739,18 @@ class Game {
           ctx.fillStyle = "#f4f1e9";
           ctx.fillRect(rowX - 10, rowY - 50, 20, 4);
         }
+        if (row === 0 && Math.abs(marker) % 13 === 0) {
+          // Banderas grandes, animadas en dos posiciones pero ancladas al
+          // terreno para que no vibren con el desplazamiento.
+          const flagWave = Math.floor(this.race.elapsed * 4 + marker) % 2;
+          const flagColors = ["#ffcc33", "#62d8f2", "#ef476f", "#f4f1e9"];
+          ctx.fillStyle = "#e8edf0";
+          ctx.fillRect(rowX + 10, rowY - 67, 3, 67);
+          ctx.fillStyle = flagColors[Math.abs(marker) % flagColors.length];
+          ctx.fillRect(rowX + 13, rowY - 65, 22 + flagWave * 5, 10);
+          ctx.fillStyle = "#101820";
+          ctx.fillRect(rowX + 13, rowY - 55, 15 + flagWave * 3, 3);
+        }
       }
     }
   }
@@ -6659,19 +6760,19 @@ class Game {
     const x = focusX + (finishKm - this.cameraKm) * pixelsPerKm;
     if (x < -80 || x > this.width + 80) return;
     const y = this.sideSurfaceY(finishKm);
-    const halfWidth = 66;
-    const gateHeight = 132;
+    const halfWidth = 78;
+    const gateHeight = SIDE_FINISH_GATE_HEIGHT;
     ctx.fillStyle = "#101820";
-    ctx.fillRect(x - halfWidth - 6, y - gateHeight, 12, gateHeight);
-    ctx.fillRect(x + halfWidth - 6, y - gateHeight, 12, gateHeight);
-    ctx.fillRect(x - halfWidth - 10, y - gateHeight - 5, halfWidth * 2 + 20, 36);
+    ctx.fillRect(x - halfWidth - 7, y - gateHeight, 14, gateHeight);
+    ctx.fillRect(x + halfWidth - 7, y - gateHeight, 14, gateHeight);
+    ctx.fillRect(x - halfWidth - 12, y - gateHeight - 6, halfWidth * 2 + 24, 46);
     ctx.fillStyle = "#ffcc33";
-    ctx.fillRect(x - halfWidth - 5, y - gateHeight, halfWidth * 2 + 10, 27);
+    ctx.fillRect(x - halfWidth - 6, y - gateHeight, halfWidth * 2 + 12, 35);
     ctx.fillStyle = "#101820";
-    ctx.font = "bold 16px Menlo, Monaco, Consolas, monospace";
+    ctx.font = "bold 18px Menlo, Monaco, Consolas, monospace";
     ctx.textAlign = "center";
-    ctx.fillText("META", x, y - gateHeight + 19);
-    for (let cell = -8; cell <= 8; cell += 1) {
+    ctx.fillText("META", x, y - gateHeight + 24);
+    for (let cell = -11; cell <= 11; cell += 1) {
       ctx.fillStyle = cell % 2 ? "#f8f5eb" : "#101820";
       ctx.fillRect(x + cell * 7, y - 5, 7, 5);
     }

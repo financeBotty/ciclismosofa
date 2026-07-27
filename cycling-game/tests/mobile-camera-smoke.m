@@ -5,6 +5,7 @@ static int testResult = 1;
 
 @interface MobileCameraDelegate : NSObject <WKNavigationDelegate>
 @property(nonatomic, strong) NSURL *outputURL;
+@property(nonatomic, copy) NSString *snapshotMode;
 @end
 
 @implementation MobileCameraDelegate
@@ -153,21 +154,23 @@ static int testResult = 1;
             return;
         }
 
-        NSString *prepareSnapshot =
+        NSString *focusExpression = [self.snapshotMode isEqualToString:@"finish"]
+            ? @"Math.max(0, game.race.road.lengthKm - 0.22)"
+            : @"(game.race.road.mountains[0]"
+               " ? Math.max(0, game.race.road.mountains[0].km - 0.35)"
+               " : Math.max(0, game.race.road.lengthKm - 0.22))";
+        NSString *prepareSnapshot = [NSString stringWithFormat:
             @"(() => {"
              "const game = window.ciclimoTourGame;"
              "document.getElementById('countdownOverlay').className = 'countdown-overlay';"
              "game.state = 'PAUSED';"
-             "const visualClimb = game.race.road.mountains[0];"
-             "game.cameraFocusKm = visualClimb"
-               " ? Math.max(0, visualClimb.km - 0.35)"
-               " : Math.max(0, game.race.road.lengthKm - 0.22);"
+             "game.cameraFocusKm = %@;"
              "game.race.player.distance = game.cameraFocusKm;"
              "game.render();"
              "if (innerWidth <= 900) game.hud.setMobileView('groups');"
              "game.notify('¡ATAQUE! EL PELOTÓN REACCIONA', 'urgent');"
              "return true;"
-             "})();";
+             "})();", focusExpression];
         [webView evaluateJavaScript:prepareSnapshot completionHandler:^(id prepared, NSError *prepareError) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)),
                            dispatch_get_main_queue(), ^{
@@ -226,6 +229,7 @@ int main(int argc, const char *argv[]) {
         window.contentView = webView;
 
         MobileCameraDelegate *delegate = [MobileCameraDelegate new];
+        delegate.snapshotMode = argc > 4 ? @(argv[4]) : @"climb";
         if (argc > 3) {
             delegate.outputURL = [NSURL fileURLWithPath:@(argv[3])];
         }
