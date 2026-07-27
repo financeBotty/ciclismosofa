@@ -25,9 +25,9 @@ La raíz del repositorio contiene además una entrada de compatibilidad que redi
 
 GitHub Pages sirve el juego mediante HTTPS, por lo que la instalación y el modo sin conexión quedan habilitados tras la primera visita. Las tres partidas se guardan en el almacenamiento local del navegador: una partida de `localhost` o `file://` no se copia automáticamente a la versión publicada, y tampoco se sincroniza entre dispositivos.
 
-La portada es una pantalla independiente del simulador y permite elegir claramente entre **Tour** y **Carrera rápida**, además de configurar dificultad, clima y tipo de corredor. Se puede competir como **todoterreno**, **escalador**, **sprinter** o **rodador**.
+La portada es una pantalla independiente del simulador y permite elegir claramente entre **Tour** y **Carrera rápida**, además de configurar dificultad y clima. Los perfiles **todoterreno**, **escalador**, **sprinter** y **rodador** se utilizan en Carrera rápida; en el Tour se elige uno de los diez equipos y se controla a su líder predefinido.
 
-El modo **Tour** utiliza tres slots de partida. El perfil elegido queda fijado al crear el Tour para que sus fortalezas y debilidades tengan efecto durante las diez etapas. Un slot vacío genera y guarda inmediatamente su calendario aleatorio de 10 etapas y su plantilla de 100 ciclistas. Después se actualiza automáticamente al terminar cada etapa. `Cargar` abre el dashboard del Tour en la siguiente jornada pendiente; si se abandona una carrera a medias, esa etapa comienza de nuevo. Cada slot se puede borrar por separado mediante una confirmación.
+El modo **Tour** utiliza tres slots de partida. Al abrir un slot vacío se elige equipo y esa elección queda fijada durante las diez etapas. Cada club cuenta con escudo SVG propio, identidad táctica, líder nominal y diez ciclistas estables. El Tour genera y guarda inmediatamente su calendario aleatorio y su plantilla de 100 ciclistas. Después se actualiza automáticamente al terminar cada etapa. `Cargar` abre el dashboard del Tour en la siguiente jornada pendiente; si se abandona una carrera a medias, esa etapa comienza de nuevo. Cada slot se puede borrar por separado mediante una confirmación.
 
 El modo **Carrera rápida** genera al instante una prueba independiente con 100 ciclistas. Puede ser contrarreloj individual, llana, de media montaña o de alta montaña, con nombre, distancia, recorrido, clima y escenarios nuevos. No modifica ni ocupa ninguno de los tres slots del Tour; al terminar permite generar otra carrera aleatoria.
 
@@ -40,6 +40,8 @@ Antes de cada etapa aparece el dashboard del Tour. Allí se ven el perfil de la 
 
 Ambas opciones muestran la misma pantalla oficial de resultados, actualizan las clasificaciones, guardan la partida y devuelven al dashboard antes de avanzar. Las etapas ya terminadas quedan activas en el calendario: al pulsarlas se abre su podio, el puesto y tiempo del jugador, y el desenlace de la escapada.
 
+El mismo dashboard incluye **Mi equipo**. Muestra montaña, sprint, resistencia y técnica, la especialidad derivada, forma y fatiga de cada corredor. Antes de la jornada se puede asignar a cada compañero una misión: gregario, terminar conservando, buscar etapa, buscar puntos o buscar montaña. El líder está bloqueado porque es el ciclista controlado. Las misiones afectan a la IA, la simulación y la fatiga posterior; las órdenes manuales dadas durante la carrera tienen prioridad.
+
 Un Tour terminado permanece disponible en su slot mediante `Ver Tour`. Abre su calendario, resumen y clasificaciones finales sin sobrescribirlo. La creación de un Tour nuevo es una acción distinta y requiere confirmación.
 
 ## Cómo se juega
@@ -50,7 +52,7 @@ El ciclista avanza automáticamente. La estrategia se controla con botones visib
 - **Atacar**: consume explosividad y da potencia durante unos segundos.
 - **Sprint**: se habilita en el último kilómetro y antes de una meta volante.
 - **Dar relevos**: forma una rotación con hasta cuatro ciclistas próximos. El juego alterna automáticamente quién tira y quién rueda a rebufo. Los compañeros colaboran sin atacar mientras participan; los rivales pueden romper el acuerdo con un ataque. Un relevo no neutraliza ese ataque: hay que igualar su velocidad con `ALTO`, responder con `ATAQUE` o usar el sprint de respuesta.
-- **Equipo**: en una etapa en línea abre el panel `♟ EQUIPO` y ordena a Solaris protegerte, cazar la fuga, atacar con escaladores y atacante, o guardar fuerzas. La orden modifica directamente el estado táctico y el esfuerzo de tus nueve compañeros. No aparece en contrarreloj.
+- **Equipo**: en una etapa en línea abre el panel `♟ EQUIPO` y ordena al club elegido protegerte, cazar la fuga, atacar con escaladores y atacante, o guardar fuerzas. La orden modifica directamente el estado táctico y el esfuerzo de tus nueve compañeros. No aparece en contrarreloj.
 - **Buscar rueda**: pulsa directamente sobre el ciclista que quieras seguir. Tu corredor intentará colocarse detrás; vuelve a pulsarlo o toca la propia ficha `RUEDA` para liberar el objetivo.
 - **Comer gel**: recupera nutrición tras un pequeño retraso. Hay tres.
 - **Segura / Normal / Agresiva**: modifica el equilibrio entre velocidad, adherencia y riesgo.
@@ -65,7 +67,7 @@ Cada cambio táctico produce indicadores flotantes de recursos. Bajo y Medio rec
 
 Las capas informativas de carrera son temporales: ningún aviso, ficha contextual, advertencia, panel táctico ni indicador de punto puntuable permanece más de cinco segundos. Los avisos normales duran algo más de tres segundos y los urgentes algo más de cuatro. Después la carretera vuelve a quedar despejada; solo permanecen los controles y los indicadores compactos de acciones que siguen activas.
 
-Cada partida es un Tour de 10 etapas. La primera y otra jornada entre la quinta y la novena son contrarrelojes individuales; cuatro etapas son de alta montaña y las cuatro restantes alternan llano y media montaña. Las etapas en línea miden entre 120 y 280 km y añaden puertos, descensos, curvas peligrosas y metas volantes. Los puertos se clasifican por su desnivel real como Especial, 1.ª, 2.ª, 3.ª o 4.ª categoría. También divide el recorrido en zonas visuales aleatorias de bosque, ciudad, desierto, alta montaña, campiña verde y terreno seco. Cada zona utiliza su propia paleta y elementos —árboles, edificios, cactus, rocas o matorral— en las dos cámaras, y el mapa muestra una franja con la sucesión de escenarios.
+Cada partida es un Tour de 10 etapas. La primera y otra jornada entre la quinta y la novena son contrarrelojes individuales; cuatro etapas son de alta montaña y las cuatro restantes alternan llano y media montaña. Las etapas en línea miden entre 120 y 280 km y añaden puertos, descensos, curvas peligrosas y metas volantes. En alta montaña las ascensiones principales miden aproximadamente entre 10 y 22 km con medias del 6,2 al 10,5 %; en media montaña se mueven entre 7 y 15 km. Los puertos se clasifican por su desnivel real como Especial, 1.ª, 2.ª, 3.ª o 4.ª categoría. También divide el recorrido en zonas visuales aleatorias de bosque, ciudad, desierto, alta montaña, campiña verde y terreno seco. Cada zona utiliza su propia paleta y elementos —árboles, edificios, cactus, rocas o matorral— en las dos cámaras, y el mapa muestra una franja con la sucesión de escenarios.
 
 Compiten los mismos 100 corredores durante todo el Tour, con edad, atributos e identidad estables, repartidos en 10 equipos de diez y 10 colores. La parrilla de la primera etapa se baraja; en la segunda contrarreloj se sale en orden inverso de la general, con el líder al final. En las cronos solo aparece el corredor controlado y quedan anulados rebufo, rueda, relevos y colisiones. Cada equipo asigna líder, sprinter, escaladores, atacante y gregarios, con planes visibles de protección, persecución, fuga o tren de sprint. Toda la imagen utiliza una dirección artística original inspirada en los arcades de 16 bits: el escenario completo se renderiza a baja resolución y se amplía sin suavizado; ciclistas, terreno, carretera, vegetación, lluvia, reflejos, mapas, botones y paneles comparten píxeles marcados, contornos gruesos y sombras duras.
 
@@ -73,7 +75,7 @@ El corredor del jugador tiene nivel de líder de equipo competitivo, también al
 
 La condición también pertenece al Tour. Cada etapa añade fatiga según longitud, desnivel, esfuerzo y energía final; una parte se recupera antes de la jornada siguiente. La forma diaria oscila de manera reproducible entre `−8` y `+8`. Ambos valores afectan por igual a las etapas jugadas y simuladas y se muestran, sin porcentajes, en el resumen de la siguiente jornada.
 
-En la cámara lateral, los corredores utilizan sprites grandes y exagerados: casco, gafas, torso, brazos, piernas y bicicletas tienen volúmenes de arcade, contornos oscuros y brillos duros. La cabeza queda adelantada sobre los hombros y próxima al manillar, formando una postura de carrera reconocible. Los ciclistas se separan visualmente en profundidad y los ataques y sprints producen estelas de velocidad de colores.
+En la cámara lateral, los corredores utilizan sprites grandes y exagerados: casco, gafas, torso, brazos, piernas y bicicletas tienen volúmenes de arcade, contornos oscuros y brillos duros. La cabeza queda adelantada sobre los hombros y próxima al manillar, formando una postura de carrera reconocible. El desnivel emplea una exageración vertical solo visual para que las rampas sean legibles en móvil; la velocidad y la cadencia disminuyen físicamente durante la subida. Los ciclistas se separan visualmente en profundidad y los ataques y sprints producen estelas de velocidad de colores.
 
 En móvil, el juego utiliza una interfaz táctil propia. En vertical mantiene visibles el HUD, la carretera y los controles en tres franjas sin desplazamiento; en horizontal coloca la carrera a la izquierda y el mando a la derecha. Los botones tienen áreas táctiles amplias, el perfil y los ciclistas se pueden pulsar, y la composición respeta las zonas seguras de teléfonos con notch.
 
@@ -98,7 +100,7 @@ Al jugar o simular una etapa, el resultado se abre como una pantalla completa in
 
 Todos los corredores visibles son seleccionables con ratón o toque en ambas cámaras. Durante la carrera, pulsar un rival lo convierte directamente en objetivo de rueda y muestra durante menos de cinco segundos su nombre, nacionalidad, rol, equipo y distancia; después la misma ficha se reduce al único indicador `RUEDA`. La ficha es pulsable y cancela el objetivo, por lo que no aparece un segundo botón de rueda. Con la carrera pausada se puede inspeccionar temporalmente cualquier ciclista.
 
-Las últimas rampas de cada puerto y el último kilómetro concentran público pixel-art. Los aficionados cambian la posición de los brazos para animar, utilizan ropa de distintos colores y rodean el arco y la línea de meta.
+Las últimas rampas de cada puerto, las metas volantes y los tres kilómetros finales concentran público pixel-art en varias filas. Los aficionados cambian la posición de los brazos para animar, utilizan ropa de distintos colores y rodean arcos ampliados y la línea de meta.
 
 Al terminar cada etapa, la pantalla oficial muestra el resultado de la jornada y las cuatro clasificaciones acumuladas: general por tiempo, regularidad por puntos, montaña y jóvenes de 25 años o menos. La llegada concede `50–30–20–15–12–10–8–6–4–2` puntos a los diez primeros, además de los puntos obtenidos en metas volantes. Los líderes visten amarillo, verde, blanco con lunares rojos y blanco; si un corredor domina varias tablas, los maillots inferiores pasan al siguiente ciclista elegible para que los cuatro sean visibles. Un podio SVG de estética 16-bit presenta a los tres primeros de la etapa.
 
@@ -150,6 +152,7 @@ Las tablas de puntuación son:
 - `tests/simulation-flow-smoke.m`: reproduce en WebKit el flujo Simular etapa → resultado → Siguiente etapa y comprueba que ninguna capa intercepta el botón.
 - `tests/phase3-smoke.jxa`: valida las cuatro órdenes de equipo, ataques, bloqueo de relevos durante un ataque rival, sprint de respuesta, tutorial, movimiento reducido y vibración.
 - `tests/energy-rules-smoke.jxa`: comprueba recuperación de Bajo en subida, pérdida lenta de Medio en llano, recuperación de Medio en descenso, Alto gratuito cuesta abajo y penalización por aislamiento.
+- `tests/team-management-smoke.jxa`: valida los diez equipos, sus líderes únicos, la selección de club, las plantillas de diez y las especialidades derivadas.
 - `manifest.webmanifest`, `service-worker.js` y `assets/icon.svg`: instalación y caché offline del juego.
 - `assets/`: icono instalable y espacio para futuros paquetes audiovisuales; la carrera actual se dibuja en Canvas y sintetiza el sonido en el navegador.
 

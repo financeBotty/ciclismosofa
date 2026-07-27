@@ -62,7 +62,7 @@ const SPRINT_POINTS = [10, 6, 4, 2, 1];
 const TOUR_STAGE_COUNT = 10;
 const YOUNG_RIDER_MAX_AGE = 25;
 const SAVE_SLOT_COUNT = 3;
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 const POPUP_MAX_MS = 4800;
 const NOTICE_MS = 3200;
 const URGENT_NOTICE_MS = 4200;
@@ -87,6 +87,90 @@ const PLAYER_PROFILES = {
     climbing: 78, sprint: 82, endurance: 90, technique: 89, aggression: 76, intelligence: 87
   }
 };
+const TEAM_DEFINITIONS = [
+  {
+    id: "solaris", name: "Solaris", color: "#ffcc33", secondary: "#181300",
+    identity: "Equilibrio", specialty: "balanced", cooperation: 0.72, attackBias: 0.58, crest: "sun",
+    leader: { name: "Iker Laredo", nationality: "España", flag: "🇪🇸", age: 27, climbing: 86, sprint: 82, endurance: 88, technique: 85, aggression: 78, intelligence: 88 }
+  },
+  {
+    id: "cobalto", name: "Cobalto", color: "#2f80ed", secondary: "#071a38",
+    identity: "Control del pelotón", specialty: "tempo", cooperation: 0.88, attackBias: 0.42, crest: "wave",
+    leader: { name: "Théo Vallet", nationality: "Francia", flag: "🇫🇷", age: 29, climbing: 83, sprint: 80, endurance: 91, technique: 88, aggression: 71, intelligence: 91 }
+  },
+  {
+    id: "bermellon", name: "Bermellón", color: "#e63946", secondary: "#31070b",
+    identity: "Ataque", specialty: "attack", cooperation: 0.48, attackBias: 0.9, crest: "bolt",
+    leader: { name: "Elio Bellori", nationality: "Italia", flag: "🇮🇹", age: 26, climbing: 87, sprint: 79, endurance: 86, technique: 81, aggression: 93, intelligence: 83 }
+  },
+  {
+    id: "esmeralda", name: "Esmeralda", color: "#2fbf71", secondary: "#062719",
+    identity: "Alta montaña", specialty: "mountain", cooperation: 0.67, attackBias: 0.7, crest: "mountain",
+    leader: { name: "Jairo Quintero", nationality: "Colombia", flag: "🇨🇴", age: 25, climbing: 93, sprint: 70, endurance: 89, technique: 84, aggression: 82, intelligence: 87 }
+  },
+  {
+    id: "violeta", name: "Violeta", color: "#9b5de5", secondary: "#200a38",
+    identity: "Oportunismo", specialty: "opportunist", cooperation: 0.43, attackBias: 0.78, crest: "diamond",
+    leader: { name: "Žan Kranjc", nationality: "Eslovenia", flag: "🇸🇮", age: 24, climbing: 88, sprint: 83, endurance: 86, technique: 87, aggression: 86, intelligence: 86 }
+  },
+  {
+    id: "naranja", name: "Naranja", color: "#ff7a00", secondary: "#351500",
+    identity: "Llegadas masivas", specialty: "sprint", cooperation: 0.82, attackBias: 0.3, crest: "wing",
+    leader: { name: "Mats De Bruyn", nationality: "Bélgica", flag: "🇧🇪", age: 28, climbing: 69, sprint: 94, endurance: 87, technique: 90, aggression: 87, intelligence: 88 }
+  },
+  {
+    id: "turquesa", name: "Turquesa", color: "#00b8d9", secondary: "#002c35",
+    identity: "Persecución", specialty: "chase", cooperation: 0.95, attackBias: 0.38, crest: "arrow",
+    leader: { name: "Daan Van Loen", nationality: "Países Bajos", flag: "🇳🇱", age: 30, climbing: 79, sprint: 86, endurance: 92, technique: 91, aggression: 74, intelligence: 92 }
+  },
+  {
+    id: "magenta", name: "Magenta", color: "#f15bb5", secondary: "#360b29",
+    identity: "Fugas", specialty: "breakaway", cooperation: 0.52, attackBias: 0.94, crest: "flame",
+    leader: { name: "Tiago Faria", nationality: "Portugal", flag: "🇵🇹", age: 27, climbing: 85, sprint: 81, endurance: 90, technique: 83, aggression: 94, intelligence: 82 }
+  },
+  {
+    id: "acero", name: "Acero", color: "#8d99ae", secondary: "#17202c",
+    identity: "Regularidad", specialty: "conservative", cooperation: 0.78, attackBias: 0.28, crest: "shield",
+    leader: { name: "Nils Ebert", nationality: "Alemania", flag: "🇩🇪", age: 31, climbing: 84, sprint: 78, endurance: 93, technique: 89, aggression: 67, intelligence: 94 }
+  },
+  {
+    id: "lima", name: "Lima", color: "#9acd32", secondary: "#1b2907",
+    identity: "Todoterreno", specialty: "allround", cooperation: 0.64, attackBias: 0.62, crest: "crown",
+    leader: { name: "Lachlan Marlow", nationality: "Australia", flag: "🇦🇺", age: 26, climbing: 86, sprint: 86, endurance: 88, technique: 88, aggression: 80, intelligence: 87 }
+  }
+];
+const TEAM_BY_ID = new Map(TEAM_DEFINITIONS.map((team) => [team.id, team]));
+const STAGE_ROLES = {
+  leader: { label: "LÍDER", short: "Líder", description: "Objetivo principal del equipo" },
+  support: { label: "GREGARIO", short: "Gregario", description: "Protege y trabaja para el líder" },
+  finish: { label: "CONSERVAR", short: "Terminar etapa", description: "Ahorra fuerzas para mañana" },
+  stage: { label: "ETAPA", short: "Buscar etapa", description: "Disputa la victoria del día" },
+  points: { label: "PUNTOS", short: "Buscar puntos", description: "Prioriza metas y final" },
+  mountain: { label: "MONTAÑA", short: "Buscar montaña", description: "Prioriza puertos puntuables" }
+};
+const derivedSpecialty = (rider) => {
+  const scores = [
+    ["ESCALADOR", rider.climbing * 0.62 + rider.endurance * 0.25 + rider.technique * 0.13],
+    ["SPRINTER", rider.sprint * 0.62 + rider.technique * 0.23 + rider.endurance * 0.15],
+    ["GREGARIO", rider.endurance * 0.5 + rider.technique * 0.3 + (rider.climbing + rider.sprint) * 0.1]
+  ];
+  return scores.sort((a, b) => b[1] - a[1])[0][0];
+};
+const teamCrestMarkup = (team, label = team.name) => {
+  const symbols = {
+    sun: '<circle cx="32" cy="31" r="11"/><path d="M32 7v9M32 46v9M8 31h9M47 31h9M15 14l7 7M42 41l7 7M49 14l-7 7M22 41l-7 7"/>',
+    wave: '<path d="M10 38c9-16 17 12 27-4s15 2 18-8M10 47c10-13 18 9 28-3s13 0 17-5"/>',
+    bolt: '<path d="M36 8 16 36h14l-4 20 22-31H34Z"/>',
+    mountain: '<path d="m8 49 17-29 8 12 7-10 16 27Z"/><path d="m20 29 5-9 6 9-5-2Z"/>',
+    diamond: '<path d="m32 7 22 23-22 26L10 30Z"/><path d="m32 15 12 15-12 17-12-17Z"/>',
+    wing: '<path d="M9 43c18-1 26-9 39-29-2 17-8 31-27 36l9-13Z"/>',
+    arrow: '<path d="M8 34h31L29 22l8-8 21 21-21 21-8-8 10-11H8Z"/>',
+    flame: '<path d="M34 7c3 13-8 15-4 25 2-7 8-8 10-14 11 12 12 27 1 35-11 8-29 1-29-14 0-12 10-18 22-32Z"/>',
+    shield: '<path d="M12 10h40v25c0 11-9 18-20 23-11-5-20-12-20-23Z"/><path d="M21 22h22v9H21Zm0 14h22v8H21Z"/>',
+    crown: '<path d="m9 20 12 9 11-17 11 17 12-9-5 29H14Z"/><path d="M17 42h30"/>'
+  };
+  return `<svg class="team-crest" viewBox="0 0 64 64" role="img" aria-label="Escudo de ${label}" style="--team-color:${team.color};--team-secondary:${team.secondary}"><path class="crest-field" d="M6 5h52v34c0 12-11 20-26 24C17 59 6 51 6 39Z"/><g class="crest-symbol">${symbols[team.crest] || symbols.shield}</g></svg>`;
+};
 const TEAM_ORDERS = {
   protect: { label: "PROTEGER", state: "PROTEGER", message: "Solaris se coloca a tu alrededor." },
   chase: { label: "CAZAR", state: "PERSEGUIR", message: "Los gregarios de Solaris toman el mando." },
@@ -103,7 +187,7 @@ const TUTORIAL_STEPS = [
     text: "Pulsa directamente un ciclista para seguir su rueda. El rebufo ahorra energía y ayuda a moverte dentro del grupo."
   },
   {
-    icon: "♟", title: "DIRIGE A SOLARIS",
+    icon: "♟", title: "DIRIGE TU EQUIPO",
     text: "En etapas en línea abre EQUIPO para protegerte, perseguir una fuga, ordenar un ataque o guardar fuerzas."
   },
   {
@@ -309,26 +393,26 @@ class Road {
     add(10 + this.random.next() * 8, this.random.next() * 0.8 - 0.2, "Salida neutralizada", "flat");
     let mountainIndex = 0;
     const maxClimbs = this.stageProfile === "flat"
-      ? Math.max(1, Math.round(this.lengthKm / 180))
-      : this.stageProfile === "mixed" ? Math.max(3, Math.round(this.lengthKm / 52))
-        : Math.max(5, Math.round(this.lengthKm / 34));
+      ? Math.max(1, Math.round(this.lengthKm / 190))
+      : this.stageProfile === "mixed" ? Math.max(2, Math.round(this.lengthKm / 62))
+        : Math.max(4, Math.round(this.lengthKm / 45));
     while (km < this.lengthKm - 14) {
       const rollingLength = this.stageProfile === "flat"
         ? 15 + this.random.next() * 18 : this.stageProfile === "mixed"
-          ? 8 + this.random.next() * 14 : 4 + this.random.next() * 9;
+          ? 7 + this.random.next() * 11 : 3 + this.random.next() * 6;
       const rollingGradient = this.stageProfile === "flat"
         ? this.random.next() * 1.2 - 0.35 : this.random.next() * 2 - 0.7;
       add(rollingLength, rollingGradient, this.stageProfile === "flat" ? "Llanura expuesta" : "Terreno ondulado", "rolling");
       if (km >= this.lengthKm - 14) break;
       if (mountainIndex >= maxClimbs) continue;
       const climbLength = Math.min(
-        this.stageProfile === "flat" ? 2.5 + this.random.next() * 3
-          : this.stageProfile === "mixed" ? 4 + this.random.next() * 7 : 6 + this.random.next() * 9,
+        this.stageProfile === "flat" ? 3.5 + this.random.next() * 3.5
+          : this.stageProfile === "mixed" ? 7 + this.random.next() * 8 : 10 + this.random.next() * 12,
         this.lengthKm - km - 8
       );
       const gradient = this.stageProfile === "flat"
-        ? 2.4 + this.random.next() * 2 : this.stageProfile === "mixed"
-          ? 3.8 + this.random.next() * 4 : 5.2 + this.random.next() * 4.1;
+        ? 3 + this.random.next() * 2.2 : this.stageProfile === "mixed"
+          ? 4.6 + this.random.next() * 4.1 : 6.2 + this.random.next() * 4.3;
       const startKm = km;
       const name = climbNames[mountainIndex % climbNames.length];
       add(climbLength, gradient, name, "climb");
@@ -457,7 +541,9 @@ class Road {
 
   spectatorDensityAt(km) {
     const finishDistance = this.lengthKm - km;
-    if (finishDistance >= 0 && finishDistance <= 1.8) return finishDistance < 0.8 ? 1 : 0.72;
+    if (finishDistance >= 0 && finishDistance <= 3) {
+      return finishDistance < 1.5 ? 1 : finishDistance < 2.3 ? 0.88 : 0.64;
+    }
     for (const mountain of this.mountains) {
       const distanceToSummit = mountain.km - km;
       if (distanceToSummit >= 0 && distanceToSummit <= 3.5) {
@@ -468,7 +554,10 @@ class Road {
         return clamp(0.38 + categoryBoost, 0, 1);
       }
     }
-    if (this.intermediateSprints.some((point) => Math.abs(point.km - km) <= 0.45)) return 0.58;
+    const sprintDistance = this.intermediateSprints.reduce((nearest, point) =>
+      Math.min(nearest, Math.abs(point.km - km)), Infinity);
+    if (sprintDistance <= 0.8) return 1;
+    if (sprintDistance <= 1.5) return 0.72;
     return this.biomeAt(km).id === "city" ? 0.18 : 0;
   }
 
@@ -921,7 +1010,13 @@ class Cyclist {
       : this.role === "climber" && gradient >= 3.5 ? 1.15
         : this.role === "sprinter" && gradient >= 3.5 ? -1.1
           : this.role === "attacker" && Math.abs(gradient) < 2 && remaining > 8 ? 0.28 : 0;
-    const climbPenalty = gradient > 0 ? gradient * (0.92 - this.climbing * 0.0038) : gradient * 0.44;
+    // Las rampas largas deben cambiar de verdad la velocidad de carrera. A
+    // partir del 4 % la penalización crece de forma adicional; montaña y
+    // resistencia siguen diferenciando a los especialistas.
+    const climbPenalty = gradient > 0
+      ? gradient * (1.13 - this.climbing * 0.0044) +
+        Math.max(0, gradient - 4) * (0.98 - this.climbing * 0.0028)
+      : gradient * 0.44;
     const fatiguePenalty = this.fatigue * 0.075;
     const nutritionPenalty = this.nutrition < 25 ? (25 - this.nutrition) * 0.17 : 0;
     const weatherPenalty = weather.intensity * (1.2 + Math.abs(road.curvatureAt(this.distance)));
@@ -1190,6 +1285,22 @@ class AICyclist extends Cyclist {
     this.memory.energyAtDecision = this.energy;
     this.memory.pointObjective = nextPoint || null;
     let desiredState = plan.state;
+    const managedTeammate = this.team === race.player.team;
+    if (managedTeammate && plan.state === "RECUPERAR") {
+      if (this.stageRole === "finish") desiredState = "RECUPERAR";
+      if (this.stageRole === "support") desiredState = "PROTEGER";
+      if (this.stageRole === "stage" && remaining < Math.max(18, road.lengthKm * 0.2)) {
+        desiredState = this.energy > 45 ? "ATACAR" : "PROTEGER";
+      }
+      if (this.stageRole === "points" &&
+        ((nextPoint?.type === "sprint" && nextPoint.km - this.distance < 5) || remaining < 7)) {
+        desiredState = "PREPARAR SPRINT";
+      }
+      if (this.stageRole === "mountain" && nextPoint?.type === "mountain" &&
+        nextPoint.km - this.distance < 6) {
+        desiredState = this.energy > 42 ? "ATACAR" : "PROTEGER";
+      }
+    }
     if (plan.state === "PERSEGUIR" && this === team?.objectiveRider) desiredState = "PROTEGER";
     if (plan.state === "ATACAR" && !["attacker", "climber"].includes(this.role)) desiredState = "PROTEGER";
     if (plan.state === "PREPARAR SPRINT" && this.role === "leader" && this !== team?.sprinter) desiredState = "PROTEGER";
@@ -1213,7 +1324,7 @@ class AICyclist extends Cyclist {
 
     const sprintDistance = 0.34 + this.intelligence * 0.0022;
     const intermediateSprint = nextPoint?.type === "sprint" && nextPoint.km - this.distance <= sprintDistance;
-    const sprintCandidate = this.role === "sprinter" || this === team?.objectiveRider ||
+    const sprintCandidate = this.role === "sprinter" || this.stageRole === "points" || this === team?.objectiveRider ||
       (this.role === "leader" && this.sprint > 80);
     if (sprintCandidate && (remaining <= sprintDistance || intermediateSprint) && this.explosive > 10) {
       this.sprinting = true;
@@ -1334,6 +1445,10 @@ class Race {
     this.jerseyAssignments = options.jerseyAssignments || {};
     this.playerProfile = PLAYER_PROFILES[options.playerProfile] ? options.playerProfile : "allrounder";
     this.tourConditions = options.tourConditions instanceof Map ? options.tourConditions : new Map();
+    this.hasExplicitPlayerTeam = TEAM_BY_ID.has(options.playerTeamId);
+    this.playerTeamId = this.hasExplicitPlayerTeam ? options.playerTeamId : "solaris";
+    this.stageAssignments = options.stageAssignments && typeof options.stageAssignments === "object"
+      ? options.stageAssignments : {};
     this.simulationOnly = Boolean(options.simulationOnly);
     this.random = new SeededRandom(stageSeed);
     const stageLength = this.stageDefinition.lengthKm || 120 + Math.floor(this.random.next() * 161);
@@ -1412,26 +1527,17 @@ class Race {
   }
 
   createPeloton() {
-    this.teams = [
-      { name: "Solaris", color: "#ffcc33", specialty: "balanced", cooperation: 0.72, attackBias: 0.58 },
-      { name: "Cobalto", color: "#2f80ed", specialty: "tempo", cooperation: 0.88, attackBias: 0.42 },
-      { name: "Bermellón", color: "#e63946", specialty: "attack", cooperation: 0.48, attackBias: 0.9 },
-      { name: "Esmeralda", color: "#2fbf71", specialty: "mountain", cooperation: 0.67, attackBias: 0.7 },
-      { name: "Violeta", color: "#9b5de5", specialty: "opportunist", cooperation: 0.43, attackBias: 0.78 },
-      { name: "Naranja", color: "#ff7a00", specialty: "sprint", cooperation: 0.82, attackBias: 0.3 },
-      { name: "Turquesa", color: "#00b8d9", specialty: "chase", cooperation: 0.95, attackBias: 0.38 },
-      { name: "Magenta", color: "#f15bb5", specialty: "breakaway", cooperation: 0.52, attackBias: 0.94 },
-      { name: "Acero", color: "#8d99ae", specialty: "conservative", cooperation: 0.78, attackBias: 0.28 },
-      { name: "Lima", color: "#9acd32", specialty: "allround", cooperation: 0.64, attackBias: 0.62 }
-    ];
-    const playerProfile = PLAYER_PROFILES[this.playerProfile];
+    this.teams = TEAM_DEFINITIONS.map((team) => ({ ...team, leader: { ...team.leader } }));
+    const playerTeamIndex = Math.max(0, this.teams.findIndex((team) => team.id === this.playerTeamId));
+    const playerTeam = this.teams[playerTeamIndex];
+    const profile = PLAYER_PROFILES[this.playerProfile];
+    const playerLeader = this.stageDefinition.quickRace || !this.hasExplicitPlayerTeam
+      ? { ...playerTeam.leader, ...profile, name: "TÚ", nationality: "España", flag: "🇪🇸", age: 23 }
+      : playerTeam.leader;
     this.player = new PlayerCyclist({
-      name: "TÚ", nationality: "España", flag: "🇪🇸", team: this.teams[0].name, color: this.teams[0].color,
-      climbing: playerProfile.climbing, sprint: playerProfile.sprint,
-      endurance: playerProfile.endurance, technique: playerProfile.technique,
-      aggression: playerProfile.aggression, intelligence: playerProfile.intelligence,
+      ...playerLeader, team: playerTeam.name, color: playerTeam.color, teamIndex: playerTeamIndex,
       lateral: 0.08, distance: 0,
-      role: "leader", roleLabel: "LÍDER", age: 23
+      role: "leader", roleLabel: "LÍDER", stageRole: "leader"
     });
     this.player.balanceBonus = 0.65;
     const nations = [
@@ -1459,7 +1565,7 @@ class Race {
     for (let teamIndex = 0; teamIndex < this.teams.length; teamIndex += 1) {
       const team = this.teams[teamIndex];
       for (let slot = 0; slot < 10; slot += 1) {
-        if (teamIndex === 0 && slot === 0) continue;
+        if (teamIndex === playerTeamIndex && slot === 0) continue;
         const role = roleSlots[slot];
         const nation = nations[riderIndex % nations.length];
         const nationalIndex = Math.floor(riderIndex / nations.length);
@@ -1467,7 +1573,8 @@ class Race {
         const firstSurname = nation.last[(nationalIndex + riderIndex) % nation.last.length];
         const secondSurname = nationalIndex >= nation.first.length
           ? `-${nation.last[(nationalIndex + riderIndex + 2) % nation.last.length]}` : "";
-        const name = `${firstName} ${firstSurname}${secondSurname}`;
+        const teamLeader = slot === 0 ? team.leader : null;
+        const name = teamLeader?.name || `${firstName} ${firstSurname}${secondSurname}`;
         const base = role === "leader"
           ? { climbing: 82, sprint: 80, endurance: 86, aggression: 76, intelligence: 88 }
           : role === "sprinter"
@@ -1481,15 +1588,16 @@ class Race {
         const specialtySprint = team.specialty === "sprint" ? 3 : 0;
         const type = roleLabels[role][0] + roleLabels[role].slice(1).toLowerCase();
         this.cyclists.push(new AICyclist({
-          name, nationality: nation.name, flag: nation.flag, type, team: team.name, color: team.color,
+          name, nationality: teamLeader?.nationality || nation.name, flag: teamLeader?.flag || nation.flag,
+          type, team: team.name, color: team.color,
           teamIndex, role, roleLabel: roleLabels[role],
-          climbing: base.climbing + specialtyClimb + this.random.next() * 4 - 2,
-          sprint: base.sprint + specialtySprint + this.random.next() * 4 - 2,
-          endurance: base.endurance + this.random.next() * 4 - 2,
-          technique: 70 + this.random.next() * 19,
-          aggression: base.aggression + (team.attackBias - 0.5) * 10 + this.random.next() * 5 - 2.5,
-          intelligence: base.intelligence + this.random.next() * 5 - 2.5,
-          age: 20 + Math.floor(this.random.next() * 17),
+          climbing: teamLeader?.climbing ?? base.climbing + specialtyClimb + this.random.next() * 4 - 2,
+          sprint: teamLeader?.sprint ?? base.sprint + specialtySprint + this.random.next() * 4 - 2,
+          endurance: teamLeader?.endurance ?? base.endurance + this.random.next() * 4 - 2,
+          technique: teamLeader?.technique ?? 70 + this.random.next() * 19,
+          aggression: teamLeader?.aggression ?? base.aggression + (team.attackBias - 0.5) * 10 + this.random.next() * 5 - 2.5,
+          intelligence: teamLeader?.intelligence ?? base.intelligence + this.random.next() * 5 - 2.5,
+          age: teamLeader?.age ?? 20 + Math.floor(this.random.next() * 17),
           lateral: ((riderIndex % 9) - 4) * 0.21,
           distance: -0.035 * Math.floor(riderIndex / 9),
           speed: 32 + this.random.next() * 2
@@ -1499,7 +1607,7 @@ class Race {
     }
     const identityFields = [
       "name", "nationality", "flag", "type", "team", "color", "teamIndex", "role", "roleLabel",
-      "climbing", "sprint", "endurance", "technique", "aggression", "intelligence", "age", "tourId"
+      "climbing", "sprint", "endurance", "technique", "aggression", "intelligence", "age", "tourId", "stageRole"
     ];
     this.cyclists.forEach((rider, index) => {
       rider.tourId = index;
@@ -1517,6 +1625,10 @@ class Race {
       rider.energy = clamp(100 - rider.tourFatigue * 0.24, 68, 100);
       rider.explosive = clamp(100 - rider.tourFatigue * 0.12, 76, 100);
       rider.conditionBonus = rider.dailyForm * 0.16 - rider.tourFatigue * 0.012;
+      rider.specialtyLabel = derivedSpecialty(rider);
+      if (rider === this.player) rider.stageRole = "leader";
+      else rider.stageRole = this.stageAssignments[rider.tourId] || rider.stageRole ||
+        (rider.team === this.player.team ? "support" : rider.role);
     });
     if (this.timeTrial) this.assignTimeTrialGrid();
     else this.assignStartingGrid();
@@ -1542,13 +1654,22 @@ class Race {
           ? team.attackers[0] || team.leader : team.leader;
         team.objectiveLabel = team.objectiveRider.role === "attacker" ? "BUSCAR LA FUGA" : "DISPUTAR LA ETAPA";
       }
-      // El equipo del jugador reconoce su dorsal como líder jugable. Los rivales
-      // conservan objetivos por perfil, pero Solaris trabaja para la decisión humana.
+      // El equipo elegido trabaja para su líder predefinido y respeta los
+      // objetivos configurados para esta etapa.
       if (team.riders.includes(this.player)) {
-        team.objectiveRider = this.player;
-        team.objectiveLabel = "PROTEGER AL LÍDER";
+        const preferredRole = this.road.stageProfile === "mountain" ? "mountain"
+          : this.road.stageProfile === "flat" ? "points" : "stage";
+        const specialist = team.riders.find((rider) => rider.stageRole === preferredRole);
+        team.objectiveRider = specialist || this.player;
+        team.objectiveLabel = specialist
+          ? STAGE_ROLES[specialist.stageRole].label
+          : "PROTEGER AL LÍDER";
       }
-      team.plan = { state: "RECUPERAR", protectedRider: team.objectiveRider, rival: null };
+      team.plan = {
+        state: "RECUPERAR",
+        protectedRider: team.riders.includes(this.player) ? this.player : team.objectiveRider,
+        rival: null
+      };
       team.nextAttackKm = 16 + teamIndex * 3.1 + this.random.next() * 11;
       team.initiatives = 0;
       team.lastAttackTime = -100;
@@ -2004,7 +2125,7 @@ class Race {
       const attackTeam = ["attack", "breakaway", "opportunist"].includes(team.specialty) ||
         (this.road.stageProfile !== "flat" && ["mountain", "allround", "balanced"].includes(team.specialty));
       let state = "RECUPERAR";
-      const isPlayerTeam = team.objectiveRider === this.player;
+      const isPlayerTeam = team.riders.includes(this.player);
       const manualOrder = isPlayerTeam ? TEAM_ORDERS[this.playerTeamOrder] : null;
       if (manualOrder && remaining > 1.2) {
         state = manualOrder.state;
@@ -2028,13 +2149,13 @@ class Race {
       }
       team.plan = {
         state,
-        protectedRider: team.objectiveRider,
+        protectedRider: isPlayerTeam ? this.player : team.objectiveRider,
         pullers: availablePullers.slice(0, state === "PREPARAR SPRINT" ? 4 : 3),
         rival: breakaway?.leader || this.ranking.find((rider) => rider.team !== team.name && rider.role === "leader") || null,
         breakaway,
         objective: team.objectiveLabel
       };
-      if (team.objectiveRider === this.player) {
+      if (isPlayerTeam) {
         const nearbyHelpers = team.riders.filter((rider) =>
           rider !== this.player && rider.role === "domestique" && !rider.finished &&
           Math.abs(rider.distance - this.player.distance) < 0.32).length;
@@ -3098,6 +3219,10 @@ class Game {
     this.gameMode = "tour";
     this.menuGameMode = "tour";
     this.activeSaveSlot = null;
+    this.pendingSaveSlot = null;
+    this.selectedTeamId = "solaris";
+    this.directoryTeamId = "solaris";
+    this.directoryRosterCache = null;
     this.simulationCheckpoint = null;
     this.lastTimestamp = 0;
     this.cameraFocusKm = 0;
@@ -3192,6 +3317,7 @@ class Game {
     document.getElementById("tourModeButton").addEventListener("click", () => this.setMenuGameMode("tour"));
     document.getElementById("quickModeButton").addEventListener("click", () => this.setMenuGameMode("quick"));
     document.getElementById("quickRaceButton").addEventListener("click", () => this.startQuickRace());
+    document.getElementById("teamsDirectoryButton").addEventListener("click", () => this.openTeamsDirectory());
     document.querySelectorAll("[data-slot-action]").forEach((button) => {
       button.addEventListener("click", () => this.openSaveSlot(Number(button.dataset.slotAction)));
     });
@@ -3207,6 +3333,13 @@ class Game {
       });
     });
     document.getElementById("dashboardBackButton").addEventListener("click", () => this.showMenu());
+    document.getElementById("dashboardTeamButton").addEventListener("click", () => {
+      document.getElementById("teamManagementCard").scrollIntoView({ behavior: this.reducedMotion ? "auto" : "smooth", block: "start" });
+    });
+    document.getElementById("openAllTeamsButton").addEventListener("click", () => this.openTeamsDirectory(this.tour?.playerTeamId));
+    document.getElementById("closeTeamsDirectoryButton").addEventListener("click", () => this.closeTeamsDirectory());
+    document.getElementById("closeTeamSelectionButton").addEventListener("click", () => this.closeTeamSelection());
+    document.getElementById("confirmTeamSelectionButton").addEventListener("click", () => this.confirmTeamSelection());
     document.getElementById("playStageButton").addEventListener("click", () => this.start());
     document.getElementById("simulateStageButton").addEventListener("click", () => this.simulateCurrentStage());
     document.getElementById("dashboardNewTourButton").addEventListener("click", () => this.startNewTourFromDashboard());
@@ -3458,7 +3591,8 @@ class Game {
     document.getElementById("teamOrderCurrent").textContent = TEAM_ORDERS[order].label;
     this.closeTeamOrders();
     this.haptic(18);
-    this.notify(TEAM_ORDERS[order].message);
+    const teamName = this.race.player.team;
+    this.notify(TEAM_ORDERS[order].message.replaceAll("Solaris", teamName));
   }
 
   openTutorial() {
@@ -3567,6 +3701,8 @@ class Game {
         conditions: [...(this.tour.conditions || new Map()).values()],
         stageResults: this.tour.stageResults || [],
         playerProfile: this.tour.playerProfile || "allrounder",
+        playerTeamId: this.tour.playerTeamId || "solaris",
+        stageAssignments: this.tour.stageAssignments || {},
         jerseyAssignments: this.tour.jerseyAssignments || {},
         leaders: this.tour.leaders || {},
         completedStages: this.tour.completedStages || 0
@@ -3577,7 +3713,7 @@ class Game {
   readSaveSlot(slot) {
     if (!Number.isInteger(slot) || slot < 1 || slot > SAVE_SLOT_COUNT) return null;
     const save = safeJsonParse(safeStorageGet(this.saveSlotKey(slot)), null);
-    if (save?.version !== SAVE_VERSION || !Number.isFinite(save.savedAt ? Date.parse(save.savedAt) : NaN) ||
+    if (![1, SAVE_VERSION].includes(save?.version) || !Number.isFinite(save.savedAt ? Date.parse(save.savedAt) : NaN) ||
       !Number.isInteger(save.tour?.seed) || save.tour?.stages?.length !== TOUR_STAGE_COUNT ||
       save.tour?.roster?.length !== 100 || save.tour?.totals?.length !== 100 ||
       !Number.isInteger(save.tour.completedStages) ||
@@ -3611,14 +3747,22 @@ class Game {
         save.tour.stageResults.every((result) => result && Number.isInteger(result.stageNumber) &&
           result.stageNumber >= 1 && result.stageNumber <= TOUR_STAGE_COUNT));
     const validProfile = save.tour.playerProfile === undefined || Boolean(PLAYER_PROFILES[save.tour.playerProfile]);
-    return validStages && validRoster && validTotals && validConditions && validStageResults && validProfile &&
+    const validTeam = save.tour.playerTeamId === undefined || TEAM_BY_ID.has(save.tour.playerTeamId);
+    const validAssignments = save.tour.stageAssignments === undefined ||
+      (save.tour.stageAssignments && typeof save.tour.stageAssignments === "object" &&
+        Object.values(save.tour.stageAssignments).every((role) => STAGE_ROLES[role] && role !== "leader"));
+    return validStages && validRoster && validTotals && validConditions && validStageResults && validProfile && validTeam && validAssignments &&
       rosterIds.size === 100 && totalIds.size === 100 ? save : null;
   }
 
   restoreTour(save, slot) {
     const source = save.tour;
     const playerProfile = PLAYER_PROFILES[source.playerProfile] ? source.playerProfile : "allrounder";
-    const roster = source.roster.map((rider) => ({ ...rider }));
+    const roster = source.roster.map((rider) => {
+      if (save.version !== 1 || rider.role !== "leader") return { ...rider };
+      const team = TEAM_DEFINITIONS.find((candidate) => candidate.name === rider.team);
+      return team ? { ...rider, ...team.leader, role: "leader", roleLabel: "LÍDER" } : { ...rider };
+    });
     if (roster[0] && !PLAYER_PROFILES[source.playerProfile]) {
       const fallback = PLAYER_PROFILES.allrounder;
       roster[0] = {
@@ -3642,6 +3786,14 @@ class Game {
         conditions.set(rider.tourId, { tourId: rider.tourId, fatigue: 0, form: 0 });
       }
     });
+    const playerTeamId = TEAM_BY_ID.has(source.playerTeamId) ? source.playerTeamId : "solaris";
+    const restoredAssignments = source.stageAssignments && typeof source.stageAssignments === "object"
+      ? { ...source.stageAssignments } : {};
+    const selectedTeam = TEAM_BY_ID.get(playerTeamId);
+    roster.forEach((rider) => {
+      if (rider.team !== selectedTeam.name || rider.role === "leader" || restoredAssignments[rider.tourId]) return;
+      restoredAssignments[rider.tourId] = "support";
+    });
     this.activeSaveSlot = slot;
     this.gameMode = "tour";
     this.tour = {
@@ -3653,6 +3805,8 @@ class Game {
       conditions,
       stageResults: Array.isArray(source.stageResults) ? source.stageResults : [],
       playerProfile,
+      playerTeamId,
+      stageAssignments: restoredAssignments,
       jerseyAssignments: source.jerseyAssignments || {},
       leaders: source.leaders || {},
       completedStages: source.completedStages
@@ -3700,11 +3854,11 @@ class Game {
       }
       const completed = save.tour.completedStages;
       const general = this.slotGeneralPosition(save);
-      const profile = PLAYER_PROFILES[save.tour.playerProfile] || PLAYER_PROFILES.allrounder;
+      const team = TEAM_BY_ID.get(save.tour.playerTeamId) || TEAM_DEFINITIONS[0];
       status.textContent = completed >= TOUR_STAGE_COUNT ? "TOUR COMPLETO" : `ETAPA ${completed + 1}/${TOUR_STAGE_COUNT}`;
       meta.textContent = completed
-        ? `${completed} completadas · ${profile.label} · General ${general ? ordinal(general) : "—"}`
-        : `${profile.label} · calendario y pelotón preparados`;
+        ? `${completed} completadas · ${team.name} · General ${general ? ordinal(general) : "—"}`
+        : `${team.name} · ${team.identity} · pelotón preparado`;
       action.textContent = completed >= TOUR_STAGE_COUNT ? "VER TOUR" : "CARGAR";
     });
   }
@@ -3727,6 +3881,8 @@ class Game {
       timeTrialOrder,
       jerseyAssignments: this.tour.jerseyAssignments,
       playerProfile: this.tour.playerProfile,
+      playerTeamId: this.tour.playerTeamId,
+      stageAssignments: this.tour.stageAssignments,
       tourConditions: this.tour.conditions,
       simulationOnly: Boolean(options.simulationOnly)
     });
@@ -3736,7 +3892,14 @@ class Game {
     if (this.tour?.roster) return;
     const preparationRace = this.createCurrentRace({ simulationOnly: true });
     this.tour.roster = this.captureRoster(preparationRace);
+    const selectedTeam = TEAM_BY_ID.get(this.tour.playerTeamId) || TEAM_DEFINITIONS[0];
+    if (!this.tour.stageAssignments) this.tour.stageAssignments = {};
     this.tour.roster.forEach((rider) => {
+      if (rider.team === selectedTeam.name && rider.role !== "leader" &&
+        !this.tour.stageAssignments[rider.tourId]) {
+        this.tour.stageAssignments[rider.tourId] = "support";
+        rider.stageRole = this.tour.stageAssignments[rider.tourId];
+      }
       this.tour.totals.set(rider.tourId, {
         tourId: rider.tourId, time: 0, points: 0, mountain: 0, stages: 0
       });
@@ -3864,11 +4027,12 @@ class Game {
       document.getElementById("dashboardStageSprints").textContent = stage.type === "itt" ? "—" : road.intermediateSprints.length;
       const scenery = [...new Set(road.sceneryZones.map((zone) => zone.name))].slice(0, 5).join(" · ");
       const playerCondition = this.tour.conditions?.get(0) || { fatigue: 0, form: 0 };
-      const profile = PLAYER_PROFILES[this.tour.playerProfile] || PLAYER_PROFILES.allrounder;
+      const playerRider = this.tour.roster.find((rider) => rider.tourId === 0);
+      const team = TEAM_BY_ID.get(this.tour.playerTeamId) || TEAM_DEFINITIONS[0];
       const formLabel = playerCondition.form >= 0
         ? `forma +${playerCondition.form.toFixed(1)}` : `forma ${playerCondition.form.toFixed(1)}`;
       document.getElementById("dashboardStageScenery").textContent =
-        `${profile.label} · ${formLabel} · fatiga ${Math.round(playerCondition.fatigue)} · ` +
+        `${team.name} · ${derivedSpecialty(playerRider)} · ${formLabel} · fatiga ${Math.round(playerCondition.fatigue)} · ` +
         `${stage.type === "itt" ? "Salida individual · sin rebufo ni colisiones" : "Etapa en línea · puertos y metas puntuables"} · ${scenery}`;
     }
 
@@ -3901,6 +4065,164 @@ class Game {
     this.renderDashboardList("dashboardPointsList", points, "points");
     this.renderDashboardList("dashboardMountainList", mountain, "mountain");
     this.renderDashboardList("dashboardYoungList", young, "young");
+    this.renderManagedTeam();
+  }
+
+  renderManagedTeam() {
+    if (!this.tour?.roster) return;
+    const team = TEAM_BY_ID.get(this.tour.playerTeamId) || TEAM_DEFINITIONS[0];
+    const riders = this.tour.roster.filter((rider) => rider.team === team.name)
+      .sort((a, b) => (a.role === "leader" ? -1 : b.role === "leader" ? 1 : a.tourId - b.tourId));
+    document.getElementById("managedTeamIdentity").textContent = team.identity.toUpperCase();
+    document.getElementById("managedTeamCrest").innerHTML = teamCrestMarkup(team);
+    document.getElementById("managedTeamName").textContent = team.name;
+    const leader = riders.find((rider) => rider.role === "leader") || riders[0];
+    document.getElementById("managedTeamLeader").textContent =
+      `Líder · ${leader?.flag || ""} ${leader?.name || team.leader.name}`;
+    const roster = document.getElementById("managedRoster");
+    roster.replaceChildren();
+    riders.forEach((rider, index) => {
+      const condition = this.tour.conditions.get(rider.tourId) || { fatigue: 0, form: 0 };
+      const assignment = rider.role === "leader"
+        ? "leader" : this.tour.stageAssignments?.[rider.tourId] || "support";
+      const row = document.createElement("article");
+      row.className = `managed-rider${rider.tourId === 0 ? " player" : ""}`;
+      const number = document.createElement("b");
+      number.textContent = String(index + 1).padStart(2, "0");
+      const identity = document.createElement("div");
+      identity.className = "rider-name";
+      identity.innerHTML = `<strong>${rider.flag || ""} ${rider.name}</strong><small>${derivedSpecialty(rider)} · ${rider.age} AÑOS</small>`;
+      row.append(number, identity);
+      [
+        ["MON", rider.climbing], ["SPR", rider.sprint],
+        ["RES", rider.endurance], ["TÉC", rider.technique]
+      ].forEach(([label, value]) => {
+        const stat = document.createElement("div");
+        stat.className = "rider-stat";
+        stat.innerHTML = `<span>${label}</span><strong>${Math.round(value)}</strong>`;
+        row.appendChild(stat);
+      });
+      const status = document.createElement("div");
+      status.className = `rider-condition${condition.fatigue >= 45 ? " tired" : ""}`;
+      const form = condition.form >= 0 ? `+${condition.form.toFixed(1)}` : condition.form.toFixed(1);
+      status.innerHTML = `<span>FATIGA · FORMA</span><strong>${Math.round(condition.fatigue)}% · ${form}</strong>`;
+      row.appendChild(status);
+      const select = document.createElement("select");
+      select.setAttribute("aria-label", `Función de ${rider.name}`);
+      Object.entries(STAGE_ROLES).forEach(([value, role]) => {
+        if (value === "leader" && rider.role !== "leader") return;
+        if (value !== "leader" && rider.role === "leader") return;
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = role.short;
+        option.selected = value === assignment;
+        select.appendChild(option);
+      });
+      select.disabled = rider.role === "leader" || this.tour.completedStages >= TOUR_STAGE_COUNT;
+      select.addEventListener("change", () => {
+        if (!this.tour.stageAssignments) this.tour.stageAssignments = {};
+        this.tour.stageAssignments[rider.tourId] = select.value;
+        rider.stageRole = select.value;
+        this.saveTour();
+      });
+      row.appendChild(select);
+      roster.appendChild(row);
+    });
+  }
+
+  directoryRoster() {
+    if (this.tour?.roster) return this.tour.roster;
+    if (!this.directoryRosterCache) {
+      const stage = { number: 1, type: "road", profile: "mixed", lengthKm: 160, name: "Presentación", label: "MEDIA MONTAÑA" };
+      const preview = new Race(this, "normal", "dry", {
+        seed: 4604, stageDefinition: stage, playerTeamId: "solaris", simulationOnly: true
+      });
+      this.directoryRosterCache = this.captureRoster(preview);
+    }
+    return this.directoryRosterCache;
+  }
+
+  openTeamsDirectory(teamId = "solaris") {
+    this.directoryTeamId = TEAM_BY_ID.has(teamId) ? teamId : "solaris";
+    const tabs = document.getElementById("teamDirectoryTabs");
+    tabs.replaceChildren();
+    TEAM_DEFINITIONS.forEach((team) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = team.name.toUpperCase();
+      button.classList.toggle("active", team.id === this.directoryTeamId);
+      button.addEventListener("click", () => {
+        this.directoryTeamId = team.id;
+        this.openTeamsDirectory(team.id);
+      });
+      tabs.appendChild(button);
+    });
+    this.renderTeamDirectoryDetail();
+    document.getElementById("teamsDirectoryOverlay").classList.remove("is-hidden");
+  }
+
+  renderTeamDirectoryDetail() {
+    const team = TEAM_BY_ID.get(this.directoryTeamId) || TEAM_DEFINITIONS[0];
+    const riders = this.directoryRoster().filter((rider) => rider.team === team.name)
+      .sort((a, b) => (a.role === "leader" ? -1 : b.role === "leader" ? 1 : a.tourId - b.tourId));
+    const detail = document.getElementById("teamDirectoryDetail");
+    detail.replaceChildren();
+    const header = document.createElement("header");
+    header.className = "directory-team-header";
+    header.innerHTML = `${teamCrestMarkup(team)}<div><h3>${team.name}</h3><p>${team.identity} · Líder predefinido: ${team.leader.flag} ${team.leader.name}</p></div>`;
+    const roster = document.createElement("div");
+    roster.className = "directory-roster";
+    riders.forEach((rider) => {
+      const row = document.createElement("div");
+      row.className = `directory-rider${rider.role === "leader" ? " leader" : ""}`;
+      row.innerHTML = `<span>${rider.flag || ""} ${rider.name}${rider.role === "leader" ? " ◆" : ""}</span>` +
+        `<b title="Montaña">M ${Math.round(rider.climbing)}</b><b title="Sprint">S ${Math.round(rider.sprint)}</b>` +
+        `<b title="Resistencia">R ${Math.round(rider.endurance)}</b><b title="Técnica">T ${Math.round(rider.technique)}</b>` +
+        `<em>${derivedSpecialty(rider)}</em>`;
+      roster.appendChild(row);
+    });
+    detail.append(header, roster);
+  }
+
+  closeTeamsDirectory() {
+    document.getElementById("teamsDirectoryOverlay").classList.add("is-hidden");
+  }
+
+  openTeamSelection(slot) {
+    this.pendingSaveSlot = slot;
+    this.selectedTeamId = "solaris";
+    const grid = document.getElementById("teamSelectionGrid");
+    grid.replaceChildren();
+    TEAM_DEFINITIONS.forEach((team) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `team-select-card${team.id === this.selectedTeamId ? " active" : ""}`;
+      button.dataset.teamId = team.id;
+      button.innerHTML = `${teamCrestMarkup(team)}<strong>${team.name}</strong><span>${team.identity.toUpperCase()}</span>` +
+        `<small>Líder · ${team.leader.flag} ${team.leader.name}<br>M ${team.leader.climbing} · S ${team.leader.sprint} · R ${team.leader.endurance} · T ${team.leader.technique}</small>`;
+      button.addEventListener("click", () => {
+        this.selectedTeamId = team.id;
+        grid.querySelectorAll(".team-select-card").forEach((card) =>
+          card.classList.toggle("active", card.dataset.teamId === team.id));
+        document.getElementById("selectedTeamName").textContent = team.name.toUpperCase();
+      });
+      grid.appendChild(button);
+    });
+    document.getElementById("selectedTeamName").textContent = TEAM_BY_ID.get(this.selectedTeamId).name.toUpperCase();
+    document.getElementById("teamSelectionOverlay").classList.remove("is-hidden");
+  }
+
+  closeTeamSelection() {
+    this.pendingSaveSlot = null;
+    document.getElementById("teamSelectionOverlay").classList.add("is-hidden");
+  }
+
+  confirmTeamSelection() {
+    const slot = this.pendingSaveSlot;
+    if (!slot || !TEAM_BY_ID.has(this.selectedTeamId)) return;
+    document.getElementById("teamSelectionOverlay").classList.add("is-hidden");
+    this.pendingSaveSlot = null;
+    this.startTour(slot, this.selectedTeamId);
   }
 
   showTourDashboard() {
@@ -3930,7 +4252,7 @@ class Game {
   openSaveSlot(slot) {
     const save = this.readSaveSlot(slot);
     if (!save) {
-      this.startTour(slot);
+      this.openTeamSelection(slot);
       return;
     }
     this.restoreTour(save, slot);
@@ -3948,7 +4270,7 @@ class Game {
     this.renderSaveSlots();
   }
 
-  createTour(slot = null) {
+  createTour(slot = null, playerTeamId = "solaris") {
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
     return {
       seed,
@@ -3959,6 +4281,8 @@ class Game {
       totals: new Map(),
       conditions: new Map(),
       stageResults: [],
+      playerTeamId: TEAM_BY_ID.has(playerTeamId) ? playerTeamId : "solaris",
+      stageAssignments: {},
       playerProfile: PLAYER_PROFILES[document.getElementById("riderProfileSelect").value]
         ? document.getElementById("riderProfileSelect").value : "allrounder",
       jerseyAssignments: {},
@@ -3997,6 +4321,7 @@ class Game {
     quickButton.setAttribute("aria-selected", String(quick));
     document.getElementById("tourModePanel").classList.toggle("is-hidden", quick);
     document.getElementById("quickModePanel").classList.toggle("is-hidden", !quick);
+    document.getElementById("profileOption").classList.toggle("is-hidden", !quick);
   }
 
   startQuickRace() {
@@ -4007,11 +4332,11 @@ class Game {
     this.start();
   }
 
-  startTour(slot = this.activeSaveSlot) {
+  startTour(slot = this.activeSaveSlot, playerTeamId = "solaris") {
     this.simulationCheckpoint = null;
     this.gameMode = "tour";
     this.activeSaveSlot = slot || null;
-    this.tour = this.createTour(this.activeSaveSlot);
+    this.tour = this.createTour(this.activeSaveSlot, playerTeamId);
     this.showTourDashboard();
   }
 
@@ -4019,7 +4344,7 @@ class Game {
     if (!this.tour || this.tour.completedStages < TOUR_STAGE_COUNT) return;
     const slotLabel = this.activeSaveSlot ? ` del slot ${this.activeSaveSlot}` : "";
     if (!window.confirm(`¿Crear un Tour nuevo${slotLabel}? El Tour terminado será reemplazado.`)) return;
-    this.startTour(this.activeSaveSlot);
+    this.openTeamSelection(this.activeSaveSlot);
   }
 
   continueTour() {
@@ -4043,7 +4368,7 @@ class Game {
   captureRoster(race) {
     const fields = [
       "name", "nationality", "flag", "type", "team", "color", "teamIndex", "role", "roleLabel",
-      "climbing", "sprint", "endurance", "technique", "aggression", "intelligence", "age", "tourId"
+      "climbing", "sprint", "endurance", "technique", "aggression", "intelligence", "age", "tourId", "stageRole"
     ];
     return race.cyclists.map((rider) => Object.fromEntries(fields.map((field) => [field, rider[field]])));
   }
@@ -4080,6 +4405,7 @@ class Game {
     teamOrderButton.disabled = this.race.timeTrial;
     teamOrderButton.classList.toggle("is-hidden", this.race.timeTrial);
     document.getElementById("teamOrderCurrent").textContent = TEAM_ORDERS.protect.label;
+    document.getElementById("teamOrderTitle").textContent = `♟ EQUIPO ${this.race.player.team.toUpperCase()}`;
     document.querySelectorAll("[data-team-order]").forEach((button) => {
       button.classList.toggle("active", button.dataset.teamOrder === "protect");
     });
@@ -4145,6 +4471,8 @@ class Game {
     document.getElementById("returnCameraButton").classList.add("is-hidden");
     document.getElementById("followCard").classList.add("is-hidden");
     document.getElementById("tutorialOverlay").classList.add("is-hidden");
+    document.getElementById("teamSelectionOverlay").classList.add("is-hidden");
+    document.getElementById("teamsDirectoryOverlay").classList.add("is-hidden");
     this.closeTeamOrders();
     document.getElementById("eventFeed").replaceChildren();
     document.getElementById("resourceFeedback").replaceChildren();
@@ -4193,9 +4521,12 @@ class Game {
       const current = this.tour.conditions.get(rider.tourId) || {
         tourId: rider.tourId, fatigue: 0, form: 0
       };
+      const assignmentLoad = rider.stageRole === "finish" ? -7
+        : rider.stageRole === "support" ? 4
+          : ["stage", "points", "mountain"].includes(rider.stageRole) ? 2.5 : 0;
       const stageLoad = clamp(
         rider.fatigue * 0.38 + Math.max(0, 72 - rider.energy) * 0.24 +
-        race.road.totalAscent / 420 + race.road.lengthKm / 95,
+        race.road.totalAscent / 420 + race.road.lengthKm / 95 + assignmentLoad,
         0,
         42
       );
@@ -4335,7 +4666,13 @@ class Game {
     const condition = rider.dailyForm * 0.7 - rider.tourFatigue * 0.025;
     const roleBonus = stage.type !== "itt" && profile === "mountain" && rider.role === "climber" ? 1.2
       : stage.type !== "itt" && profile === "flat" && rider.role === "sprinter" ? 1.2 : 0;
-    return ability + playerModifier + raceDay + roleBonus + condition;
+    const assignmentBonus = stage.type === "itt" ? 0
+      : rider.stageRole === "stage" ? 1.5
+        : rider.stageRole === "mountain" && profile === "mountain" ? 2.6
+          : rider.stageRole === "points" && profile === "flat" ? 2.6
+            : rider.stageRole === "finish" ? -3.2
+              : rider.stageRole === "support" ? -1.4 : 0;
+    return ability + playerModifier + raceDay + roleBonus + assignmentBonus + condition;
   }
 
   createInstantBreakaway(race, random) {
@@ -4418,8 +4755,10 @@ class Game {
         const breakawayPointBonus = simulatedBreakaway.riders.includes(rider)
           ? simulatedBreakaway.survived ? 4 : 1.2 : 0;
         const score = point.type === "mountain"
-          ? rider.climbing * 0.72 + rider.endurance * 0.2 + pointRandom.next() * 8 + breakawayPointBonus
-          : rider.sprint * 0.68 + rider.intelligence * 0.2 + pointRandom.next() * 8 + breakawayPointBonus;
+          ? rider.climbing * 0.72 + rider.endurance * 0.2 + pointRandom.next() * 8 + breakawayPointBonus +
+            (rider.stageRole === "mountain" ? 7 : 0)
+          : rider.sprint * 0.68 + rider.intelligence * 0.2 + pointRandom.next() * 8 + breakawayPointBonus +
+            (rider.stageRole === "points" ? 7 : 0);
         return [rider, score];
       }));
       const pointRanking = [...race.cyclists]
@@ -5012,7 +5351,10 @@ class Game {
       if (point.y < -90 || point.y > this.height + 90) continue;
       const color = racePointColor(racePoint);
       const label = racePoint.markerLabel || (racePoint.type === "sprint" ? "SPR" : racePoint.category);
-      const halfWidth = Math.max(42, point.roadHalf - 7);
+      const sprintGate = racePoint.type === "sprint";
+      const halfWidth = sprintGate ? Math.max(64, point.roadHalf + 18) : Math.max(42, point.roadHalf - 7);
+      const gateHeight = sprintGate ? 91 : 57;
+      const bannerHeight = sprintGate ? 29 : 23;
       ctx.save();
       ctx.translate(Math.round(point.x), Math.round(point.y));
       ctx.rotate(this.roadAngleAt(racePoint.km));
@@ -5023,16 +5365,16 @@ class Game {
       }
       // Arco pixel-art y cartel con categoría/puntos máximos.
       ctx.fillStyle = "#101820";
-      ctx.fillRect(-halfWidth - 4, -57, 8, 58);
-      ctx.fillRect(halfWidth - 4, -57, 8, 58);
-      ctx.fillRect(-halfWidth - 6, -61, halfWidth * 2 + 12, 23);
+      ctx.fillRect(-halfWidth - 5, -gateHeight, 10, gateHeight + 1);
+      ctx.fillRect(halfWidth - 5, -gateHeight, 10, gateHeight + 1);
+      ctx.fillRect(-halfWidth - 8, -gateHeight - 4, halfWidth * 2 + 16, bannerHeight);
       ctx.fillStyle = color;
-      ctx.fillRect(-halfWidth - 2, -57, halfWidth * 2 + 4, 15);
+      ctx.fillRect(-halfWidth - 3, -gateHeight, halfWidth * 2 + 6, bannerHeight - 8);
       ctx.fillStyle = racePoint.type === "mountain" && racePoint.category === "4ª" ? "#101820" : "#fff7da";
-      ctx.font = "bold 9px Menlo, Monaco, Consolas, monospace";
+      ctx.font = `bold ${sprintGate ? 11 : 9}px Menlo, Monaco, Consolas, monospace`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(`${label} · ${racePoint.maxPoints} PT`, 0, -49);
+      ctx.fillText(`${label} · ${racePoint.maxPoints} PT`, 0, -gateHeight + (bannerHeight - 8) / 2);
       ctx.restore();
     }
   }
@@ -5198,24 +5540,27 @@ class Game {
       const point = this.roadPointAt(km);
       const sides = density > 0.7 && marker % 3 === 0 ? [-1, 1] : [marker % 2 ? -1 : 1];
       for (const side of sides) {
-        const x = Math.round(point.x + side * (point.roadHalf + 13 + Math.abs(marker % 3) * 6));
-        const y = Math.round(point.y);
-        const wave = Math.floor(this.race.elapsed * 6 + marker + side) % 2;
-        ctx.fillStyle = "#d59a70";
-        ctx.fillRect(x - 2, y - 13, 5, 5);
-        ctx.fillStyle = colors[Math.abs(marker + side) % colors.length];
-        ctx.fillRect(x - 3, y - 8, 7, 8);
-        ctx.fillStyle = "#17212a";
-        ctx.fillRect(x - 3, y, 3, 6);
-        ctx.fillRect(x + 2, y, 3, 6);
-        ctx.fillStyle = "#d59a70";
-        ctx.fillRect(x - 6, y - 8 - wave * 4, 4, 3);
-        ctx.fillRect(x + 4, y - 12 + wave * 4, 4, 3);
-        if (marker % 13 === 0) {
-          ctx.fillStyle = "#f4f1e9";
-          ctx.fillRect(x - 10, y - 22, 20, 6);
-          ctx.fillStyle = colors[Math.abs(marker) % colors.length];
-          ctx.fillRect(x - 7, y - 20, 14, 2);
+        const crowdRows = density > 0.82 ? [1, 0] : [0];
+        for (const row of crowdRows) {
+          const x = Math.round(point.x + side * (point.roadHalf + 13 + Math.abs(marker % 3) * 6 + row * 10));
+          const y = Math.round(point.y - row * 5);
+          const wave = Math.floor(this.race.elapsed * 6 + marker + side + row) % 2;
+          ctx.fillStyle = "#d59a70";
+          ctx.fillRect(x - 2, y - 13, 5, 5);
+          ctx.fillStyle = colors[Math.abs(marker + side + row) % colors.length];
+          ctx.fillRect(x - 3, y - 8, 7, 8);
+          ctx.fillStyle = "#17212a";
+          ctx.fillRect(x - 3, y, 3, 6);
+          ctx.fillRect(x + 2, y, 3, 6);
+          ctx.fillStyle = "#d59a70";
+          ctx.fillRect(x - 6, y - 8 - wave * 4, 4, 3);
+          ctx.fillRect(x + 4, y - 12 + wave * 4, 4, 3);
+          if (marker % 13 === 0 && row === 0) {
+            ctx.fillStyle = "#f4f1e9";
+            ctx.fillRect(x - 10, y - 22, 20, 6);
+            ctx.fillStyle = colors[Math.abs(marker) % colors.length];
+            ctx.fillRect(x - 7, y - 20, 14, 2);
+          }
         }
       }
     }
@@ -5235,15 +5580,18 @@ class Game {
         ctx.fillRect(column * cell, row * cell - cell, cell, cell);
       }
     }
+    const halfWidth = this.roadHalfWidth + 24;
+    const gateHeight = 108;
     ctx.fillStyle = "#101820";
-    ctx.fillRect(-this.roadHalfWidth - 8, -58, 8, 58);
-    ctx.fillRect(this.roadHalfWidth, -58, 8, 58);
+    ctx.fillRect(-halfWidth - 7, -gateHeight, 12, gateHeight);
+    ctx.fillRect(halfWidth - 5, -gateHeight, 12, gateHeight);
+    ctx.fillRect(-halfWidth - 10, -gateHeight - 5, halfWidth * 2 + 20, 33);
     ctx.fillStyle = "#ffcc33";
-    ctx.fillRect(-this.roadHalfWidth - 8, -58, this.roadHalfWidth * 2 + 16, 13);
+    ctx.fillRect(-halfWidth - 5, -gateHeight, halfWidth * 2 + 10, 24);
     ctx.fillStyle = "#101820";
-    ctx.font = "bold 11px Menlo, Monaco, Consolas, monospace";
+    ctx.font = "bold 15px Menlo, Monaco, Consolas, monospace";
     ctx.textAlign = "center";
-    ctx.fillText("META", 0, -48);
+    ctx.fillText("META", 0, -91);
     ctx.restore();
   }
 
@@ -5799,7 +6147,9 @@ class Game {
     if (!this.race) return this.height * 0.68;
     const centerElevation = this.race.road.elevationAt(this.cameraKm);
     const elevation = this.race.road.elevationAt(km);
-    return this.height * 0.69 - (elevation - centerElevation) * 0.42;
+    // Exageración vertical deliberada para que la inclinación sea legible en
+    // una pantalla pequeña sin alterar la pendiente física de la carretera.
+    return this.height * 0.69 - (elevation - centerElevation) * 0.82;
   }
 
   renderLateralSkyDetails(ctx, biome, weather) {
@@ -5960,13 +6310,19 @@ class Game {
       const x = focusX + (point.km - this.cameraKm) * pixelsPerKm;
       if (x < -20 || x > this.width + 20) continue;
       const y = this.sideSurfaceY(point.km);
-      ctx.fillStyle = racePointColor(point);
-      ctx.fillRect(Math.round(x - 2), Math.round(y - 62), 4, 62);
-      ctx.fillRect(Math.round(x - 25), Math.round(y - 62), 50, 15);
+      const sprintGate = point.type === "sprint";
+      const gateWidth = sprintGate ? 104 : 64;
+      const gateHeight = sprintGate ? 108 : 72;
       ctx.fillStyle = "#101820";
-      ctx.font = "bold 9px Menlo, Monaco, Consolas, monospace";
+      ctx.fillRect(Math.round(x - gateWidth / 2 - 5), Math.round(y - gateHeight), 9, gateHeight);
+      ctx.fillRect(Math.round(x + gateWidth / 2 - 4), Math.round(y - gateHeight), 9, gateHeight);
+      ctx.fillRect(Math.round(x - gateWidth / 2 - 7), Math.round(y - gateHeight - 3), gateWidth + 14, sprintGate ? 28 : 20);
+      ctx.fillStyle = racePointColor(point);
+      ctx.fillRect(Math.round(x - gateWidth / 2 - 2), Math.round(y - gateHeight + 2), gateWidth + 4, sprintGate ? 20 : 13);
+      ctx.fillStyle = "#101820";
+      ctx.font = `bold ${sprintGate ? 11 : 9}px Menlo, Monaco, Consolas, monospace`;
       ctx.textAlign = "center";
-      ctx.fillText(`${point.markerLabel || (point.type === "mountain" ? point.category : "SPR")} ${point.maxPoints}P`, x, y - 51);
+      ctx.fillText(`${point.markerLabel || (point.type === "mountain" ? point.category : "SPR")} ${point.maxPoints}P`, x, y - gateHeight + (sprintGate ? 16 : 12));
     }
 
     this.renderLateralSpectators(ctx, focusX, pixelsPerKm);
@@ -5980,7 +6336,8 @@ class Game {
     })).filter((item) => item.x > -120 && item.x < this.width + 120)
       .sort((a, b) => a.rider.lateral - b.rider.lateral);
     for (const item of visible) {
-      const frame = ((Math.floor(this.race.elapsed * (8 + item.rider.speed * 0.1) + item.rider.lateral * 3) % 8) + 8) % 8;
+      const cadence = 3.4 + item.rider.speed * 0.18;
+      const frame = ((Math.floor(this.race.elapsed * cadence + item.rider.lateral * 3) % 8) + 8) % 8;
       const pose = this.riderPose(item.rider);
       const jerseyColor = item.rider.jerseyColor || item.rider.color;
       const sprite = this.buildSideCyclistSprite(jerseyColor, item.rider === this.race.player, frame, item.rider.role, pose, item.rider.jerseyType);
@@ -6128,7 +6485,7 @@ class Game {
       if (x < -10 || x > this.width + 10) continue;
       const y = this.sideSurfaceY(km);
       const wave = Math.floor(this.race.elapsed * 6 + marker) % 2;
-      const rows = density > 0.7 && marker % 3 === 0 ? [1, 0] : [0];
+      const rows = density > 0.82 ? [2, 1, 0] : density > 0.7 && marker % 2 === 0 ? [1, 0] : [0];
       for (const row of rows) {
         const rowX = x + row * 7;
         const rowY = y - row * 7;
@@ -6155,18 +6512,21 @@ class Game {
   renderLateralFinish(ctx, focusX, pixelsPerKm) {
     const finishKm = this.race.road.lengthKm;
     const x = focusX + (finishKm - this.cameraKm) * pixelsPerKm;
-    if (x < -30 || x > this.width + 30) return;
+    if (x < -80 || x > this.width + 80) return;
     const y = this.sideSurfaceY(finishKm);
+    const halfWidth = 66;
+    const gateHeight = 132;
     ctx.fillStyle = "#101820";
-    ctx.fillRect(x - 25, y - 88, 7, 88);
-    ctx.fillRect(x + 18, y - 88, 7, 88);
+    ctx.fillRect(x - halfWidth - 6, y - gateHeight, 12, gateHeight);
+    ctx.fillRect(x + halfWidth - 6, y - gateHeight, 12, gateHeight);
+    ctx.fillRect(x - halfWidth - 10, y - gateHeight - 5, halfWidth * 2 + 20, 36);
     ctx.fillStyle = "#ffcc33";
-    ctx.fillRect(x - 25, y - 88, 50, 15);
+    ctx.fillRect(x - halfWidth - 5, y - gateHeight, halfWidth * 2 + 10, 27);
     ctx.fillStyle = "#101820";
-    ctx.font = "bold 11px Menlo, Monaco, Consolas, monospace";
+    ctx.font = "bold 16px Menlo, Monaco, Consolas, monospace";
     ctx.textAlign = "center";
-    ctx.fillText("META", x, y - 77);
-    for (let cell = -3; cell <= 3; cell += 1) {
+    ctx.fillText("META", x, y - gateHeight + 19);
+    for (let cell = -8; cell <= 8; cell += 1) {
       ctx.fillStyle = cell % 2 ? "#f8f5eb" : "#101820";
       ctx.fillRect(x + cell * 7, y - 5, 7, 5);
     }

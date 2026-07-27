@@ -1,0 +1,75 @@
+ObjC.import("Foundation");
+
+const projectPath = "/Users/mmp/Ciclismosofa/cycling-game/game.js";
+const sourceString = $.NSString.stringWithContentsOfFileEncodingError(
+  projectPath,
+  $.NSUTF8StringEncoding,
+  null
+);
+if (!sourceString) throw new Error("No se pudo leer game.js");
+const source = ObjC.unwrap(sourceString).replace(/\nwindow\.CiclimoTourRace[\s\S]*$/, "");
+
+const tests = String.raw`
+const assertMountain = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+
+const climbs = [];
+for (let seed = 1; seed <= 40; seed += 1) {
+  const road = new Road(new SeededRandom(seed), 190, {
+    name: "Etapa de prueba", type: "mountain", profile: "mountain", lengthKm: 190
+  });
+  climbs.push(...road.mountains);
+  assertMountain(road.mountains.length >= 3, "Una etapa de montaña quedó sin suficientes puertos");
+}
+const averageLength = climbs.reduce((sum, climb) => sum + climb.lengthKm, 0) / climbs.length;
+const averageGradient = climbs.reduce((sum, climb) => sum + climb.averageGradient, 0) / climbs.length;
+assertMountain(averageLength >= 10, "Las ascensiones siguen siendo demasiado cortas");
+assertMountain(averageGradient >= 6.2, "Las ascensiones siguen siendo demasiado suaves");
+assertMountain(climbs.some((climb) => climb.lengthKm >= 18), "No aparecen puertos largos");
+assertMountain(climbs.some((climb) => climb.averageGradient >= 9), "No aparecen rampas exigentes");
+
+const crowdRoad = new Road(new SeededRandom(91), 180, {
+  name: "Público", type: "road", profile: "mixed", lengthKm: 180
+});
+assertMountain(crowdRoad.spectatorDensityAt(179) === 1, "La llegada no concentra público");
+assertMountain(crowdRoad.intermediateSprints.every((point) => crowdRoad.spectatorDensityAt(point.km) === 1),
+  "Alguna meta volante no concentra público");
+
+const visualGame = Object.create(Game.prototype);
+visualGame.height = 700;
+visualGame.cameraFocusKm = 50;
+visualGame.race = { road: { elevationAt: (km) => 500 + (km - 50) * 80 } };
+const visualRise = visualGame.sideSurfaceY(50) - visualGame.sideSurfaceY(51);
+assertMountain(visualRise >= 60, "La pendiente lateral no se aprecia suficientemente");
+
+const riderData = {
+  name: "Test", team: "Solaris", color: "#ffcc33", role: "leader",
+  climbing: 86, sprint: 82, endurance: 88, technique: 85, aggression: 78, intelligence: 88,
+  distance: 20, lateral: 0, speed: 35
+};
+const flatRider = new Cyclist({ ...riderData });
+const climbRider = new Cyclist({ ...riderData });
+const weather = { intensity: 0 };
+const raceContext = { isolationExposureFor: () => 0 };
+const makeRoad = (gradient) => ({
+  lengthKm: 180, stageProfile: "mountain",
+  getGradient: () => gradient, curvatureAt: () => 0
+});
+flatRider.updateCommon(0.1, { road: makeRoad(0), weather, simulationScale: 60, race: raceContext });
+climbRider.updateCommon(0.1, { road: makeRoad(8), weather, simulationScale: 60, race: raceContext });
+const speedLoss = flatRider.targetSpeed - climbRider.targetSpeed;
+assertMountain(speedLoss >= 7, "La subida no reduce bastante la velocidad");
+
+JSON.stringify({
+  climbs: climbs.length,
+  averageLength: Number(averageLength.toFixed(2)),
+  averageGradient: Number(averageGradient.toFixed(2)),
+  longest: Number(Math.max(...climbs.map((climb) => climb.lengthKm)).toFixed(2)),
+  steepest: Number(Math.max(...climbs.map((climb) => climb.averageGradient)).toFixed(2)),
+  visualRise: Number(visualRise.toFixed(1)),
+  speedLossAt8Percent: Number(speedLoss.toFixed(1))
+});
+`;
+
+eval(source + "\n" + tests);

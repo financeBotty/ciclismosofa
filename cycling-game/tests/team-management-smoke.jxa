@@ -1,0 +1,67 @@
+ObjC.import("Foundation");
+
+const projectPath = "/Users/mmp/Ciclismosofa/cycling-game/game.js";
+const sourceString = $.NSString.stringWithContentsOfFileEncodingError(
+  projectPath,
+  $.NSUTF8StringEncoding,
+  null
+);
+if (!sourceString) throw new Error("No se pudo leer game.js");
+const source = ObjC.unwrap(sourceString).replace(/\nwindow\.CiclimoTourRace[\s\S]*$/, "");
+
+const tests = String.raw`
+const assertTeam = (condition, message) => {
+  if (!condition) throw new Error(message);
+};
+const controls = {
+  difficultySelect: { value: "normal" },
+  weatherSelect: { value: "dry" },
+  riderProfileSelect: { value: "allrounder" }
+};
+globalThis.document = {
+  getElementById: (id) => controls[id] || {
+    value: "", textContent: "", innerHTML: "",
+    classList: { add() {}, remove() {}, toggle() {} },
+    setAttribute() {}, querySelector: () => ({ textContent: "" }),
+    replaceChildren() {}, appendChild() {}
+  },
+  querySelectorAll: () => []
+};
+
+assertTeam(TEAM_DEFINITIONS.length === 10, "No hay diez equipos");
+assertTeam(new Set(TEAM_DEFINITIONS.map((team) => team.id)).size === 10, "IDs de equipo repetidos");
+assertTeam(new Set(TEAM_DEFINITIONS.map((team) => team.leader.name)).size === 10, "Líderes repetidos");
+assertTeam(TEAM_DEFINITIONS.every((team) => team.leader && team.leader.climbing && team.leader.sprint),
+  "Algún equipo no tiene líder predefinido");
+
+const fakeGame = { notify() {}, audio: { play() {} } };
+const selected = TEAM_BY_ID.get("esmeralda");
+const race = new Race(fakeGame, "normal", "dry", {
+  seed: 4604,
+  stageDefinition: { number: 1, type: "road", profile: "mountain", lengthKm: 170, name: "Test", label: "MONTAÑA" },
+  playerTeamId: selected.id,
+  stageAssignments: { 1: "mountain" },
+  simulationOnly: true
+});
+assertTeam(race.cyclists.length === 100, "El pelotón no tiene 100 ciclistas");
+assertTeam(race.teams.every((team) => team.riders.length === 10), "Algún equipo no tiene 10 ciclistas");
+assertTeam(race.player.team === selected.name, "No se aplicó el equipo elegido");
+assertTeam(race.player.name === selected.leader.name, "No se controla al líder predefinido");
+assertTeam(race.player.role === "leader" && race.player.tourId === 0, "El líder jugable perdió su identidad");
+assertTeam(race.cyclists.every((rider) => ["ESCALADOR", "SPRINTER", "GREGARIO"].includes(derivedSpecialty(rider))),
+  "Especialidad derivada inválida");
+
+const ownTeam = race.teams.find((team) => team.name === selected.name);
+assertTeam(ownTeam.leader === race.player, "El líder del equipo elegido no es el jugador");
+assertTeam(ownTeam.riders.filter((rider) => rider.role === "leader").length === 1, "Hay más de un líder en el equipo");
+
+JSON.stringify({
+  teams: TEAM_DEFINITIONS.length,
+  leaders: TEAM_DEFINITIONS.map((team) => team.leader.name),
+  selected: race.player.team,
+  player: race.player.name,
+  riders: race.cyclists.length
+});
+`;
+
+eval(source + "\n" + tests);

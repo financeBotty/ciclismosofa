@@ -117,7 +117,7 @@
         <span>♟</span><b id="teamOrderCurrent">PROTEGER</b>
       </button>
       <aside id="teamOrderPanel" class="team-order-panel is-hidden" aria-label="Órdenes al equipo">
-        <header><span>♟ EQUIPO SOLARIS</span><button id="closeTeamOrderButton" type="button" aria-label="Cerrar órdenes">×</button></header>
+        <header><span id="teamOrderTitle">♟ EQUIPO SOLARIS</span><button id="closeTeamOrderButton" type="button" aria-label="Cerrar órdenes">×</button></header>
         <div role="group" aria-label="Orden táctica">
           <button type="button" data-team-order="protect" class="active"><i>◆</i><span>PROTEGER<small>Quédate arropado</small></span></button>
           <button type="button" data-team-order="chase"><i>»</i><span>CAZAR<small>Gregarios al frente</small></span></button>
@@ -171,7 +171,7 @@
                 <option value="rain">Lluvia</option>
               </select>
             </label>
-            <label class="profile-option">CORREDOR
+            <label id="profileOption" class="profile-option is-hidden">CORREDOR
               <select id="riderProfileSelect">
                 <option value="allrounder" selected>Todoterreno</option>
                 <option value="climber">Escalador</option>
@@ -190,6 +190,7 @@
             <button id="reducedMotionToggle" type="button" aria-pressed="false">MOVIMIENTO · ON</button>
             <button id="hapticsToggle" type="button" aria-pressed="false">VIBRACIÓN · OFF</button>
             <button id="tutorialResetButton" type="button">? TUTORIAL</button>
+            <button id="teamsDirectoryButton" type="button">♟ EQUIPOS</button>
           </div>
           <div id="tourModePanel" class="mode-panel" role="tabpanel" aria-labelledby="tourModeButton">
             <section class="save-slots" aria-label="Partidas guardadas">
@@ -238,7 +239,10 @@
               <span id="dashboardSlot">SLOT 1</span>
               <h2>CICLIMO TOUR</h2>
             </div>
-            <strong id="dashboardProgress">ETAPA 1 / 10</strong>
+            <div class="dashboard-header-actions">
+              <button id="dashboardTeamButton" type="button">♟ MI EQUIPO</button>
+              <strong id="dashboardProgress">ETAPA 1 / 10</strong>
+            </div>
           </header>
           <main class="dashboard-grid">
             <section class="next-stage-card">
@@ -282,9 +286,42 @@
                 <article class="dashboard-standing white"><h3>○ JÓVENES</h3><ol id="dashboardYoungList"></ol></article>
               </div>
             </section>
+            <section id="teamManagementCard" class="team-management-card">
+              <div class="dashboard-section-title"><span>MI EQUIPO</span><b id="managedTeamIdentity">—</b></div>
+              <header class="managed-team-header">
+                <div id="managedTeamCrest"></div>
+                <div><small>EQUIPO ELEGIDO</small><h3 id="managedTeamName">—</h3><p id="managedTeamLeader">—</p></div>
+              </header>
+              <p class="team-management-help">Asigna la misión de cada compañero para la siguiente etapa. El líder está predefinido y es el ciclista que controlas.</p>
+              <div id="managedRoster" class="managed-roster"></div>
+              <button id="openAllTeamsButton" class="open-all-teams" type="button">VER LOS 10 EQUIPOS Y SUS CICLISTAS</button>
+            </section>
           </main>
         </div>
       </div>
+
+      <section id="teamSelectionOverlay" class="team-browser-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="teamSelectionTitle">
+        <div class="team-browser-shell">
+          <header>
+            <div><span class="eyebrow accent">NUEVO TOUR</span><h2 id="teamSelectionTitle">ELIGE TU EQUIPO</h2></div>
+            <button id="closeTeamSelectionButton" type="button" aria-label="Cancelar selección">×</button>
+          </header>
+          <p>Controlarás al líder predefinido durante las diez etapas. La elección quedará guardada en este slot.</p>
+          <div id="teamSelectionGrid" class="team-selection-grid"></div>
+          <button id="confirmTeamSelectionButton" class="primary-button" type="button"><span>EMPEZAR CON <b id="selectedTeamName">SOLARIS</b></span><b>▶</b></button>
+        </div>
+      </section>
+
+      <section id="teamsDirectoryOverlay" class="team-browser-overlay is-hidden" role="dialog" aria-modal="true" aria-labelledby="teamsDirectoryTitle">
+        <div class="team-browser-shell directory">
+          <header>
+            <div><span class="eyebrow accent">PELOTÓN</span><h2 id="teamsDirectoryTitle">EQUIPOS Y CICLISTAS</h2></div>
+            <button id="closeTeamsDirectoryButton" type="button" aria-label="Cerrar equipos">×</button>
+          </header>
+          <div id="teamDirectoryTabs" class="team-directory-tabs" role="tablist" aria-label="Equipos"></div>
+          <article id="teamDirectoryDetail" class="team-directory-detail"></article>
+        </div>
+      </section>
 
       <div id="countdownOverlay" class="countdown-overlay" aria-live="assertive"></div>
 
