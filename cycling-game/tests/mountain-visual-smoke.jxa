@@ -46,12 +46,100 @@ const visualRoadAngle = visualGame.sideRoadAngleAt(50, 800);
 assertMountain(visualRoadAngle < -0.04, "La bicicleta lateral no acompaña el ángulo de subida");
 assertMountain(SIDE_ROAD_ASPHALT_WIDTH >= 42 && SIDE_ROAD_SHOULDER_WIDTH >= 54,
   "La carretera lateral sigue siendo demasiado estrecha");
+assertMountain(SIDE_ROAD_LANE_DEPTH >= 10,
+  "Los cambios de carril siguen sin apreciarse en la vista lateral");
 assertMountain(Math.abs(visualGame.sideLaneOffset(1)) <= SIDE_ROAD_ASPHALT_WIDTH / 2 - 8,
   "Un cambio de carril puede sacar al ciclista del asfalto lateral");
 assertMountain(SIDE_FINISH_GATE_HEIGHT >= 180,
   "La meta lateral puede quedar oculta por el público");
 assertMountain(typeof visualGame.renderLateralRoadsideProps === "function",
   "No se renderizan vehículos y bicicletas de aficionados");
+
+const raceLeader = { distance: 50, finished: false, color: "#ffcc33" };
+const raceMiddle = { distance: 47, finished: false, color: "#2f80ed" };
+const raceTail = { distance: 44, finished: false, color: "#ef476f" };
+const persistentVehicles = [
+  { id: "tv-head", type: "tv", distance: 50.12, lateral: -0.52, speed: 42, active: true },
+  { id: "team-0", type: "team", distance: 46.5, lateral: 0.5, speed: 29, active: true },
+  { id: "broom", type: "broom", distance: 43.58, lateral: 0.55, speed: 27, active: true }
+];
+const vehicleGame = Object.create(Game.prototype);
+vehicleGame.race = {
+  player: raceMiddle,
+  timeTrial: false,
+  cyclists: [raceMiddle, raceTail, raceLeader],
+  road: { lengthKm: 100, racePoints: [] },
+  raceVehicles: persistentVehicles,
+  groups: [
+    { leader: raceLeader, tail: raceMiddle },
+    { leader: raceTail, tail: raceTail }
+  ]
+};
+const ambientVehicles = vehicleGame.ambientRaceVehicles();
+const tvMoto = ambientVehicles.find((vehicle) => vehicle.type === "tv");
+const broomCar = ambientVehicles.find((vehicle) => vehicle.type === "broom");
+assertMountain(tvMoto && tvMoto.distance > raceLeader.distance,
+  "La moto de televisión no permanece delante de la cabeza");
+assertMountain(ambientVehicles.some((vehicle) => vehicle.type === "team"),
+  "No aparecen coches de equipo detrás de los grupos");
+assertMountain(broomCar && broomCar.distance < raceTail.distance,
+  "El coche escoba no cierra la carrera");
+ambientVehicles.forEach((vehicle) => {
+  assertMountain(Math.abs(vehicle.lateral) <= 0.62,
+    "Un vehículo ambiental circula fuera de la carretera");
+});
+assertMountain(typeof vehicleGame.renderRaceVehicles === "function" &&
+  typeof vehicleGame.renderLateralRaceVehicles === "function" &&
+  typeof vehicleGame.drawRaceVehicle === "function" &&
+  typeof vehicleGame.drawLateralRaceVehicle === "function",
+  "Falta alguna vista de los vehículos de carrera");
+
+const layerOrder = [];
+const layerGame = Object.create(vehicleGame);
+Object.defineProperties(layerGame, {
+  height: { value: 700 },
+  roadHalfWidth: { value: 135 },
+  riderHitAreas: { value: [] },
+  roadPointAt: { value: (distance, lateral) => ({ x: lateral, y: distance }) },
+  roadAngleAt: { value: () => 0 },
+  drawCyclist: { value: (ctx, rider) => layerOrder.push(rider === raceMiddle ? "middle" :
+    rider === raceTail ? "tail" : "leader") },
+  drawRaceVehicle: { value: (ctx, vehicle) => layerOrder.push(vehicle.id) }
+});
+layerGame.race.weather = { intensity: 0 };
+layerGame.race.player.draft = 0;
+layerGame.race.player.wheelTarget = null;
+layerGame.renderCyclists({});
+assertMountain(layerOrder.indexOf("tail") < layerOrder.indexOf("team-0") &&
+  layerOrder.indexOf("team-0") < layerOrder.indexOf("middle"),
+  "Los coches no comparten el orden de profundidad con los ciclistas y pueden desaparecer bajo el pelotón");
+
+const passingRider = {
+  distance: 10, previousDistance: 9.99, lateral: 0.5, targetLateral: 0.5,
+  speed: 40, targetSpeed: 40, finished: false, crashTimer: 0,
+  intelligence: 82, avoidanceBrake: 0, avoiding: false
+};
+const trafficRace = Object.create(Race.prototype);
+trafficRace.timeTrial = false;
+trafficRace.player = passingRider;
+trafficRace.cyclists = [passingRider];
+trafficRace.proximityCache = new Map([[passingRider, []]]);
+trafficRace.raceVehicles = [
+  { id: "passable-car", type: "team", distance: 10.08, lateral: 0.5, speed: 27, active: true }
+];
+trafficRace.applyVehicleAvoidance();
+assertMountain(Math.abs(passingRider.targetLateral - trafficRace.raceVehicles[0].lateral) >= 0.4,
+  "El ciclista no cambia de trayectoria para adelantar al coche");
+passingRider.distance = 10.06;
+passingRider.lateral = 0.5;
+trafficRace.resolveVehicleClearances();
+assertMountain(passingRider.distance <= trafficRace.raceVehicles[0].distance - 0.052,
+  "El ciclista puede atravesar un coche por la misma trayectoria");
+passingRider.distance = 10.06;
+passingRider.lateral = -0.8;
+trafficRace.resolveVehicleClearances();
+assertMountain(passingRider.distance === 10.06,
+  "El ciclista no puede adelantar aunque use una trayectoria lateral libre");
 
 const makeDescentRider = () => ({
   role: "leader", distance: 40, grip: 80, riskMode: "aggressive",

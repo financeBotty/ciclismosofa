@@ -71,7 +71,7 @@ const RECOVERY_DESCENT_GRADIENT = -1.5;
 const ISOLATION_HIGH_EFFORT_LOAD = 0.2;
 const SIDE_ROAD_SHOULDER_WIDTH = 56;
 const SIDE_ROAD_ASPHALT_WIDTH = 43;
-const SIDE_ROAD_LANE_DEPTH = 3;
+const SIDE_ROAD_LANE_DEPTH = 12;
 const SIDE_FINISH_GATE_HEIGHT = 190;
 const STAGE_POINTS = [50, 30, 20, 15, 12, 10, 8, 6, 4, 2];
 const PLAYER_PROFILES = {
@@ -1520,6 +1520,75 @@ class Race {
     this.proximityCache = new Map();
     this.riderIndices = new Map();
     this.createPeloton();
+    this.initializeRaceVehicles();
+  }
+
+  initializeRaceVehicles() {
+    const colors = this.teams.slice(0, 3).map((team) => team.color);
+    this.raceVehicles = [
+      { id: "tv-head", type: "tv", distance: 0.12, lateral: -0.52, speed: 40, color: "#ffcc33", active: true },
+      { id: "team-0", type: "team", distance: 0.55, lateral: 0.5, speed: 29, cruiseSpeed: 29, color: colors[0] || "#2f80ed", active: true },
+      { id: "team-1", type: "team", distance: Math.max(1.1, this.road.lengthKm * 0.34), lateral: -0.48, speed: 31, cruiseSpeed: 31, color: colors[1] || "#ef476f", active: true },
+      { id: "team-2", type: "team", distance: Math.max(1.7, this.road.lengthKm * 0.68), lateral: 0.12, speed: 28, cruiseSpeed: 28, color: colors[2] || "#36bd69", active: true },
+      { id: "broom", type: "broom", distance: -0.42, lateral: 0.55, speed: 28, color: "#f0a62b", active: true }
+    ];
+  }
+
+  updateRaceVehicles(dt) {
+    const activeRiders = this.cyclists
+      .filter((rider) => !rider.finished)
+      .sort((a, b) => b.distance - a.distance);
+    const leader = this.timeTrial ? this.player : activeRiders[0] || this.player;
+    const tail = this.timeTrial ? this.player : activeRiders.at(-1) || this.player;
+    const television = this.raceVehicles.find((vehicle) => vehicle.type === "tv");
+    const teamCars = this.raceVehicles.filter((vehicle) => vehicle.type === "team" && vehicle.active);
+    const broom = this.raceVehicles.find((vehicle) => vehicle.type === "broom");
+
+    if (television) {
+      const targetDistance = leader.distance + 0.12;
+      const nearbyCar = teamCars.find((vehicle) =>
+        Math.abs(vehicle.distance - targetDistance) < 0.16);
+      television.distance = targetDistance;
+      television.speed = Math.max(leader.speed + 2, 38);
+      // Si coincide longitudinalmente con un coche, la moto usa el lado
+      // opuesto de la calzada en vez de saltar o frenar sobre la cabeza.
+      television.lateral = clamp(nearbyCar
+        ? (nearbyCar.lateral >= 0 ? -0.55 : 0.55)
+        : -0.52, -0.62, 0.62);
+    }
+
+    const orderedCars = [...teamCars].sort((a, b) => b.distance - a.distance);
+    for (let index = 0; index < orderedCars.length; index += 1) {
+      const vehicle = orderedCars[index];
+      const aheadVehicle = orderedCars[index - 1];
+      let targetSpeed = vehicle.cruiseSpeed;
+      if (aheadVehicle && aheadVehicle.distance - vehicle.distance < 0.22) {
+        targetSpeed = Math.min(targetSpeed, Math.max(8, aheadVehicle.speed - 2));
+      }
+      const riderAhead = activeRiders
+        .filter((rider) => rider.distance >= vehicle.distance &&
+          rider.distance - vehicle.distance < 0.18 &&
+          Math.abs(rider.lateral - vehicle.lateral) < 0.46)
+        .sort((a, b) => a.distance - b.distance)[0];
+      if (riderAhead) targetSpeed = Math.min(targetSpeed, Math.max(6, riderAhead.speed - 4));
+      vehicle.speed = lerp(vehicle.speed, targetSpeed, 1 - Math.exp(-dt * 2.4));
+      vehicle.distance += vehicle.speed * this.simulationScale / 3600 * dt;
+      vehicle.lateral = clamp(vehicle.lateral, -0.62, 0.62);
+      if (vehicle.distance > this.road.lengthKm + 0.25) vehicle.active = false;
+    }
+
+    if (broom) {
+      let targetDistance = tail.distance - 0.42;
+      for (const vehicle of teamCars) {
+        if (Math.abs(vehicle.distance - targetDistance) < 0.2) {
+          targetDistance = Math.min(targetDistance, vehicle.distance - 0.2);
+        }
+      }
+      broom.distance = targetDistance;
+      broom.speed = Math.max(8, tail.speed - 2);
+      broom.lateral = clamp(0.55, -0.62, 0.62);
+      broom.active = tail.distance > 0.46;
+    }
   }
 
   createPeloton() {
@@ -2393,6 +2462,7 @@ class Race {
         rider.avoiding = false;
         rider.targetLateral = 0;
       });
+      this.applyVehicleAvoidance();
       this.player.teamProtection = 0;
       this.activePlayerProtectors = 0;
       return;
@@ -2439,6 +2509,7 @@ class Race {
       }
     }
     this.applyCollisionAvoidance();
+    this.applyVehicleAvoidance();
     this.updatePlayerTeamProtection();
   }
 
@@ -2481,7 +2552,52 @@ class Race {
         cost += (1 - longitudinal / 0.055) * (1 - lateral / 0.3) * 8;
       }
     }
+    for (const vehicle of this.raceVehicles || []) {
+      if (!vehicle.active) continue;
+      const longitudinal = Math.abs(vehicle.distance - rider.distance);
+      const lateral = Math.abs(vehicle.lateral - candidate);
+      const vehicleWidth = vehicle.type === "tv" ? 0.3 : 0.46;
+      if (longitudinal < 0.14 && lateral < vehicleWidth) {
+        cost += 30 + (1 - longitudinal / 0.14) * 35;
+      }
+    }
     return cost;
+  }
+
+  applyVehicleAvoidance() {
+    const riders = this.timeTrial ? [this.player] : this.cyclists;
+    for (const rider of riders) {
+      if (rider.finished || rider.crashTimer > 0) continue;
+      let threat = null;
+      let nearest = Infinity;
+      for (const vehicle of this.raceVehicles || []) {
+        if (!vehicle.active) continue;
+        const ahead = vehicle.distance - rider.distance;
+        const lateralGap = Math.abs(vehicle.lateral - rider.lateral);
+        const vehicleWidth = vehicle.type === "tv" ? 0.3 : 0.46;
+        if (ahead <= 0 || ahead > 0.15 || lateralGap >= vehicleWidth || ahead >= nearest) continue;
+        threat = vehicle;
+        nearest = ahead;
+      }
+      if (!threat) continue;
+      const preferredDirection = threat.lateral >= 0 ? -1 : 1;
+      const primaryLane = clamp(threat.lateral + preferredDirection * 0.78, -0.9, 0.9);
+      const alternateLane = clamp(threat.lateral - preferredDirection * 0.78, -0.9, 0.9);
+      const primaryCost = this.laneCost(rider, primaryLane);
+      const alternateCost = this.laneCost(rider, alternateLane);
+      const bestLane = primaryCost <= alternateCost ? primaryLane : alternateLane;
+      const bestCost = Math.min(primaryCost, alternateCost);
+      rider.avoiding = true;
+      if (bestCost < 28) {
+        rider.targetLateral = bestLane;
+        rider.avoidanceBrake = Math.max(rider.avoidanceBrake, nearest < 0.055 ? 3.8 : 1.4);
+      } else {
+        // Si ambos laterales están ocupados, iguala la velocidad hasta que se
+        // abra un hueco. Nunca atraviesa el vehículo por la misma trayectoria.
+        rider.avoidanceBrake = Math.max(rider.avoidanceBrake, 8.5);
+        rider.targetSpeed = Math.min(rider.targetSpeed, Math.max(8, threat.speed - 1));
+      }
+    }
   }
 
   applyCollisionAvoidance() {
@@ -2564,6 +2680,32 @@ class Race {
           this.player.collisionCooldown = 2.5;
           this.game.cameraShake = Math.max(this.game.cameraShake, 0.28);
           this.game.notify("¡Contacto! Has perdido velocidad.", "urgent");
+        }
+      }
+    }
+  }
+
+  resolveVehicleClearances() {
+    const riders = this.timeTrial ? [this.player] : this.cyclists;
+    for (const vehicle of this.raceVehicles || []) {
+      if (!vehicle.active) continue;
+      const vehicleWidth = vehicle.type === "tv" ? 0.27 : 0.42;
+      const longitudinalClearance = vehicle.type === "tv" ? 0.032 : 0.052;
+      for (const rider of riders) {
+        if (rider.finished || rider.crashTimer > 1.6) continue;
+        const longitudinal = vehicle.distance - rider.distance;
+        const lateralGap = Math.abs(vehicle.lateral - rider.lateral);
+        if (Math.abs(longitudinal) >= longitudinalClearance || lateralGap >= vehicleWidth) continue;
+        const direction = vehicle.lateral >= 0 ? -1 : 1;
+        if (longitudinal >= 0) {
+          rider.distance = Math.min(rider.distance, vehicle.distance - longitudinalClearance);
+          rider.speed = Math.min(rider.speed, Math.max(8, vehicle.speed - 1));
+          rider.avoidanceBrake = Math.max(rider.avoidanceBrake, 9);
+          rider.targetLateral = clamp(vehicle.lateral + direction * 0.78, -0.9, 0.9);
+        } else if (vehicle.type === "team") {
+          // El coche cede ante un ciclista que ya lo ha superado.
+          vehicle.distance = Math.min(vehicle.distance, rider.distance - longitudinalClearance);
+          vehicle.speed = Math.min(vehicle.speed, Math.max(6, rider.speed - 4));
         }
       }
     }
@@ -2693,6 +2835,7 @@ class Race {
     const attackResponse = this.activeRivalAttackForPlayer();
     this.player.sprintAllowed = this.road.lengthKm - this.player.distance <= 1 ||
       Boolean(sprintPointAhead) || Boolean(attackResponse);
+    if (!this.simulationOnly) this.updateRaceVehicles(dt);
     this.refreshProximity();
     if (this.simulationOnly) this.applySimulationDrafting();
     else this.applyDraftingAndSeparation();
@@ -2701,6 +2844,7 @@ class Race {
       rider.update(dt, context);
       this.evaluateCrash(rider, dt);
     }
+    if (!this.simulationOnly) this.resolveVehicleClearances();
     this.processRacePoints();
     if (!this.simulationOnly && !this.timeTrial) {
       this.refreshProximity();
@@ -5777,6 +5921,282 @@ class Game {
     }[role] || "#f4f1e9";
   }
 
+  ambientRaceVehicles() {
+    return (this.race?.raceVehicles || []).filter((vehicle) => vehicle.active);
+  }
+
+  buildRaceVehicleSprite(type, color) {
+    const key = `race-vehicle-top-${type}-${color}`;
+    if (this.spriteCache.has(key)) return this.spriteCache.get(key);
+    const motorcycle = type === "tv";
+    const sprite = document.createElement("canvas");
+    sprite.width = motorcycle ? 40 : 52;
+    sprite.height = motorcycle ? 78 : 94;
+    const pixel = sprite.getContext("2d");
+    pixel.imageSmoothingEnabled = false;
+    const outline = "#070c12";
+    if (motorcycle) {
+      pixel.fillStyle = "rgba(7,12,18,.24)";
+      pixel.fillRect(8, 7, 25, 67);
+      pixel.fillStyle = outline;
+      pixel.fillRect(15, 1, 10, 18);
+      pixel.fillRect(15, 61, 10, 16);
+      pixel.fillStyle = "#56636a";
+      pixel.fillRect(18, 3, 4, 14);
+      pixel.fillRect(18, 63, 4, 12);
+      pixel.fillStyle = "#c99920";
+      pixel.fillRect(11, 16, 18, 47);
+      pixel.fillStyle = color;
+      pixel.fillRect(14, 18, 12, 41);
+      pixel.fillStyle = outline;
+      pixel.fillRect(7, 22, 26, 7);
+      pixel.fillRect(9, 45, 22, 8);
+      pixel.fillStyle = "#ffcc33";
+      pixel.fillRect(11, 25, 18, 17);
+      pixel.fillStyle = "#17212a";
+      pixel.fillRect(12, 27, 16, 13);
+      pixel.fillStyle = "#d59a70";
+      pixel.fillRect(14, 30, 12, 9);
+      pixel.fillStyle = "#8b59a4";
+      pixel.fillRect(10, 48, 20, 11);
+      pixel.fillStyle = "#101820";
+      pixel.fillRect(12, 50, 16, 8);
+      pixel.fillStyle = "#62d8f2";
+      pixel.fillRect(2, 49, 8, 12);
+      pixel.fillStyle = outline;
+      pixel.fillRect(0, 47, 12, 16);
+      pixel.fillStyle = "#62d8f2";
+      pixel.fillRect(3, 50, 6, 9);
+      pixel.fillStyle = "#101820";
+      pixel.fillRect(1, 39, 13, 6);
+    } else {
+      pixel.fillStyle = "rgba(7,12,18,.25)";
+      pixel.fillRect(4, 4, 44, 87);
+      pixel.fillStyle = outline;
+      pixel.fillRect(5, 1, 42, 92);
+      pixel.fillRect(0, 14, 7, 18);
+      pixel.fillRect(45, 14, 7, 18);
+      pixel.fillRect(0, 64, 7, 18);
+      pixel.fillRect(45, 64, 7, 18);
+      pixel.fillStyle = color;
+      pixel.fillRect(8, 4, 36, 86);
+      pixel.fillStyle = lerpColor(color, "#ffffff", 0.2);
+      pixel.fillRect(11, 7, 30, 13);
+      pixel.fillStyle = "#75d3e4";
+      pixel.fillRect(10, 23, 32, 17);
+      pixel.fillRect(10, 69, 32, 13);
+      pixel.fillStyle = "#17212a";
+      pixel.fillRect(10, 43, 32, 23);
+      pixel.fillStyle = "#05090e";
+      pixel.fillRect(8, 44, 36, 4);
+      pixel.fillRect(8, 61, 36, 4);
+      for (let bike = 0; bike < 4; bike += 1) {
+        const y = 47 + bike * 5;
+        pixel.fillStyle = bike % 2 ? "#f4f1e9" : "#ffcc33";
+        pixel.fillRect(12, y, 27, 2);
+        pixel.fillRect(15 + bike % 2 * 14, y - 2, 3, 6);
+        pixel.fillStyle = "#070c12";
+        pixel.fillRect(9, y - 1, 5, 4);
+        pixel.fillRect(39, y - 1, 5, 4);
+      }
+      if (type === "broom") {
+        for (let cell = 0; cell < 4; cell += 1) {
+          pixel.fillStyle = cell % 2 ? "#101820" : "#f4f1e9";
+          pixel.fillRect(12 + cell * 7, 84, 7, 5);
+        }
+      }
+    }
+    this.spriteCache.set(key, sprite);
+    return sprite;
+  }
+
+  buildSideRaceVehicleSprite(type, color) {
+    const key = `race-vehicle-side-${type}-${color}`;
+    if (this.spriteCache.has(key)) return this.spriteCache.get(key);
+    const motorcycle = type === "tv";
+    const sprite = document.createElement("canvas");
+    sprite.width = motorcycle ? 92 : 116;
+    sprite.height = motorcycle ? 66 : 84;
+    const pixel = sprite.getContext("2d");
+    pixel.imageSmoothingEnabled = false;
+    const outline = "#070c12";
+    if (motorcycle) {
+      pixel.fillStyle = "rgba(7,12,18,.25)";
+      pixel.fillRect(4, 59, 82, 5);
+      for (const wheelX of [21, 70]) {
+        pixel.fillStyle = outline;
+        pixel.beginPath();
+        pixel.arc(wheelX, 50, 14, 0, Math.PI * 2);
+        pixel.fill();
+        pixel.fillStyle = "#718087";
+        pixel.beginPath();
+        pixel.arc(wheelX, 50, 9, 0, Math.PI * 2);
+        pixel.fill();
+        pixel.fillStyle = "#1d2b34";
+        pixel.beginPath();
+        pixel.arc(wheelX, 50, 6, 0, Math.PI * 2);
+        pixel.fill();
+      }
+      pixel.strokeStyle = outline;
+      pixel.lineWidth = 8;
+      pixel.beginPath();
+      pixel.moveTo(21, 50);
+      pixel.lineTo(43, 33);
+      pixel.lineTo(70, 50);
+      pixel.lineTo(49, 48);
+      pixel.closePath();
+      pixel.stroke();
+      pixel.strokeStyle = color;
+      pixel.lineWidth = 4;
+      pixel.stroke();
+      pixel.fillStyle = outline;
+      pixel.fillRect(38, 27, 30, 16);
+      pixel.fillStyle = "#ffcc33";
+      pixel.fillRect(41, 30, 23, 10);
+      pixel.fillStyle = "#62d8f2";
+      pixel.fillRect(8, 27, 20, 15);
+      pixel.fillStyle = outline;
+      pixel.fillRect(5, 24, 26, 21);
+      pixel.fillStyle = "#62d8f2";
+      pixel.fillRect(9, 28, 18, 12);
+      for (const person of [{ x: 48, color: "#ffcc33" }, { x: 30, color: "#8b59a4" }]) {
+        pixel.fillStyle = outline;
+        pixel.fillRect(person.x - 7, 4, 17, 18);
+        pixel.fillStyle = "#d59a70";
+        pixel.fillRect(person.x - 4, 9, 12, 11);
+        pixel.fillStyle = person.color;
+        pixel.fillRect(person.x - 8, 3, 19, 7);
+        pixel.fillRect(person.x - 8, 21, 18, 14);
+      }
+      pixel.fillStyle = outline;
+      pixel.fillRect(18, 5, 20, 11);
+      pixel.fillRect(12, 8, 10, 7);
+      pixel.fillStyle = "#62d8f2";
+      pixel.fillRect(14, 10, 6, 4);
+    } else {
+      pixel.fillStyle = "rgba(7,12,18,.26)";
+      pixel.fillRect(4, 76, 108, 6);
+      pixel.fillStyle = outline;
+      pixel.fillRect(4, 45, 108, 30);
+      pixel.fillRect(19, 29, 69, 21);
+      pixel.fillStyle = color;
+      pixel.fillRect(8, 48, 100, 23);
+      pixel.fillRect(23, 33, 61, 18);
+      pixel.fillStyle = lerpColor(color, "#ffffff", 0.16);
+      pixel.fillRect(10, 49, 96, 5);
+      pixel.fillStyle = "#75d3e4";
+      pixel.fillRect(27, 35, 23, 13);
+      pixel.fillRect(54, 35, 25, 13);
+      pixel.fillStyle = outline;
+      pixel.fillRect(51, 34, 4, 17);
+      for (const wheelX of [25, 91]) {
+        pixel.fillStyle = outline;
+        pixel.beginPath();
+        pixel.arc(wheelX, 70, 12, 0, Math.PI * 2);
+        pixel.fill();
+        pixel.fillStyle = "#78868c";
+        pixel.beginPath();
+        pixel.arc(wheelX, 70, 7, 0, Math.PI * 2);
+        pixel.fill();
+      }
+      pixel.fillStyle = outline;
+      pixel.fillRect(17, 25, 76, 5);
+      for (let bike = 0; bike < 4; bike += 1) {
+        const offset = 16 + bike * 23;
+        pixel.strokeStyle = bike % 2 ? "#f4f1e9" : "#ffcc33";
+        pixel.lineWidth = 3;
+        for (const wheelX of [offset, offset + 14]) {
+          pixel.beginPath();
+          pixel.arc(wheelX, 15, 8, 0, Math.PI * 2);
+          pixel.stroke();
+        }
+        pixel.beginPath();
+        pixel.moveTo(offset, 15);
+        pixel.lineTo(offset + 6, 6);
+        pixel.lineTo(offset + 9, 15);
+        pixel.lineTo(offset, 15);
+        pixel.moveTo(offset + 9, 15);
+        pixel.lineTo(offset + 14, 15);
+        pixel.lineTo(offset + 10, 5);
+        pixel.lineTo(offset + 6, 6);
+        pixel.stroke();
+      }
+      if (type === "broom") {
+        for (let cell = 0; cell < 6; cell += 1) {
+          pixel.fillStyle = cell % 2 ? "#101820" : "#f4f1e9";
+          pixel.fillRect(58 + cell * 7, 57, 7, 6);
+        }
+      }
+    }
+    this.spriteCache.set(key, sprite);
+    return sprite;
+  }
+
+  renderRaceVehicles(ctx) {
+    const vehicles = this.ambientRaceVehicles()
+      .map((vehicle) => ({ ...vehicle, point: this.roadPointAt(vehicle.distance, vehicle.lateral) }))
+      .filter((vehicle) => vehicle.point.y > -110 && vehicle.point.y < this.height + 110)
+      .sort((a, b) => a.point.y - b.point.y);
+    vehicles.forEach((vehicle) => this.drawRaceVehicle(ctx, vehicle, vehicle.point));
+  }
+
+  drawRaceVehicle(ctx, vehicle, point) {
+    const originalScale = clamp(this.roadHalfWidth / 135, 0.8, 1.24);
+    const sprite = this.buildRaceVehicleSprite(vehicle.type, vehicle.color);
+    const scale = originalScale * (vehicle.type === "tv" ? 0.72 : 0.78);
+    if (this.race.weather.intensity > 0.25) {
+      ctx.fillStyle = "rgba(205,230,234,.35)";
+      ctx.fillRect(point.x - 12 * scale, point.y + 35 * scale, 24 * scale, 4 * scale);
+      ctx.fillRect(point.x - 7 * scale, point.y + 43 * scale, 14 * scale, 3 * scale);
+    }
+    ctx.save();
+    ctx.translate(Math.round(point.x), Math.round(point.y));
+    ctx.rotate(this.roadAngleAt(vehicle.distance));
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(
+      sprite,
+      -sprite.width * scale / 2,
+      -sprite.height * scale / 2,
+      sprite.width * scale,
+      sprite.height * scale
+    );
+    ctx.restore();
+  }
+
+  renderLateralRaceVehicles(ctx, focusX, pixelsPerKm) {
+    const vehicles = this.ambientRaceVehicles()
+      .map((vehicle) => ({
+        ...vehicle,
+        x: focusX + (vehicle.distance - this.cameraKm) * pixelsPerKm,
+        y: this.sideSurfaceY(vehicle.distance) + this.sideLaneOffset(vehicle.lateral)
+      }))
+      .filter((vehicle) => vehicle.x > -140 && vehicle.x < this.width + 140);
+    vehicles.forEach((vehicle) => this.drawLateralRaceVehicle(ctx, vehicle, pixelsPerKm));
+  }
+
+  drawLateralRaceVehicle(ctx, vehicle, pixelsPerKm) {
+    const sprite = this.buildSideRaceVehicleSprite(vehicle.type, vehicle.color);
+    const scale = vehicle.type === "tv" ? 0.82 : 0.8;
+    const bob = this.reducedMotion ? 0 : Math.floor(this.race.elapsed * 8 + vehicle.distance * 10) % 2;
+    if (this.race.weather.intensity > 0.25) {
+      ctx.fillStyle = "rgba(205,230,234,.34)";
+      ctx.fillRect(vehicle.x - sprite.width * scale / 2 - 18, vehicle.y - 3, 24, 4);
+      ctx.fillRect(vehicle.x - sprite.width * scale / 2 - 28, vehicle.y + 3, 17, 3);
+    }
+    ctx.save();
+    ctx.translate(Math.round(vehicle.x), Math.round(vehicle.y + bob));
+    ctx.rotate(this.sideRoadAngleAt(vehicle.distance, pixelsPerKm));
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(
+      sprite,
+      -sprite.width * scale / 2,
+      -sprite.height * scale + 4,
+      sprite.width * scale,
+      sprite.height * scale
+    );
+    ctx.restore();
+  }
+
   buildCyclistSprite(color, isPlayer, frame, role = "domestique", pose = "normal", jerseyType = "") {
     const key = `${color}-${isPlayer}-${frame}-${role}-${pose}-${jerseyType}`;
     if (this.spriteCache.has(key)) return this.spriteCache.get(key);
@@ -6052,14 +6472,26 @@ class Game {
     if (!this.race) return;
     const player = this.race.player;
     const renderRiders = this.race.timeTrial ? [this.race.player] : this.race.cyclists;
-    const visible = renderRiders.map((rider) => {
+    const visibleRiders = renderRiders.map((rider) => {
       const point = this.roadPointAt(rider.distance, rider.lateral);
       return { rider, point, angle: this.roadAngleAt(rider.distance), delta: rider.distance - player.distance };
     }).filter((item) => item.point.y > -70 && item.point.y < this.height + 70)
       .sort((a, b) => a.point.y - b.point.y);
-    const nearestAhead = visible.filter((item) => item.rider !== player && item.delta > 0).sort((a, b) => a.delta - b.delta)[0];
+    const visibleVehicles = this.ambientRaceVehicles().map((vehicle) => ({
+      vehicle,
+      point: this.roadPointAt(vehicle.distance, vehicle.lateral)
+    })).filter((item) => item.point.y > -110 && item.point.y < this.height + 110);
+    const visible = [...visibleRiders, ...visibleVehicles]
+      .sort((a, b) => a.point.y - b.point.y);
+    const nearestAhead = visibleRiders
+      .filter((item) => item.rider !== player && item.delta > 0)
+      .sort((a, b) => a.delta - b.delta)[0];
     if (nearestAhead && player.draft > 8) this.renderDraftZone(ctx, nearestAhead.point.x, nearestAhead.point.y, nearestAhead.angle);
     for (const item of visible) {
+      if (item.vehicle) {
+        this.drawRaceVehicle(ctx, item.vehicle, item.point);
+        continue;
+      }
       const originalScale = clamp(this.roadHalfWidth / 135, 0.8, 1.24);
       const scale = (item.rider === player ? originalScale + 0.14 : originalScale) * 0.75;
       const hitScale = Math.max(scale, 0.86);
@@ -6494,16 +6926,34 @@ class Game {
     this.renderLateralFinish(ctx, focusX, pixelsPerKm);
 
     const renderRiders = this.race.timeTrial ? [this.race.player] : this.race.cyclists;
-    const visible = renderRiders.map((rider) => ({
+    const visibleRiders = renderRiders.map((rider) => ({
       rider,
       x: focusX + (rider.distance - this.cameraKm) * pixelsPerKm,
-      // En una vista lateral el cambio de carril solo aporta una pequeña
-      // profundidad. Un desplazamiento mayor sacaba las ruedas del asfalto,
-      // especialmente cuando la línea de carretera estaba inclinada.
+      // La profundidad representa ahora todo el carril útil. El límite se
+      // mantiene dentro del asfalto para que ni ciclistas ni vehículos pisen
+      // visualmente el arcén al cambiar de trazada.
       y: this.sideSurfaceY(rider.distance) + this.sideLaneOffset(rider.lateral)
-    })).filter((item) => item.x > -120 && item.x < this.width + 120)
-      .sort((a, b) => a.rider.lateral - b.rider.lateral);
+    })).filter((item) => item.x > -120 && item.x < this.width + 120);
+    const visibleVehicles = this.ambientRaceVehicles().map((vehicle) => ({
+      vehicle,
+      x: focusX + (vehicle.distance - this.cameraKm) * pixelsPerKm,
+      y: this.sideSurfaceY(vehicle.distance) + this.sideLaneOffset(vehicle.lateral)
+    })).filter((item) => item.x > -140 && item.x < this.width + 140);
+    const visible = [...visibleRiders, ...visibleVehicles]
+      .sort((a, b) => {
+        const lateralA = a.rider ? a.rider.lateral : a.vehicle.lateral;
+        const lateralB = b.rider ? b.rider.lateral : b.vehicle.lateral;
+        return lateralA - lateralB;
+      });
     for (const item of visible) {
+      if (item.vehicle) {
+        this.drawLateralRaceVehicle(ctx, {
+          ...item.vehicle,
+          x: item.x,
+          y: item.y
+        }, pixelsPerKm);
+        continue;
+      }
       const cadence = 3.4 + item.rider.speed * 0.18;
       const frame = ((Math.floor(this.race.elapsed * cadence + item.rider.lateral * 3) % 8) + 8) % 8;
       const pose = this.riderPose(item.rider);
