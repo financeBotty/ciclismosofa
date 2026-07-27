@@ -53,6 +53,73 @@ assertMountain(SIDE_FINISH_GATE_HEIGHT >= 180,
 assertMountain(typeof visualGame.renderLateralRoadsideProps === "function",
   "No se renderizan vehículos y bicicletas de aficionados");
 
+const makeDescentRider = () => ({
+  role: "leader", distance: 40, grip: 80, riskMode: "aggressive",
+  riskAccumulator: 0, crashTimer: 0, finished: false, technique: 80,
+  energy: 100, lateral: 0, targetLateral: 0, crashes: 0
+});
+const descentRace = Object.create(Race.prototype);
+descentRace.elapsed = 5;
+descentRace.difficulty = "normal";
+descentRace.weather = { intensity: 0 };
+descentRace.road = { getGradient: () => -8, curvatureAt: () => 0 };
+descentRace.game = { cameraShake: 0, notify() {} };
+descentRace.playerProfile = "allrounder";
+descentRace.player = makeDescentRider();
+for (let tick = 0; tick < 300 && descentRace.player.crashTimer <= 0; tick += 1) {
+  descentRace.evaluateCrash(descentRace.player, 0.1);
+}
+assertMountain(descentRace.player.crashTimer > 0,
+  "La conducción agresiva de un no sprinter no provoca riesgo real en bajada");
+
+const sprinterRace = Object.create(Race.prototype);
+sprinterRace.elapsed = 5;
+sprinterRace.difficulty = "normal";
+sprinterRace.weather = { intensity: 0 };
+sprinterRace.road = descentRace.road;
+sprinterRace.game = { cameraShake: 0, notify() {} };
+sprinterRace.playerProfile = "sprinter";
+sprinterRace.player = makeDescentRider();
+for (let tick = 0; tick < 600; tick += 1) sprinterRace.evaluateCrash(sprinterRace.player, 0.1);
+assertMountain(sprinterRace.player.crashTimer === 0,
+  "El perfil sprinter recibe el riesgo específico de bajada agresiva");
+
+const dynamicWeather = new WeatherSystem("dynamic", 200);
+dynamicWeather.update(35);
+assertMountain(dynamicWeather.state === "dry", "La lluvia dinámica empieza antes del tramo previsto");
+dynamicWeather.update(36);
+assertMountain(dynamicWeather.state === "light", "La lluvia dinámica no inicia un episodio largo");
+dynamicWeather.update(111);
+assertMountain(dynamicWeather.state === "heavy", "La lluvia no aumenta de intensidad");
+dynamicWeather.update(199);
+assertMountain(dynamicWeather.state === "heavy", "El episodio de lluvia termina antes de la etapa");
+
+const wetRace = Object.create(Race.prototype);
+wetRace.elapsed = 5;
+wetRace.difficulty = "normal";
+wetRace.weather = { intensity: 1 };
+wetRace.road = { getGradient: () => 0, curvatureAt: () => 0 };
+wetRace.game = { cameraShake: 0, notify() {} };
+wetRace.playerProfile = "allrounder";
+wetRace.player = makeDescentRider();
+for (let tick = 0; tick < 500 && wetRace.player.crashTimer <= 0; tick += 1) {
+  wetRace.evaluateCrash(wetRace.player, 0.1);
+}
+assertMountain(wetRace.player.crashTimer > 0,
+  "La lluvia intensa no aumenta suficientemente las caídas en conducción agresiva");
+
+const wetNormalRace = Object.create(Race.prototype);
+wetNormalRace.elapsed = 5;
+wetNormalRace.difficulty = "normal";
+wetNormalRace.weather = { intensity: 1 };
+wetNormalRace.road = wetRace.road;
+wetNormalRace.game = { cameraShake: 0, notify() {} };
+wetNormalRace.playerProfile = "allrounder";
+wetNormalRace.player = { ...makeDescentRider(), riskMode: "normal" };
+for (let tick = 0; tick < 700; tick += 1) wetNormalRace.evaluateCrash(wetNormalRace.player, 0.1);
+assertMountain(wetNormalRace.player.crashTimer === 0,
+  "La penalización combinada de lluvia se aplica también sin conducción agresiva");
+
 const riderData = {
   name: "Test", team: "Solaris", color: "#ffcc33", role: "leader",
   climbing: 86, sprint: 82, endurance: 88, technique: 85, aggression: 78, intelligence: 88,

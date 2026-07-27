@@ -506,21 +506,15 @@ class Road {
       { id: "green", name: "Campiña verde", ground: "#68a05c", detail: "#3c784b", accent: "#a6c46a" },
       { id: "dry", name: "Terreno seco", ground: "#a08351", detail: "#705e40", accent: "#c8aa68" }
     ];
-    let km = 0;
-    let previousBiome = "";
-    while (km < this.lengthKm) {
-      let biome = biomes[Math.floor(this.random.next() * biomes.length)];
-      if (biome.id === previousBiome) biome = biomes[(biomes.indexOf(biome) + 1) % biomes.length];
-      const zoneLength = 18 + this.random.next() * 30;
-      this.sceneryZones.push({
-        startKm: km,
-        endKm: Math.min(this.lengthKm, km + zoneLength),
-        timeOfDay: "day",
-        ...biome
-      });
-      previousBiome = biome.id;
-      km += zoneLength;
-    }
+    // El paisaje define la identidad visual de la etapa completa: una etapa
+    // árida no se convierte a mitad de recorrido en bosque o campiña.
+    const biome = biomes[Math.floor(this.random.next() * biomes.length)];
+    this.sceneryZones.push({
+      startKm: 0,
+      endKm: this.lengthKm,
+      timeOfDay: "day",
+      ...biome
+    });
   }
 
   biomeAt(km) {
@@ -528,20 +522,7 @@ class Road {
   }
 
   visualBiomeAt(km) {
-    const zoneIndex = Math.max(0, this.sceneryZones.findIndex((zone) => km >= zone.startKm && km < zone.endKm));
-    const current = this.sceneryZones[zoneIndex] || this.sceneryZones.at(-1);
-    const next = this.sceneryZones[zoneIndex + 1];
-    if (!next) return current;
-    const transitionKm = Math.min(2.4, (current.endKm - current.startKm) * 0.18);
-    const blend = clamp((km - (current.endKm - transitionKm)) / transitionKm, 0, 1);
-    if (blend <= 0) return current;
-    return {
-      ...current,
-      timeOfDay: "day",
-      ground: lerpColor(current.ground, next.ground, blend),
-      detail: lerpColor(current.detail, next.detail, blend),
-      accent: lerpColor(current.accent, next.accent, blend)
-    };
+    return this.biomeAt(km);
   }
 
   spectatorDensityAt(km) {
@@ -704,14 +685,17 @@ class WeatherSystem {
     this.lengthKm = lengthKm;
     this.state = "dry";
     this.previousState = "dry";
+    // Cuando aparece, la lluvia ocupa la mayor parte restante de la etapa y
+    // no alterna en episodios cortos. La intensidad aumenta progresivamente.
+    this.rainStartKm = mode === "rain" ? 0 : lengthKm * 0.18;
+    this.heavyRainKm = mode === "rain" ? lengthKm * 0.2 : lengthKm * 0.55;
   }
 
   update(km) {
     this.previousState = this.state;
     if (this.mode === "dry") this.state = "dry";
-    else if (this.mode === "rain") this.state = km < this.lengthKm * 0.12 ? "light" : "heavy";
-    else if (km < this.lengthKm * 0.25) this.state = "dry";
-    else if (km < this.lengthKm * 0.58) this.state = "light";
+    else if (km < this.rainStartKm) this.state = "dry";
+    else if (km < this.heavyRainKm) this.state = "light";
     else this.state = "heavy";
     return this.state !== this.previousState;
   }
@@ -2645,9 +2629,26 @@ class Race {
 
   evaluateCrash(rider, dt) {
     if (this.elapsed < 4 || rider.crashTimer > 0 || rider.finished) return;
+    const gradient = this.road.getGradient(rider.distance);
     const curve = Math.abs(this.road.curvatureAt(rider.distance));
+    const isSprinter = rider.role === "sprinter" ||
+      (rider === this.player && this.playerProfile === "sprinter");
+    const aggressiveDescent = gradient <= RECOVERY_DESCENT_GRADIENT &&
+      rider.riskMode === "aggressive" && !isSprinter;
+    // En una bajada recta la fórmula general apenas generaba peligro. Los no
+    // sprinters acumulan ahora un riesgo adicional que crece con la pendiente.
+    const descentDanger = aggressiveDescent
+      ? 40 + Math.min(32, Math.abs(gradient) * 3.5)
+      : 0;
+    // La postura agresiva sobre firme mojado multiplica el riesgo: la lluvia
+    // ya reduce la adherencia, pero esta combinación debe poder causar una
+    // caída incluso en un tramo sin una curva especialmente cerrada.
+    const wetAggressiveDanger = rider.riskMode === "aggressive"
+      ? this.weather.intensity * 32
+      : 0;
     const danger = (100 - rider.grip) * 0.62 + curve * 38 + this.weather.intensity * 18 +
-      (rider.riskMode === "aggressive" ? 18 : rider.riskMode === "safe" ? -12 : 0);
+      (rider.riskMode === "aggressive" ? 18 : rider.riskMode === "safe" ? -12 : 0) +
+      descentDanger + wetAggressiveDanger;
     if (danger > 72) rider.riskAccumulator += (danger - 72) * dt * 0.022;
     else rider.riskAccumulator = Math.max(0, rider.riskAccumulator - dt * 0.32);
     const difficultySafety = rider === this.player && this.difficulty === "easy" ? 0.45 : 0;
@@ -2660,7 +2661,12 @@ class Race {
       if (rider === this.player) {
         rider.crashes += 1;
         this.game.cameraShake = 1;
-        this.game.notify("Has sufrido una caída. ¡Vuelve a carrera!", "urgent");
+        this.game.notify(
+          aggressiveDescent
+            ? "Te has caído arriesgando en el descenso. ¡Vuelve a carrera!"
+            : "Has sufrido una caída. ¡Vuelve a carrera!",
+          "urgent"
+        );
       }
     }
   }
@@ -2778,7 +2784,7 @@ class HUD {
       "effortNumber", "effortName", "sprintButton", "attackButton",
       "relayButton", "relayButtonDetail", "gelButton", "gelButtonDetail", "lastKmOverlay", "finishMeters", "dangerBanner", "dangerDistance",
       "directorTip", "vignette", "profileCanvas", "profileTooltip", "groupsPanel", "groupsCount", "groupsList",
-      "racePointCard", "racePointType", "racePointName", "racePointDistance", "followCard", "followModeLabel", "followRiderName", "followRiderInfo",
+      "racePointCard", "racePointType", "racePointName", "racePointDistance", "followCard", "followModeLabel", "followRiderName", "followRiderJersey", "followRiderInfo",
       "teamOrderButton", "teamOrderCurrent",
       "mobileViewTabs", "mobileClassificationPanel", "mobileClassificationList", "mobileRacePosition",
       "mobileGroupsPanel", "mobileGroupsCount", "mobileGroupsList",
@@ -3265,6 +3271,8 @@ class HUD {
     if (!rider) {
       if (this.followCardRider) this.elements.followCard.classList.add("is-hidden");
       this.elements.followCard.classList.remove("wheel-compact");
+      this.elements.followRiderJersey.hidden = true;
+      delete this.elements.followRiderJersey.dataset.jersey;
       this.followCardRider = null;
       this.followCardMode = "";
       this.followCardUntil = 0;
@@ -3272,20 +3280,31 @@ class HUD {
     }
     const targetChanged = rider !== this.followCardRider || mode !== this.followCardMode;
     const now = performance.now();
+    const riderJersey = rider.jerseyType ? TOUR_JERSEYS[rider.jerseyType] : null;
     if (targetChanged) {
       this.followCardRider = rider;
       this.followCardMode = mode;
-      this.followCardUntil = wheelTarget ? now + WHEEL_INDICATOR_MS : now + POPUP_MAX_MS;
+      this.followCardUntil = wheelTarget && !riderJersey
+        ? now + WHEEL_INDICATOR_MS
+        : now + POPUP_MAX_MS;
       this.elements.followModeLabel.textContent = wheelTarget ? "RUEDA" : "⌖ SIGUIENDO";
-      this.elements.followRiderName.textContent = wheelTarget ? "" : `${rider.flag || ""} ${rider.name}`;
+      this.elements.followRiderName.textContent = `${rider.flag || ""} ${rider.name}`;
       this.elements.followRiderInfo.textContent = "";
+      this.elements.followRiderJersey.hidden = !riderJersey;
+      if (riderJersey) {
+        this.elements.followRiderJersey.dataset.jersey = rider.jerseyType;
+        this.elements.followRiderJersey.textContent = `${riderJersey.icon} MAILLOT ${riderJersey.label}`;
+      } else {
+        delete this.elements.followRiderJersey.dataset.jersey;
+        this.elements.followRiderJersey.textContent = "";
+      }
       this.elements.followCard.style.borderLeftColor = rider.jerseyColor || rider.color;
       this.elements.followCard.setAttribute(
         "aria-label",
         wheelTarget ? `Cancelar rueda de ${rider.name}` : `Volver a tu ciclista desde ${rider.name}`
       );
     }
-    const wheelCompact = Boolean(wheelTarget);
+    const wheelCompact = Boolean(wheelTarget && !riderJersey);
     this.elements.followCard.classList.toggle("wheel-compact", wheelCompact);
     const visible = now < this.followCardUntil;
     this.elements.followCard.classList.toggle("is-hidden", !visible);
@@ -3298,11 +3317,8 @@ class HUD {
     const groupIndex = race.groups.findIndex((group) => group.riders.includes(rider));
     const groupName = groupIndex >= 0 ? race.groups[groupIndex].label : rider.finished ? "FINALIZADO" : "DESCOLGADO";
     const team = race.teamByName.get(rider.team);
-    const jersey = rider.jerseyType ? ` · ${TOUR_JERSEYS[rider.jerseyType].label}` : "";
-    if (!wheelTarget) {
-      this.elements.followRiderInfo.textContent =
-        `${rider.roleLabel}${jersey} · ${TACTICAL_LABELS[rider.tacticalState] || rider.tacticalState} · ${rider.team} · ${position}.º · ${groupName} · ${team?.objectiveLabel || "ETAPA"}`;
-    }
+    this.elements.followRiderInfo.textContent =
+      `${rider.roleLabel} · ${TACTICAL_LABELS[rider.tacticalState] || rider.tacticalState} · ${rider.team} · ${position}.º · ${groupName} · ${team?.objectiveLabel || "ETAPA"}`;
   }
 
   getDirectorTip(player, gradient, remaining) {
@@ -3315,6 +3331,13 @@ class HUD {
           : "El rival está colaborando, pero puede romper el relevo con un ataque.";
     }
     if (remaining <= 1) return "Elige bien el momento: un sprint demasiado largo vaciará tu explosividad.";
+    if (this.game.race?.weather.intensity > 0.25 && player.riskMode === "aggressive") {
+      return "Asfalto mojado: la conducción agresiva aumenta mucho el riesgo de caída.";
+    }
+    if (gradient <= RECOVERY_DESCENT_GRADIENT && player.riskMode === "aggressive" &&
+      this.game.race?.playerProfile !== "sprinter") {
+      return "Bajada agresiva: si no eres sprinter puedes caerte. Reduce a conducción normal o segura.";
+    }
     if (this.game.race?.isolationExposureFor(player) > 0.55) {
       return player.effort >= 4 && gradient > RECOVERY_DESCENT_GRADIENT
         ? "Ritmo Alto en solitario: gastas más energía. Busca compañía o relevos."
@@ -6567,7 +6590,10 @@ class Game {
       if (biome.id !== "forest" && biome.id !== "green" && Math.abs(marker) % 2) continue;
       const x = Math.round(focusX + (km - this.cameraKm) * pixelsPerKm);
       if (x < -45 || x > this.width + 45) continue;
-      const y = Math.round(this.sideSurfaceY(km) - 9);
+      // La línea de la carretera representa su eje y se dibuja con un arcén
+      // ancho. Anclamos la base de la vegetación al borde superior del arcén
+      // para que, en la vista lateral, no aparezca plantada sobre el asfalto.
+      const y = Math.round(this.sideSurfaceY(km) - SIDE_ROAD_SHOULDER_WIDTH / 2 - 3);
       const variation = (Math.sin(marker * 91.73) + 1) * 0.5;
       const size = Math.round(14 + variation * 12);
 

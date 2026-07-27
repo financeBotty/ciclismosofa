@@ -128,6 +128,7 @@
       <button id="followCard" class="follow-card is-hidden" type="button" aria-label="Cancelar rueda">
         <span id="followModeLabel">RUEDA</span>
         <strong id="followRiderName">—</strong>
+        <span id="followRiderJersey" class="follow-rider-jersey" hidden></span>
         <em id="followRiderInfo">—</em>
       </button>
 
@@ -475,7 +476,7 @@
               <div class="risk-buttons" role="group" aria-label="Nivel de riesgo">
                 <button data-risk="safe" aria-label="Conducción segura" title="Conducción segura · menos velocidad"><i aria-hidden="true">◈</i><span>SEGURA<small>Menos velocidad</small></span></button>
                 <button data-risk="normal" class="active" aria-label="Conducción normal" title="Conducción normal · equilibrada"><i aria-hidden="true">◆</i><span>NORMAL<small>Equilibrada</small></span></button>
-                <button data-risk="aggressive" aria-label="Conducción agresiva" title="Conducción agresiva · más velocidad y riesgo"><i aria-hidden="true">✦</i><span>AGRESIVA<small>Más riesgo</small></span></button>
+                <button data-risk="aggressive" aria-label="Conducción agresiva" title="Conducción agresiva · riesgo de caída en bajada salvo para sprinters"><i aria-hidden="true">✦</i><span>AGRESIVA<small>Riesgo de caída</small></span></button>
               </div>
               <div class="race-tip"><span>DIRECTOR</span><p id="directorTip">Mantente a rueda durante el llano y guarda fuerzas para el puerto.</p></div>
             </div>

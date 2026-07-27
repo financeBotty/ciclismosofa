@@ -72,6 +72,11 @@ quickAssert(
   "Algún escenario de la etapa no está marcado como diurno"
 );
 quickAssert(
+  quickRace.road.sceneryZones.length === 1 &&
+    quickRace.road.biomeAt(0).id === quickRace.road.biomeAt(quickRace.road.lengthKm).id,
+  "El bioma visual cambia durante la etapa"
+);
+quickAssert(
   quickRace.timeTrial === (quickGame.tour.stages[0].type === "itt"),
   "El modo contrarreloj no coincide con la etapa generada"
 );

@@ -35,6 +35,16 @@ static int testResult = 1;
          "game.race.player.relayWheelTarget = wheelTarget;"
          "game.hud.update();"
          "const relayWheelHidden = followCard.classList.contains('is-hidden') && getComputedStyle(followCard).visibility === 'hidden';"
+         "wheelTarget.jerseyType = 'polka';"
+         "wheelTarget.jerseyColor = '#f7f4ea';"
+         "game.race.player.relayWheelTarget = null;"
+         "game.hud.followCardRider = null;"
+         "game.hud.followCardMode = '';"
+         "game.hud.update();"
+         "const jerseyBadge = document.getElementById('followRiderJersey');"
+         "const jerseyShownOnClick = !followCard.classList.contains('wheel-compact') &&"
+           " !jerseyBadge.hidden && jerseyBadge.dataset.jersey === 'polka' &&"
+           " jerseyBadge.textContent.includes('MONTAÑA');"
          "game.race.player.wheelTarget = null;"
          "game.race.player.relayWheelTarget = null;"
          "game.hud.update();"
@@ -81,7 +91,7 @@ static int testResult = 1;
          "const message = feed.querySelector('.event-message');"
          "return {"
            "before, after: game.cameraMode, mobileView: viewAfterCamera,"
-           "singleWheelIndicator, wheelIndicatorCompact, wheelNoAge, wheelIndicatorExpires, wheelCancelledFromCard, relayWheelHidden,"
+           "singleWheelIndicator, wheelIndicatorCompact, wheelNoAge, wheelIndicatorExpires, wheelCancelledFromCard, relayWheelHidden, jerseyShownOnClick,"
            "viewAfterRoute, viewAfterPointerRoute, viewAfterPanelReturn, viewAfterTouchReturn, panelsHiddenAfterTouch,"
            "routeHitView: routeHit && routeHit.closest('[data-mobile-view]') && routeHit.closest('[data-mobile-view]').dataset.mobileView,"
            "groupsVisible, groupsRows, viewAfterGroup,"
@@ -112,6 +122,7 @@ static int testResult = 1;
             [result[@"wheelIndicatorExpires"] boolValue] &&
             [result[@"wheelCancelledFromCard"] boolValue] &&
             [result[@"relayWheelHidden"] boolValue] &&
+            [result[@"jerseyShownOnClick"] boolValue] &&
             [result[@"brandDisplay"] isEqual:@"none"] &&
             ([result[@"viewportWidth"] doubleValue] > 900 ||
                 [result[@"mobileView"] isEqual:@"race"]) &&
