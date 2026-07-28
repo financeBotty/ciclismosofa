@@ -14,6 +14,8 @@ static int testResult = 1;
     NSString *test =
         @"(() => {"
          "const game = window.ciclimoTourGame;"
+         "Date.now = () => 1700000000000;"
+         "Math.random = () => 0.3141592653;"
          "game.storage.tutorialSeen = true;"
          "game.startQuickRace();"
          "const followCard = document.getElementById('followCard');"
@@ -89,6 +91,17 @@ static int testResult = 1;
          "}"
          "game.notify('ATAQUE DE PRUEBA', 'urgent');"
          "const message = feed.querySelector('.event-message');"
+         "const normalSprite = game.buildSideCyclistSprite('#ffcc33', true, 0, 'leader', 'normal', '');"
+         "const standingSprite = game.buildSideCyclistSprite('#ffcc33', true, 0, 'leader', 'standing', '');"
+         "const normalPixels = normalSprite.getContext('2d').getImageData(0, 0, normalSprite.width, normalSprite.height).data;"
+         "const standingPixels = standingSprite.getContext('2d').getImageData(0, 0, standingSprite.width, standingSprite.height).data;"
+         "let posePixelDifference = 0;"
+         "for (let pixel = 0; pixel < normalPixels.length; pixel += 4) {"
+           "if (normalPixels[pixel] !== standingPixels[pixel] ||"
+               " normalPixels[pixel + 1] !== standingPixels[pixel + 1] ||"
+               " normalPixels[pixel + 2] !== standingPixels[pixel + 2] ||"
+               " normalPixels[pixel + 3] !== standingPixels[pixel + 3]) posePixelDifference += 1;"
+         "}"
          "return {"
            "before, after: game.cameraMode, mobileView: viewAfterCamera,"
            "singleWheelIndicator, wheelIndicatorCompact, wheelNoAge, wheelIndicatorExpires, wheelCancelledFromCard, relayWheelHidden, jerseyShownOnClick,"
@@ -104,6 +117,7 @@ static int testResult = 1;
            "groupsZIndex: getComputedStyle(desktopGroups).zIndex,"
            "messageText: message && message.textContent,"
            "messageWidth: message ? message.getBoundingClientRect().width : 0,"
+           "posePixelDifference,"
            "hitId: hit && hit.id,"
            "left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,"
            "width: rect.width, height: rect.height,"
@@ -144,6 +158,7 @@ static int testResult = 1;
             [result[@"feedZIndex"] integerValue] > [result[@"groupsZIndex"] integerValue] &&
             [result[@"messageText"] isEqual:@"ATAQUE DE PRUEBA"] &&
             [result[@"messageWidth"] doubleValue] > 0 &&
+            [result[@"posePixelDifference"] integerValue] >= 100 &&
             [result[@"hitId"] isEqual:@"sideCameraButton"] &&
             [result[@"height"] doubleValue] >=
                 ([result[@"viewportWidth"] doubleValue] <= 900 ? 44 : 38) &&
@@ -165,6 +180,8 @@ static int testResult = 1;
             return;
         }
 
+        BOOL poseSnapshot = [self.snapshotMode isEqualToString:@"normal"] ||
+            [self.snapshotMode isEqualToString:@"standing"];
         NSString *focusExpression = [self.snapshotMode isEqualToString:@"finish"]
             ? @"Math.max(0, game.race.road.lengthKm - 0.22)"
             : @"(game.race.road.mountains[0]"
@@ -177,11 +194,29 @@ static int testResult = 1;
              "game.state = 'PAUSED';"
              "game.cameraFocusKm = %@;"
              "game.race.player.distance = game.cameraFocusKm;"
+             "%@"
              "game.render();"
-             "if (innerWidth <= 900) game.hud.setMobileView('groups');"
-             "game.notify('¡ATAQUE! EL PELOTÓN REACCIONA', 'urgent');"
+             "if (innerWidth <= 900) game.hud.setMobileView('%@');"
+             "%@"
              "return true;"
-             "})();", focusExpression];
+             "})();",
+             focusExpression,
+             poseSnapshot
+                ? [NSString stringWithFormat:
+                    @"game.race.timeTrial = true;"
+                     "game.race.raceVehicles.forEach((vehicle) => vehicle.active = false);"
+                     "game.race.player.lateral = 0;"
+                     "game.race.player.targetLateral = 0;"
+                     "game.race.player.energy = 80;"
+                     "game.race.player.fatigue = 10;"
+                     "game.race.player.sprinting = false;"
+                     "game.race.player.effort = %@;"
+                     "game.race.player.attacking = %@;",
+                     [self.snapshotMode isEqualToString:@"standing"] ? @"4" : @"2",
+                     [self.snapshotMode isEqualToString:@"standing"] ? @"2" : @"0"]
+                : @"",
+             poseSnapshot ? @"race" : @"groups",
+             poseSnapshot ? @"" : @"game.notify('¡ATAQUE! EL PELOTÓN REACCIONA', 'urgent');"];
         [webView evaluateJavaScript:prepareSnapshot completionHandler:^(id prepared, NSError *prepareError) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)),
                            dispatch_get_main_queue(), ^{

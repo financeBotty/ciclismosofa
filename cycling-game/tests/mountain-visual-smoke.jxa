@@ -144,6 +144,7 @@ assertMountain(typeof vehicleGame.renderRaceVehicles === "function" &&
   "Falta alguna vista de los vehículos de carrera");
 
 const layerOrder = [];
+const renderedRiderScales = new Map();
 const layerGame = Object.create(vehicleGame);
 Object.defineProperties(layerGame, {
   height: { value: 700 },
@@ -151,8 +152,10 @@ Object.defineProperties(layerGame, {
   riderHitAreas: { value: [] },
   roadPointAt: { value: (distance, lateral) => ({ x: lateral, y: distance }) },
   roadAngleAt: { value: () => 0 },
-  drawCyclist: { value: (ctx, rider) => layerOrder.push(rider === raceMiddle ? "middle" :
-    rider === raceTail ? "tail" : "leader") },
+  drawCyclist: { value: (ctx, rider, x, y, scale) => {
+    layerOrder.push(rider === raceMiddle ? "middle" : rider === raceTail ? "tail" : "leader");
+    renderedRiderScales.set(rider, scale);
+  } },
   drawRaceVehicle: { value: (ctx, vehicle) => layerOrder.push(vehicle.id) }
 });
 layerGame.race.weather = { intensity: 0 };
@@ -162,6 +165,9 @@ layerGame.renderCyclists({});
 assertMountain(layerOrder.indexOf("tail") < layerOrder.indexOf("team-0") &&
   layerOrder.indexOf("team-0") < layerOrder.indexOf("middle"),
   "Los coches no comparten el orden de profundidad con los ciclistas y pueden desaparecer bajo el pelotón");
+assertMountain(renderedRiderScales.get(raceMiddle) === renderedRiderScales.get(raceTail) &&
+  renderedRiderScales.get(raceMiddle) === renderedRiderScales.get(raceLeader),
+  "El ciclista del jugador se sigue dibujando más grande que sus rivales");
 
 const movingTrafficRace = Object.create(Race.prototype);
 movingTrafficRace.teams = [{ color: "#2f80ed" }, { color: "#ef476f" }, { color: "#36bd69" }];

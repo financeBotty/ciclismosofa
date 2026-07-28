@@ -6458,7 +6458,7 @@ class Game {
     const sprite = this.buildCyclistSprite(jerseyColor, isPlayer, frame, rider.role, pose, rider.jerseyType);
     ctx.save();
     ctx.translate(Math.round(x), Math.round(y));
-    const standingRock = pose === "standing" ? Math.sin(frame / 8 * Math.PI * 2) * 0.055 : 0;
+    const standingRock = pose === "standing" ? Math.sin(frame / 8 * Math.PI * 2) * 0.085 : 0;
     ctx.rotate(angle + standingRock + (rider.crashTimer > 2 ? (3.2 - rider.crashTimer) * 1.25 : 0));
     ctx.imageSmoothingEnabled = false;
 
@@ -6543,7 +6543,7 @@ class Game {
         continue;
       }
       const originalScale = clamp(this.roadHalfWidth / 135, 0.8, 1.24);
-      const scale = (item.rider === player ? originalScale + 0.14 : originalScale) * 0.75;
+      const scale = originalScale * 0.75;
       const hitScale = Math.max(scale, 0.86);
       this.drawCyclist(ctx, item.rider, item.point.x, item.point.y, scale, item.rider === player, item.angle);
       this.riderHitAreas.push({ rider: item.rider, x: item.point.x, y: item.point.y, width: 48 * hitScale, height: 68 * hitScale });
@@ -6674,8 +6674,8 @@ class Game {
 
     // Piernas más gruesas y con ocho posiciones de pedaleo.
     const hip = {
-      x: standing ? 31 + Math.round(Math.sin(phase) * 2) : 34,
-      y: standing ? 26 : 30
+      x: standing ? 31 + Math.round(Math.sin(phase) * 3) : 34,
+      y: standing ? 19 : 30
     };
     const leftKnee = { x: Math.round((hip.x + pedal.x) / 2 - 5), y: Math.round((hip.y + pedal.y) / 2) };
     const rightKnee = { x: Math.round((hip.x + opposite.x) / 2 + 5), y: Math.round((hip.y + opposite.y) / 2) };
@@ -6688,6 +6688,95 @@ class Game {
     pixel.fillStyle = outline;
     pixel.fillRect(pedal.x - 4, pedal.y, 9, 4);
     pixel.fillRect(opposite.x - 4, opposite.y, 9, 4);
+
+    if (standing) {
+      // Postura fuera del sillín deliberadamente exagerada para que siga
+      // leyéndose cuando el sprite se reduce en móvil: pelvis alta, espalda
+      // casi vertical y brazos largos cargando el peso sobre el manillar.
+      pixel.fillStyle = outline;
+      pixel.beginPath();
+      pixel.moveTo(22, 7);
+      pixel.lineTo(38, 6);
+      pixel.lineTo(45, 18);
+      pixel.lineTo(37, 25);
+      pixel.lineTo(24, 24);
+      pixel.lineTo(20, 12);
+      pixel.closePath();
+      pixel.fill();
+      pixel.fillStyle = color;
+      pixel.fillRect(23, 9, 15, 12);
+      pixel.fillRect(27, 18, 13, 6);
+      pixel.fillStyle = lerpColor(color, "#10151d", 0.55);
+      pixel.fillRect(23, 18, 17, 5);
+      pixel.fillStyle = "#f4f1e9";
+      pixel.fillRect(27, 10, 4, 11);
+      pixel.fillStyle = outline;
+      pixel.fillRect(27, 22, 12, 6);
+
+      // Brazos casi extendidos hasta un manillar que permanece unido a la bici.
+      pixel.strokeStyle = outline;
+      pixel.lineWidth = 8;
+      pixel.beginPath();
+      pixel.moveTo(37, 10);
+      pixel.lineTo(47, 17);
+      pixel.lineTo(59, 21);
+      pixel.stroke();
+      pixel.strokeStyle = skin;
+      pixel.lineWidth = 4;
+      pixel.beginPath();
+      pixel.moveTo(38, 10);
+      pixel.lineTo(47, 17);
+      pixel.lineTo(58, 21);
+      pixel.stroke();
+      pixel.fillStyle = outline;
+      pixel.fillRect(55, 19, 12, 4);
+      pixel.fillRect(62, 19, 4, 8);
+
+      // Cabeza retrasada respecto a la postura sentada y claramente erguida.
+      pixel.fillStyle = outline;
+      pixel.fillRect(25, 0, 21, 17);
+      pixel.fillRect(43, 5, 6, 10);
+      pixel.fillStyle = skin;
+      pixel.fillRect(29, 4, 16, 11);
+      pixel.fillStyle = skinShadow;
+      pixel.fillRect(29, 12, 15, 4);
+      pixel.fillRect(43, 8, 6, 5);
+      pixel.fillStyle = isPlayer ? "#ffcc33" : lerpColor(color, "#10151d", 0.4);
+      pixel.fillRect(23, 0, 24, 7);
+      pixel.fillStyle = lerpColor(isPlayer ? "#ffcc33" : color, "#ffffff", 0.45);
+      pixel.fillRect(27, 1, 9, 3);
+      pixel.fillStyle = "#6fe4ff";
+      pixel.fillRect(38, 6, 13, 4);
+      pixel.fillStyle = "#10202b";
+      pixel.fillRect(41, 7, 4, 3);
+
+      const standingRoleColor = this.roleAccent(role);
+      pixel.fillStyle = standingRoleColor;
+      if (role === "leader") {
+        pixel.fillRect(24, 9, 4, 13);
+        pixel.fillRect(35, 8, 4, 14);
+      } else if (role === "sprinter") {
+        pixel.fillRect(23, 9, 16, 4);
+      } else if (role === "climber") {
+        for (const [markX, markY] of [[25, 10], [34, 10], [29, 15], [36, 19], [25, 20]]) {
+          pixel.fillRect(markX, markY, 3, 3);
+        }
+      } else if (role === "attacker") {
+        pixel.fillRect(24, 9, 4, 4);
+        pixel.fillRect(28, 12, 4, 4);
+        pixel.fillRect(32, 15, 4, 4);
+      } else {
+        pixel.fillRect(24, 20, 15, 3);
+      }
+      if (jerseyType === "polka") {
+        pixel.fillStyle = "#e63946";
+        for (const [markX, markY] of [[25, 9], [34, 9], [29, 14], [36, 18], [25, 20]]) {
+          pixel.fillRect(markX, markY, 3, 3);
+        }
+      }
+      this.spriteCache.set(key, sprite);
+      return sprite;
+    }
 
     // Torso ancho, inclinado y con sombras duras.
     pixel.save();
@@ -6889,22 +6978,6 @@ class Game {
     }
   }
 
-  renderLateralRoadDetails(ctx, focusX, pixelsPerKm, weather) {
-    for (let x = -20; x < this.width + 20; x += 43) {
-      const km = this.cameraKm + (x - focusX) / pixelsPerKm;
-      const y = Math.round(this.sideSurfaceY(km));
-      const hash = Math.sin(Math.floor(km * 1000) * 12.91);
-      ctx.fillStyle = weather > 0.2 ? "rgba(205,226,230,.24)" : "rgba(29,34,37,.3)";
-      ctx.fillRect(x - 6, y - 5, 12, 2);
-      if (Math.abs(hash) > 0.66) {
-        ctx.fillStyle = "#343b3e";
-        ctx.fillRect(x + 5, y - 7, 16, 4);
-        ctx.fillStyle = "#737779";
-        ctx.fillRect(x + 8, y - 6, 10, 2);
-      }
-    }
-  }
-
   renderLateralScene(ctx, weather) {
     const focusX = this.width * 0.38;
     const pixelsPerKm = clamp(this.width / 1.35, 520, 1050);
@@ -6962,7 +7035,6 @@ class Game {
     ctx.lineDashOffset = this.cameraKm * 80;
     ctx.stroke();
     ctx.setLineDash([]);
-    this.renderLateralRoadDetails(ctx, focusX, pixelsPerKm, weather);
 
     this.renderLateralScenery(ctx, focusX, pixelsPerKm);
     for (const point of this.race.road.racePoints) {
@@ -7025,8 +7097,7 @@ class Game {
       const depthScale = 1 + (item.rider.lateral + 0.9) * 0.07;
       // En móvil el pelotón debe dejar carretera visible. La escala de toque
       // conserva algo más de margen que el sprite para no dificultar las fichas.
-      const scale = (item.rider === this.race.player ? 0.99 : 0.855) *
-        depthScale * riderViewportScale;
+      const scale = 0.855 * depthScale * riderViewportScale;
       const minimumHitScale = riderViewportScale < 1 ? riderViewportScale + 0.06 : 1;
       const hitScale = Math.max(scale, minimumHitScale);
       const actionColor = item.rider.sprinting ? "#62d8f2" : item.rider.attacking > 0 ? "#ff7158" : null;
@@ -7065,8 +7136,8 @@ class Game {
       }
       ctx.imageSmoothingEnabled = false;
       ctx.save();
-      const standingBob = pose === "standing" && frame % 2 ? -2 * scale : 0;
-      const standingPitch = pose === "standing" ? Math.sin(frame / 8 * Math.PI * 2) * 0.018 : 0;
+      const standingBob = pose === "standing" && frame % 2 ? -3 * scale : 0;
+      const standingPitch = pose === "standing" ? Math.sin(frame / 8 * Math.PI * 2) * 0.035 : 0;
       ctx.translate(Math.round(item.x), Math.round(item.y + standingBob));
       ctx.rotate(roadAngle + standingPitch);
       ctx.drawImage(sprite, -36 * scale, -58 * scale, 72 * scale, 60 * scale);
