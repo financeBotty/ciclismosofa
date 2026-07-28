@@ -69,6 +69,7 @@ const NOTICE_MS = 3200;
 const URGENT_NOTICE_MS = 4200;
 const RECOVERY_DESCENT_GRADIENT = -1.5;
 const ISOLATION_HIGH_EFFORT_LOAD = 0.2;
+const PROTECTION_PULL_LOAD = 0.85;
 const SIDE_ROAD_SHOULDER_WIDTH = 56;
 const SIDE_ROAD_ASPHALT_WIDTH = 43;
 const SIDE_ROAD_LANE_DEPTH = 12;
@@ -1035,6 +1036,9 @@ class Cyclist {
     const draftSaving = this.draft * 0.0042;
     const teamProtectionSaving = clamp(this.teamProtection || 0, 0, 1) * 0.2;
     const sacrificeLoad = this.sacrificing ? 0.17 : 0;
+    // Un gregario que abre paso y mantiene al líder a rueda soporta un coste
+    // aerodinámico propio, muy superior al de limitarse a rodar en Alto.
+    const protectionPullLoad = this.protectionPuller ? PROTECTION_PULL_LOAD : 0;
     const aggressionLoad = this.riskMode === "aggressive" ? 0.08 : 0;
     const rainLoad = weather.intensity * 0.06;
     const nutritionLoad = this.nutrition < 28 ? 0.22 : 0;
@@ -1045,7 +1049,8 @@ class Cyclist {
       ? isolationExposure * ISOLATION_HIGH_EFFORT_LOAD
       : 0;
     const energyRate = Math.max(0.02, (effortLoad + climbLoad + aggressionLoad + rainLoad + nutritionLoad +
-      progressiveHighLoad + exposureLoad + sacrificeLoad - draftSaving - teamProtectionSaving) * enduranceFactor);
+      progressiveHighLoad + exposureLoad + sacrificeLoad + protectionPullLoad -
+      draftSaving - teamProtectionSaving) * enduranceFactor);
     const canRecover = this.recoversEnergy && this.attacking <= 0 && !this.sprinting && this.crashTimer <= 0;
     const nutritionFactor = clamp((this.nutrition - 18) / 55, 0, 1);
     const recoveryRate = canRecover && this.effort === 1
@@ -1053,7 +1058,8 @@ class Cyclist {
       : canRecover && this.effort === 2 && descending ? 0.078 * nutritionFactor : 0;
     // En descenso, rodar en Alto no añade coste energético. Ataque y sprint
     // siguen pagando su coste específico en explosividad.
-    const energyChange = this.effort >= 4 && descending ? 0 : recoveryRate - energyRate * 0.21;
+    const freeHighEffortDescent = this.effort >= 4 && descending && !this.protectionPuller;
+    const energyChange = freeHighEffortDescent ? 0 : recoveryRate - energyRate * 0.21;
     this.energy = clamp(this.energy + energyChange * dt, 0, 100);
     this.fatigue = clamp(this.fatigue + energyRate * dt * 0.12 - (this.effort === 1 ? dt * 0.065 : this.effort === 2 ? dt * 0.028 : 0), 0, 100);
     this.nutrition = clamp(this.nutrition - dt * (0.075 + this.effort * 0.008), 0, 100);
@@ -1526,11 +1532,13 @@ class Race {
   initializeRaceVehicles() {
     const colors = this.teams.slice(0, 3).map((team) => team.color);
     this.raceVehicles = [
-      { id: "tv-head", type: "tv", distance: 0.12, lateral: -0.52, speed: 40, color: "#ffcc33", active: true },
+      { id: "tv-0", type: "tv", distance: -0.06, lateral: -0.52, speed: 40, cruiseSpeed: 40, color: "#ffcc33", active: true },
+      { id: "tv-1", type: "tv", distance: -0.22, lateral: 0.5, speed: 35, cruiseSpeed: 35, color: "#62d8f2", active: true },
+      { id: "tv-2", type: "tv", distance: -0.38, lateral: -0.08, speed: 31, cruiseSpeed: 31, color: "#f4f1e9", active: true },
       { id: "team-0", type: "team", distance: 0.55, lateral: 0.5, speed: 29, cruiseSpeed: 29, color: colors[0] || "#2f80ed", active: true },
       { id: "team-1", type: "team", distance: Math.max(1.1, this.road.lengthKm * 0.34), lateral: -0.48, speed: 31, cruiseSpeed: 31, color: colors[1] || "#ef476f", active: true },
       { id: "team-2", type: "team", distance: Math.max(1.7, this.road.lengthKm * 0.68), lateral: 0.12, speed: 28, cruiseSpeed: 28, color: colors[2] || "#36bd69", active: true },
-      { id: "broom", type: "broom", distance: -0.42, lateral: 0.55, speed: 28, color: "#f0a62b", active: true }
+      { id: "broom", type: "broom", distance: -0.56, lateral: 0.55, speed: 28, color: "#f0a62b", active: true }
     ];
   }
 
@@ -1540,40 +1548,38 @@ class Race {
       .sort((a, b) => b.distance - a.distance);
     const leader = this.timeTrial ? this.player : activeRiders[0] || this.player;
     const tail = this.timeTrial ? this.player : activeRiders.at(-1) || this.player;
-    const television = this.raceVehicles.find((vehicle) => vehicle.type === "tv");
     const teamCars = this.raceVehicles.filter((vehicle) => vehicle.type === "team" && vehicle.active);
+    const trafficVehicles = this.raceVehicles.filter((vehicle) =>
+      (vehicle.type === "team" || vehicle.type === "tv") && vehicle.active);
     const broom = this.raceVehicles.find((vehicle) => vehicle.type === "broom");
 
-    if (television) {
-      const targetDistance = leader.distance + 0.12;
-      const nearbyCar = teamCars.find((vehicle) =>
-        Math.abs(vehicle.distance - targetDistance) < 0.16);
-      television.distance = targetDistance;
-      television.speed = Math.max(leader.speed + 2, 38);
-      // Si coincide longitudinalmente con un coche, la moto usa el lado
-      // opuesto de la calzada en vez de saltar o frenar sobre la cabeza.
-      television.lateral = clamp(nearbyCar
-        ? (nearbyCar.lateral >= 0 ? -0.55 : 0.55)
-        : -0.52, -0.62, 0.62);
-    }
-
-    const orderedCars = [...teamCars].sort((a, b) => b.distance - a.distance);
-    for (let index = 0; index < orderedCars.length; index += 1) {
-      const vehicle = orderedCars[index];
-      const aheadVehicle = orderedCars[index - 1];
+    // Motos y coches se comportan como tráfico real: avanzan con velocidad
+    // propia, frenan ante lo que tienen delante y conservan su trazada.
+    const orderedTraffic = [...trafficVehicles].sort((a, b) => b.distance - a.distance);
+    let motorcycleCeiling = leader.distance - 0.06;
+    for (let index = 0; index < orderedTraffic.length; index += 1) {
+      const vehicle = orderedTraffic[index];
+      const aheadVehicle = orderedTraffic[index - 1];
       let targetSpeed = vehicle.cruiseSpeed;
-      if (aheadVehicle && aheadVehicle.distance - vehicle.distance < 0.22) {
+      const safeVehicleGap = vehicle.type === "tv" && aheadVehicle?.type === "tv" ? 0.14 : 0.22;
+      if (aheadVehicle && aheadVehicle.distance - vehicle.distance < safeVehicleGap) {
         targetSpeed = Math.min(targetSpeed, Math.max(8, aheadVehicle.speed - 2));
       }
+      const riderWidth = vehicle.type === "tv" ? 0.32 : 0.46;
       const riderAhead = activeRiders
         .filter((rider) => rider.distance >= vehicle.distance &&
           rider.distance - vehicle.distance < 0.18 &&
-          Math.abs(rider.lateral - vehicle.lateral) < 0.46)
+          Math.abs(rider.lateral - vehicle.lateral) < riderWidth)
         .sort((a, b) => a.distance - b.distance)[0];
       if (riderAhead) targetSpeed = Math.min(targetSpeed, Math.max(6, riderAhead.speed - 4));
       vehicle.speed = lerp(vehicle.speed, targetSpeed, 1 - Math.exp(-dt * 2.4));
       vehicle.distance += vehicle.speed * this.simulationScale / 3600 * dt;
       vehicle.lateral = clamp(vehicle.lateral, -0.62, 0.62);
+      if (vehicle.type === "tv") {
+        // Ninguna moto puede abrir carrera ni amontonarse con otra en cabeza.
+        vehicle.distance = Math.min(vehicle.distance, motorcycleCeiling);
+        motorcycleCeiling = vehicle.distance - 0.14;
+      }
       if (vehicle.distance > this.road.lengthKm + 0.25) vehicle.active = false;
     }
 
@@ -2702,8 +2708,8 @@ class Race {
           rider.speed = Math.min(rider.speed, Math.max(8, vehicle.speed - 1));
           rider.avoidanceBrake = Math.max(rider.avoidanceBrake, 9);
           rider.targetLateral = clamp(vehicle.lateral + direction * 0.78, -0.9, 0.9);
-        } else if (vehicle.type === "team") {
-          // El coche cede ante un ciclista que ya lo ha superado.
+        } else if (vehicle.type === "team" || vehicle.type === "tv") {
+          // Coches y motos ceden ante un ciclista que ya los ha superado.
           vehicle.distance = Math.min(vehicle.distance, rider.distance - longitudinalClearance);
           vehicle.speed = Math.min(vehicle.speed, Math.max(6, rider.speed - 4));
         }
@@ -6197,6 +6203,12 @@ class Game {
     ctx.restore();
   }
 
+  lateralRiderViewportScale(viewportWidth = window.innerWidth) {
+    if (viewportWidth <= 480) return 0.66;
+    if (viewportWidth <= 900) return 0.76;
+    return 1;
+  }
+
   buildCyclistSprite(color, isPlayer, frame, role = "domestique", pose = "normal", jerseyType = "") {
     const key = `${color}-${isPlayer}-${frame}-${role}-${pose}-${jerseyType}`;
     if (this.spriteCache.has(key)) return this.spriteCache.get(key);
@@ -6945,6 +6957,7 @@ class Game {
         const lateralB = b.rider ? b.rider.lateral : b.vehicle.lateral;
         return lateralA - lateralB;
       });
+    const riderViewportScale = this.lateralRiderViewportScale();
     for (const item of visible) {
       if (item.vehicle) {
         this.drawLateralRaceVehicle(ctx, {
@@ -6961,8 +6974,12 @@ class Game {
       const sprite = this.buildSideCyclistSprite(jerseyColor, item.rider === this.race.player, frame, item.rider.role, pose, item.rider.jerseyType);
       const roadAngle = this.sideRoadAngleAt(item.rider.distance, pixelsPerKm);
       const depthScale = 1 + (item.rider.lateral + 0.9) * 0.07;
-      const scale = (item.rider === this.race.player ? 0.99 : 0.855) * depthScale;
-      const hitScale = Math.max(scale, 1);
+      // En móvil el pelotón debe dejar carretera visible. La escala de toque
+      // conserva algo más de margen que el sprite para no dificultar las fichas.
+      const scale = (item.rider === this.race.player ? 0.99 : 0.855) *
+        depthScale * riderViewportScale;
+      const minimumHitScale = riderViewportScale < 1 ? riderViewportScale + 0.06 : 1;
+      const hitScale = Math.max(scale, minimumHitScale);
       const actionColor = item.rider.sprinting ? "#62d8f2" : item.rider.attacking > 0 ? "#ff7158" : null;
       if (actionColor) {
         const pulse = Math.floor(this.race.elapsed * 14 + item.rider.distance * 100) % 3;

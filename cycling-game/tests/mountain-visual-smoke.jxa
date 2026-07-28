@@ -50,6 +50,12 @@ assertMountain(SIDE_ROAD_LANE_DEPTH >= 10,
   "Los cambios de carril siguen sin apreciarse en la vista lateral");
 assertMountain(Math.abs(visualGame.sideLaneOffset(1)) <= SIDE_ROAD_ASPHALT_WIDTH / 2 - 8,
   "Un cambio de carril puede sacar al ciclista del asfalto lateral");
+assertMountain(visualGame.lateralRiderViewportScale(390) <= 0.68,
+  "Los ciclistas laterales siguen siendo demasiado grandes en un móvil estrecho");
+assertMountain(visualGame.lateralRiderViewportScale(800) < 0.8,
+  "Los ciclistas laterales no se reducen en móviles grandes");
+assertMountain(visualGame.lateralRiderViewportScale(1200) === 1,
+  "La reducción móvil está alterando también la vista lateral de escritorio");
 assertMountain(SIDE_FINISH_GATE_HEIGHT >= 180,
   "La meta lateral puede quedar oculta por el público");
 assertMountain(typeof visualGame.renderLateralRoadsideProps === "function",
@@ -59,7 +65,9 @@ const raceLeader = { distance: 50, finished: false, color: "#ffcc33" };
 const raceMiddle = { distance: 47, finished: false, color: "#2f80ed" };
 const raceTail = { distance: 44, finished: false, color: "#ef476f" };
 const persistentVehicles = [
-  { id: "tv-head", type: "tv", distance: 50.12, lateral: -0.52, speed: 42, active: true },
+  { id: "tv-0", type: "tv", distance: 49.88, lateral: -0.52, speed: 40, active: true },
+  { id: "tv-1", type: "tv", distance: 47.7, lateral: 0.5, speed: 35, active: true },
+  { id: "tv-2", type: "tv", distance: 44.8, lateral: -0.08, speed: 31, active: true },
   { id: "team-0", type: "team", distance: 46.5, lateral: 0.5, speed: 29, active: true },
   { id: "broom", type: "broom", distance: 43.58, lateral: 0.55, speed: 27, active: true }
 ];
@@ -76,10 +84,12 @@ vehicleGame.race = {
   ]
 };
 const ambientVehicles = vehicleGame.ambientRaceVehicles();
-const tvMoto = ambientVehicles.find((vehicle) => vehicle.type === "tv");
+const tvMotos = ambientVehicles.filter((vehicle) => vehicle.type === "tv");
 const broomCar = ambientVehicles.find((vehicle) => vehicle.type === "broom");
-assertMountain(tvMoto && tvMoto.distance > raceLeader.distance,
-  "La moto de televisión no permanece delante de la cabeza");
+assertMountain(tvMotos.length >= 3,
+  "No aparecen varias motos de televisión durante la carrera");
+assertMountain(tvMotos.every((vehicle) => vehicle.distance < raceLeader.distance),
+  "Alguna moto de televisión circula por delante del líder");
 assertMountain(ambientVehicles.some((vehicle) => vehicle.type === "team"),
   "No aparecen coches de equipo detrás de los grupos");
 assertMountain(broomCar && broomCar.distance < raceTail.distance,
@@ -113,6 +123,28 @@ layerGame.renderCyclists({});
 assertMountain(layerOrder.indexOf("tail") < layerOrder.indexOf("team-0") &&
   layerOrder.indexOf("team-0") < layerOrder.indexOf("middle"),
   "Los coches no comparten el orden de profundidad con los ciclistas y pueden desaparecer bajo el pelotón");
+
+const movingTrafficRace = Object.create(Race.prototype);
+movingTrafficRace.teams = [{ color: "#2f80ed" }, { color: "#ef476f" }, { color: "#36bd69" }];
+movingTrafficRace.road = { lengthKm: 100 };
+movingTrafficRace.initializeRaceVehicles();
+movingTrafficRace.timeTrial = false;
+movingTrafficRace.player = raceMiddle;
+movingTrafficRace.cyclists = [
+  { ...raceLeader, speed: 38 },
+  { ...raceMiddle, speed: 35 },
+  { ...raceTail, speed: 31 }
+];
+movingTrafficRace.simulationScale = 20;
+movingTrafficRace.updateRaceVehicles(0.5);
+const movingMotos = movingTrafficRace.raceVehicles.filter((vehicle) => vehicle.type === "tv");
+assertMountain(movingMotos.length === 3 &&
+  movingMotos.every((vehicle) => vehicle.distance <= raceLeader.distance - 0.06),
+  "Una moto puede colocarse por delante de la cabeza durante la actualización");
+const orderedMotos = [...movingMotos].sort((a, b) => b.distance - a.distance);
+assertMountain(orderedMotos.every((vehicle, index) =>
+  index === 0 || orderedMotos[index - 1].distance - vehicle.distance >= 0.139),
+  "Las motos pueden amontonarse en la misma posición");
 
 const passingRider = {
   distance: 10, previousDistance: 9.99, lateral: 0.5, targetLateral: 0.5,

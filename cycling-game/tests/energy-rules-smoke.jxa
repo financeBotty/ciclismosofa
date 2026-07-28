@@ -37,12 +37,13 @@ const riderData = {
   aggression: 78, intelligence: 86
 };
 
-const simulateEnergy = (effort, gradient, isolated, seconds = 20) => {
+const simulateEnergy = (effort, gradient, isolated, seconds = 20, protectionPuller = false) => {
   const rider = new PlayerCyclist(riderData);
   rider.energy = 50;
   rider.explosive = 50;
   rider.nutrition = 100;
   rider.effort = effort;
+  rider.protectionPuller = protectionPuller;
   const context = {
     simulationScale: 0,
     weather: { intensity: 0 },
@@ -65,6 +66,7 @@ const lowUphill = simulateEnergy(1, 7, 1);
 const mediumFlat = simulateEnergy(2, 0, 0);
 const mediumDownhill = simulateEnergy(2, -3, 1);
 const highDownhill = simulateEnergy(4, -3, 1);
+const protectionPullerDownhill = simulateEnergy(4, -3, 0, 20, true);
 const highProtected = simulateEnergy(4, 0, 0);
 const highIsolated = simulateEnergy(4, 0, 1);
 
@@ -72,6 +74,8 @@ energyAssert(lowUphill.energy > 50, "Bajo no recuperó energía en subida");
 energyAssert(mediumFlat.energy < 50, "Medio recuperó energía en llano");
 energyAssert(mediumDownhill.energy > 50, "Medio no recuperó energía en descenso");
 energyAssert(Math.abs(highDownhill.energy - 50) < 0.0001, "Alto consumió energía en descenso");
+energyAssert(protectionPullerDownhill.energy < 47,
+  "Un gregario tirando todavía puede trabajar gratis en descenso");
 energyAssert(highIsolated.energy < highProtected.energy,
   "El aislamiento no aumentó el consumo en Alto");
 energyAssert(lowUphill.explosive > 50 && mediumFlat.explosive > 50,
@@ -82,6 +86,7 @@ JSON.stringify({
   mediumFlat,
   mediumDownhill,
   highDownhill,
+  protectionPullerDownhill,
   highProtected,
   highIsolated
 });

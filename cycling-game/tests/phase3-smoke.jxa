@@ -237,10 +237,26 @@ phase3Assert(integratedProtectors.length >= 1,
 phase3ProtectionPuller.distance = 20.03;
 phase3Player.distance = 20;
 phase3ProtectionPuller.lateral = 0;
+phase3Player.lateral = 0;
+phase3ProtectionPuller.relayParticipant = false;
+if (!playerTeam.plan.pullers.includes(phase3ProtectionPuller)) {
+  playerTeam.plan.pullers = [phase3ProtectionPuller, ...playerTeam.plan.pullers.slice(0, 2)];
+}
 phase3Game.race.applyTeamProtectionInstruction(phase3ProtectionPuller);
 phase3Game.race.updatePlayerTeamProtection();
 phase3Assert(phase3Player.teamProtection > 0.2 && phase3Game.race.activePlayerProtectors >= 1,
-  "El gregario colocado delante no redujo el desgaste del líder");
+  "El gregario colocado delante no redujo el desgaste del líder: " + JSON.stringify({
+    protection: phase3Player.teamProtection,
+    active: phase3Game.race.activePlayerProtectors,
+    puller: phase3ProtectionPuller.protectionPuller,
+    energy: phase3ProtectionPuller.energy,
+    timeTrial: phase3Game.race.timeTrial,
+    plan: playerTeam.plan.state,
+    slot: playerTeam.plan.pullers.indexOf(phase3ProtectionPuller),
+    finished: phase3ProtectionPuller.finished,
+    gap: phase3ProtectionPuller.distance - phase3Player.distance,
+    lateralGap: Math.abs(phase3ProtectionPuller.lateral - phase3Player.lateral)
+  }));
 
 phase3Player.energy = 80;
 phase3ProtectionPuller.energy = 80;
@@ -255,10 +271,12 @@ const protectionContext = {
   simulationScale: 0,
   race: { isolationExposureFor: () => 0 }
 };
-phase3ProtectionPuller.updateCommon(2, protectionContext);
-phase3Player.updateCommon(2, protectionContext);
-phase3Assert(phase3ProtectionPuller.energy < phase3Player.energy - 0.1,
-  "El gregario no asumió más desgaste que el líder protegido");
+phase3ProtectionPuller.updateCommon(20, protectionContext);
+phase3Player.updateCommon(20, protectionContext);
+phase3Assert(phase3ProtectionPuller.energy < phase3Player.energy - 4,
+  "Tirar del líder no provoca un desgaste energético claramente alto en el gregario");
+phase3Assert(phase3ProtectionPuller.fatigue > phase3Player.fatigue + 2,
+  "El trabajo del gregario no aumenta suficientemente la fatiga que pasa a la siguiente etapa");
 
 phase3Game.reducedMotion = true;
 phase3Game.applyAccessibilityPreferences();
