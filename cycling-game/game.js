@@ -74,6 +74,8 @@ const SIDE_ROAD_SHOULDER_WIDTH = 56;
 const SIDE_ROAD_ASPHALT_WIDTH = 43;
 const SIDE_ROAD_LANE_DEPTH = 12;
 const SIDE_FINISH_GATE_HEIGHT = 190;
+const TOP_SPRINT_GATE_HEIGHT = 132;
+const SIDE_SPRINT_GATE_HEIGHT = 190;
 const STAGE_POINTS = [50, 30, 20, 15, 12, 10, 8, 6, 4, 2];
 const PLAYER_PROFILES = {
   allrounder: {
@@ -417,13 +419,45 @@ class Road {
         this.lengthKm - km - 8
       );
       const gradient = this.stageProfile === "flat"
-        ? 3 + this.random.next() * 2.2 : this.stageProfile === "mixed"
-          ? 4.6 + this.random.next() * 4.1 : 6.2 + this.random.next() * 4.3;
+        ? 3.4 + this.random.next() * 2.6 : this.stageProfile === "mixed"
+          ? 5.4 + this.random.next() * 4.3 : 7 + this.random.next() * 4.6;
       const startKm = km;
       const name = climbNames[mountainIndex % climbNames.length];
-      add(climbLength, gradient, name, "climb");
+      if (this.stageProfile === "flat") {
+        add(climbLength, gradient, name, "climb");
+      } else {
+        // Los puertos se dividen en sectores: la media sigue siendo coherente,
+        // pero aparecen rampas duras y descansos como en una subida real.
+        const sectorWeights = [0.22, 0.26, 0.24, 0.28];
+        const rawVariation = [
+          -1.2 + this.random.next() * 0.6,
+          0.1 + this.random.next() * 0.9,
+          1.8 + this.random.next() * 1.8,
+          -0.45 + this.random.next() * 1.05
+        ];
+        const weightedVariation = rawVariation.reduce((total, variation, index) =>
+          total + variation * sectorWeights[index], 0);
+        let coveredLength = 0;
+        sectorWeights.forEach((weight, index) => {
+          const sectorLength = index === sectorWeights.length - 1
+            ? climbLength - coveredLength
+            : climbLength * weight;
+          const maximumGradient = this.stageProfile === "mountain" ? 14.5 : 13.5;
+          const sectorGradient = clamp(
+            gradient + rawVariation[index] - weightedVariation,
+            this.stageProfile === "mountain" ? 5.8 : 3.8,
+            maximumGradient
+          );
+          add(sectorLength, sectorGradient, name, "climb");
+          coveredLength += sectorLength;
+        });
+      }
       const actualLength = km - startKm;
-      const elevationGain = actualLength * gradient * 10;
+      const climbSections = this.profile.filter((section) =>
+        section.kind === "climb" && section.startKm >= startKm && section.endKm <= km);
+      const elevationGain = climbSections.reduce((total, section) =>
+        total + (section.endKm - section.startKm) * section.gradient * 10, 0);
+      const averageGradient = elevationGain / Math.max(0.1, actualLength * 10);
       const categoryRule = mountainCategoryFor(elevationGain);
       this.mountains.push({
         type: "mountain",
@@ -433,7 +467,8 @@ class Road {
         category: categoryRule.category,
         markerLabel: categoryRule.marker,
         lengthKm: actualLength,
-        averageGradient: gradient,
+        averageGradient,
+        maxGradient: Math.max(...climbSections.map((section) => section.gradient)),
         elevationGain,
         pointsTable: [...categoryRule.points],
         maxPoints: categoryRule.points[0],
@@ -446,7 +481,7 @@ class Road {
           ? 2.4 + this.random.next() * 2.2 : 3.2 + this.random.next() * 3.8;
         const descentLength = Math.min(
           climbLength * (0.75 + this.random.next() * 0.35),
-          climbLength * gradient * 0.88 / descentGradient,
+          climbLength * averageGradient * 0.88 / descentGradient,
           this.lengthKm - km - 7
         );
         add(descentLength, -descentGradient, "Descenso", "descent");
@@ -5645,8 +5680,10 @@ class Game {
       const color = racePointColor(racePoint);
       const label = racePoint.markerLabel || (racePoint.type === "sprint" ? "SPR" : racePoint.category);
       const sprintGate = racePoint.type === "sprint";
-      const halfWidth = sprintGate ? Math.max(64, point.roadHalf + 18) : Math.max(42, point.roadHalf - 7);
-      const gateHeight = sprintGate ? 91 : 57;
+      // El centro de cada poste queda justo fuera del asfalto: con sus cinco
+      // píxeles de semiancho, la cara interior coincide con el borde real.
+      const halfWidth = sprintGate ? Math.max(64, point.roadHalf + 9) : Math.max(42, point.roadHalf - 7);
+      const gateHeight = sprintGate ? TOP_SPRINT_GATE_HEIGHT : 57;
       const bannerHeight = sprintGate ? 29 : 23;
       ctx.save();
       ctx.translate(Math.round(point.x), Math.round(point.y));
@@ -5910,10 +5947,10 @@ class Game {
   riderPose(rider) {
     if (rider.victory) return "victory";
     if (rider.crashTimer > 0) return "crash";
-    if (rider.sprinting) return "sprint";
-    if (rider.attacking > 0) return "attack";
+    if (rider.sprinting || rider.attacking > 0) return "standing";
     if (rider.energy < 22 || rider.fatigue > 70) return "fatigue";
-    if (rider.effort >= 4) return "high";
+    const gradient = this.race?.road?.getGradient?.(rider.distance) ?? 0;
+    if (rider.effort >= 4 && gradient > RECOVERY_DESCENT_GRADIENT) return "standing";
     return "normal";
   }
 
@@ -6421,7 +6458,8 @@ class Game {
     const sprite = this.buildCyclistSprite(jerseyColor, isPlayer, frame, rider.role, pose, rider.jerseyType);
     ctx.save();
     ctx.translate(Math.round(x), Math.round(y));
-    ctx.rotate(angle + (rider.crashTimer > 2 ? (3.2 - rider.crashTimer) * 1.25 : 0));
+    const standingRock = pose === "standing" ? Math.sin(frame / 8 * Math.PI * 2) * 0.055 : 0;
+    ctx.rotate(angle + standingRock + (rider.crashTimer > 2 ? (3.2 - rider.crashTimer) * 1.25 : 0));
     ctx.imageSmoothingEnabled = false;
 
     if (rider.relayParticipant) {
@@ -6595,6 +6633,7 @@ class Game {
     const skinShadow = "#a85f45";
     const metal = "#dce6e7";
     const phase = frame / 8 * Math.PI * 2;
+    const standing = pose === "standing";
     const pedal = { x: Math.round(36 + Math.cos(phase) * 8), y: Math.round(42 + Math.sin(phase) * 6) };
     const opposite = { x: Math.round(36 - Math.cos(phase) * 8), y: Math.round(42 - Math.sin(phase) * 6) };
 
@@ -6634,7 +6673,10 @@ class Game {
     pixel.fillRect(33, 40, 6, 6);
 
     // Piernas más gruesas y con ocho posiciones de pedaleo.
-    const hip = { x: 34, y: 30 };
+    const hip = {
+      x: standing ? 31 + Math.round(Math.sin(phase) * 2) : 34,
+      y: standing ? 26 : 30
+    };
     const leftKnee = { x: Math.round((hip.x + pedal.x) / 2 - 5), y: Math.round((hip.y + pedal.y) / 2) };
     const rightKnee = { x: Math.round((hip.x + opposite.x) / 2 + 5), y: Math.round((hip.y + opposite.y) / 2) };
     for (const [knee, foot] of [[leftKnee, pedal], [rightKnee, opposite]]) {
@@ -6648,6 +6690,8 @@ class Game {
     pixel.fillRect(opposite.x - 4, opposite.y, 9, 4);
 
     // Torso ancho, inclinado y con sombras duras.
+    pixel.save();
+    if (standing) pixel.translate(-6, -3);
     pixel.fillStyle = outline;
     pixel.beginPath();
     pixel.moveTo(20, 11); pixel.lineTo(39, 9); pixel.lineTo(50, 24); pixel.lineTo(35, 34); pixel.lineTo(18, 25); pixel.closePath(); pixel.fill();
@@ -6672,8 +6716,11 @@ class Game {
     pixel.fillStyle = outline;
     pixel.fillRect(54, 19, 13, 4);
     pixel.fillRect(62, 19, 4, 8);
+    pixel.restore();
 
     // Cabeza adelantada sobre los hombros, cerca del manillar.
+    pixel.save();
+    if (standing) pixel.translate(-6, 0);
     pixel.fillStyle = outline;
     pixel.fillRect(34, 3, 21, 18);
     pixel.fillRect(52, 7, 6, 10);
@@ -6693,8 +6740,11 @@ class Game {
     pixel.fillRect(49, 9, 4, 3);
     pixel.fillStyle = "#f4f1e9";
     pixel.fillRect(32, 20, 16, 4);
+    pixel.restore();
 
     const roleColor = this.roleAccent(role);
+    pixel.save();
+    if (standing) pixel.translate(-6, -3);
     pixel.fillStyle = roleColor;
     if (role === "leader") {
       pixel.fillRect(22, 13, 5, 14);
@@ -6725,6 +6775,7 @@ class Game {
       pixel.fillRect(58, 12, 3, 5);
       pixel.fillRect(62, 18, 2, 4);
     }
+    pixel.restore();
 
     this.spriteCache.set(key, sprite);
     return sprite;
@@ -6915,22 +6966,20 @@ class Game {
 
     this.renderLateralScenery(ctx, focusX, pixelsPerKm);
     for (const point of this.race.road.racePoints) {
-      const x = focusX + (point.km - this.cameraKm) * pixelsPerKm;
+      const geometry = this.lateralRaceGateGeometry(point, focusX, pixelsPerKm);
+      const { x, leftX, rightX, leftBaseY, rightBaseY, topY, gateWidth, gateHeight } = geometry;
       if (x < -20 || x > this.width + 20) continue;
-      const y = this.sideSurfaceY(point.km);
       const sprintGate = point.type === "sprint";
-      const gateWidth = sprintGate ? 120 : 72;
-      const gateHeight = sprintGate ? 142 : 88;
       ctx.fillStyle = "#101820";
-      ctx.fillRect(Math.round(x - gateWidth / 2 - 5), Math.round(y - gateHeight), 9, gateHeight);
-      ctx.fillRect(Math.round(x + gateWidth / 2 - 4), Math.round(y - gateHeight), 9, gateHeight);
-      ctx.fillRect(Math.round(x - gateWidth / 2 - 7), Math.round(y - gateHeight - 3), gateWidth + 14, sprintGate ? 28 : 20);
+      ctx.fillRect(Math.round(leftX - 5), Math.round(topY), 9, Math.round(leftBaseY - topY));
+      ctx.fillRect(Math.round(rightX - 4), Math.round(topY), 9, Math.round(rightBaseY - topY));
+      ctx.fillRect(Math.round(x - gateWidth / 2 - 7), Math.round(topY - 3), gateWidth + 14, sprintGate ? 31 : 20);
       ctx.fillStyle = racePointColor(point);
-      ctx.fillRect(Math.round(x - gateWidth / 2 - 2), Math.round(y - gateHeight + 2), gateWidth + 4, sprintGate ? 20 : 13);
+      ctx.fillRect(Math.round(x - gateWidth / 2 - 2), Math.round(topY + 2), gateWidth + 4, sprintGate ? 22 : 13);
       ctx.fillStyle = "#101820";
-      ctx.font = `bold ${sprintGate ? 11 : 9}px Menlo, Monaco, Consolas, monospace`;
+      ctx.font = `bold ${sprintGate ? 12 : 9}px Menlo, Monaco, Consolas, monospace`;
       ctx.textAlign = "center";
-      ctx.fillText(`${point.markerLabel || (point.type === "mountain" ? point.category : "SPR")} ${point.maxPoints}P`, x, y - gateHeight + (sprintGate ? 16 : 12));
+      ctx.fillText(`${point.markerLabel || (point.type === "mountain" ? point.category : "SPR")} ${point.maxPoints}P`, x, topY + (sprintGate ? 17 : 12));
     }
 
     this.renderLateralSpectators(ctx, focusX, pixelsPerKm);
@@ -7016,8 +7065,10 @@ class Game {
       }
       ctx.imageSmoothingEnabled = false;
       ctx.save();
-      ctx.translate(Math.round(item.x), Math.round(item.y));
-      ctx.rotate(roadAngle);
+      const standingBob = pose === "standing" && frame % 2 ? -2 * scale : 0;
+      const standingPitch = pose === "standing" ? Math.sin(frame / 8 * Math.PI * 2) * 0.018 : 0;
+      ctx.translate(Math.round(item.x), Math.round(item.y + standingBob));
+      ctx.rotate(roadAngle + standingPitch);
       ctx.drawImage(sprite, -36 * scale, -58 * scale, 72 * scale, 60 * scale);
       ctx.restore();
       this.riderHitAreas.push({ rider: item.rider, x: item.x, y: item.y - 29 * scale, width: 78 * hitScale, height: 66 * hitScale });
@@ -7041,6 +7092,24 @@ class Game {
       }
     }
     this.renderLateralGroupMarkers(ctx, focusX, pixelsPerKm);
+  }
+
+  lateralRaceGateGeometry(point, focusX, pixelsPerKm) {
+    const x = focusX + (point.km - this.cameraKm) * pixelsPerKm;
+    const sprintGate = point.type === "sprint";
+    const gateWidth = sprintGate ? 132 : 78;
+    const gateHeight = sprintGate ? SIDE_SPRINT_GATE_HEIGHT : 102;
+    const leftX = x - gateWidth / 2;
+    const rightX = x + gateWidth / 2;
+    const leftKm = this.cameraKm + (leftX - focusX) / pixelsPerKm;
+    const rightKm = this.cameraKm + (rightX - focusX) / pixelsPerKm;
+    const roadEdgeOffset = SIDE_ROAD_ASPHALT_WIDTH / 2 + 5;
+    // El poste cercano nace fuera del borde inferior y el lejano fuera del
+    // superior. Cada base consulta su propia cota para respetar la pendiente.
+    const leftBaseY = this.sideSurfaceY(leftKm) + roadEdgeOffset;
+    const rightBaseY = this.sideSurfaceY(rightKm) - roadEdgeOffset;
+    const topY = Math.min(leftBaseY, rightBaseY) - gateHeight;
+    return { x, leftX, rightX, leftKm, rightKm, leftBaseY, rightBaseY, topY, gateWidth, gateHeight };
   }
 
   renderLateralScenery(ctx, focusX, pixelsPerKm) {
