@@ -34,18 +34,19 @@
 .team-management-help { margin-bottom: 12px; }
 .managed-roster { display: grid; gap: 5px; }
 .managed-rider {
-  display: grid; grid-template-columns: 30px minmax(150px, 1.6fr) repeat(4, minmax(52px, .55fr)) minmax(92px, .8fr) minmax(132px, 1.1fr);
-  align-items: center; gap: 7px; min-height: 45px; padding: 5px 7px; border: 2px solid #05090e;
-  background: #17364b; font-size: 9px;
+  display: grid; grid-template-columns: 30px minmax(170px, 1.6fr) repeat(4, minmax(58px, .55fr)) minmax(108px, .8fr) minmax(132px, 1.1fr);
+  align-items: center; gap: 8px; min-height: 54px; padding: 7px 9px; border: 2px solid #05090e;
+  background: #17364b; font-size: 11px;
 }
 .managed-rider.player { background: rgba(216,255,54,.12); border-color: var(--lime); }
 .managed-rider > b { color: var(--cyan); text-align: center; }
 .managed-rider .rider-name { min-width: 0; }
 .managed-rider .rider-name strong, .managed-rider .rider-name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.managed-rider .rider-name small { margin-top: 2px; color: #9db1bf; font-size: 7px; }
+.managed-rider .rider-name strong { font-size: 12px; }
+.managed-rider .rider-name small { margin-top: 3px; color: #b8cad4; font-size: 9px; }
 .rider-stat { text-align: center; }
-.rider-stat span, .rider-condition span { display: block; color: #91a7b6; font-size: 6px; font-weight: 900; }
-.rider-stat strong { font-size: 11px; }
+.rider-stat span, .rider-condition span { display: block; color: #b8cad4; font-size: 8px; font-weight: 900; }
+.rider-stat strong { font-size: 14px; }
 .rider-condition strong { color: var(--lime); }
 .rider-condition.tired strong { color: var(--orange); }
 .managed-rider select {
@@ -91,24 +92,31 @@
 .directory-roster { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .directory-rider {
   display: grid; grid-template-columns: minmax(120px, 1fr) repeat(4, 42px) 76px; gap: 5px; align-items: center;
-  padding: 8px; border: 2px solid #05090e; background: #17364b; font-size: 8px;
+  padding: 9px; border: 2px solid #05090e; background: #17364b; font-size: 10px;
 }
 .directory-rider.leader { border-color: var(--lime); }
 .directory-rider > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 900; }
-.directory-rider b { text-align: center; }
-.directory-rider em { color: var(--cyan); font-size: 7px; font-style: normal; text-align: right; }
+.directory-rider b { font-size: 12px; text-align: center; }
+.directory-rider em { color: var(--cyan); font-size: 9px; font-style: normal; text-align: right; }
 @media (max-width: 760px) {
   .dashboard-header-actions { align-items: stretch; flex-direction: column-reverse; gap: 3px; }
   #dashboardTeamButton { min-height: 31px; font-size: 7px; }
   .team-management-card { padding: 9px; }
   .managed-team-header h3 { font-size: 18px; }
-  .managed-rider { grid-template-columns: 25px minmax(112px, 1fr) 65px minmax(118px, 1fr); gap: 5px; }
-  .managed-rider .rider-stat { display: none; }
+  .managed-rider {
+    grid-template-columns: 25px repeat(4, minmax(0, 1fr));
+    gap: 5px; padding: 8px 6px;
+  }
+  .managed-rider .rider-name { grid-column: 2 / -1; }
+  .managed-rider .rider-condition { grid-column: 1 / span 2; }
+  .managed-rider select { grid-column: 3 / -1; }
+  .managed-rider .rider-stat span { font-size: 7px; }
+  .managed-rider .rider-stat strong { font-size: 12px; }
   .team-selection-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .team-browser-overlay { padding: 7px; }
   .team-browser-shell { padding: 10px; max-height: 97dvh; }
   .directory-roster { grid-template-columns: 1fr; }
-  .directory-rider { grid-template-columns: minmax(105px, 1fr) repeat(4, 32px) 66px; font-size: 7px; }
+  .directory-rider { grid-template-columns: minmax(118px, 1fr) repeat(4, 34px) 70px; font-size: 9px; }
 }
 
 * { box-sizing: border-box; }

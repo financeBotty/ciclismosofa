@@ -78,9 +78,23 @@ phase2Game.tour = {
 phase2Game.ensureTourRoster();
 phase2Assert(phase2Game.tour.roster.length === 100, "El pelotón no tiene 100 corredores");
 phase2Assert(phase2Game.tour.conditions.size === 100, "Faltan estados de forma iniciales");
+const phase2FinalStage = phase2Game.tour.stages.at(-1);
+phase2Assert(
+  phase2FinalStage.finale === true && phase2FinalStage.lengthKm === 100 &&
+  phase2FinalStage.profile === "flat",
+  "La última etapa no es el circuito final llano de 100 km"
+);
+const phase2FinalRoad = new Road(new SeededRandom(2468), phase2FinalStage.lengthKm, phase2FinalStage);
+phase2Assert(
+  phase2FinalRoad.mountains.length === 0 &&
+  phase2FinalRoad.sceneryZones.every((zone) => zone.id === "city") &&
+  phase2FinalRoad.spectatorDensityAt(50) >= 0.7,
+  "La última etapa no mantiene ciudad, recorrido fácil y público abundante"
+);
 
 const phase2RoadUniqueCounts = [];
 const phase2IttUniqueCounts = [];
+const phase2WinningTimes = [];
 for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
   phase2Game.tour.stageIndex = stageIndex;
   const race = phase2Game.createCurrentRace({ simulationOnly: true });
@@ -98,7 +112,7 @@ for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
       : race.stageDefinition.profile === "flat" ? 44 : 38;
   scored.forEach(({ rider, score }, index) => {
     const speed = baseSpeed * clamp(0.9 + (score - 70) * 0.0042, 0.84, 1.12);
-    rider.finishTime = race.stageDefinition.lengthKm / speed * 3600 / race.simulationScale + index * 0.045;
+    rider.finishTime = race.stageDefinition.lengthKm / speed * 3600 + index * 0.18;
     rider.distance = race.road.lengthKm;
     rider.finished = true;
     rider.speed = speed;
@@ -120,6 +134,7 @@ for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
   if (race.timeTrial) phase2IttUniqueCounts.push(uniqueCount);
   else phase2RoadUniqueCounts.push(uniqueCount);
   const officialTime = (rider) => official.get(rider);
+  phase2WinningTimes.push(officialTime(ranking[0]));
   phase2Game.recordStageResult(ranking, officialTime);
   phase2Game.updateTourStandings(ranking, officialTime);
 }
@@ -136,6 +151,13 @@ phase2Assert(
 phase2Assert(
   phase2IttUniqueCounts.every((count) => count === 100),
   "La contrarreloj agrupó tiempos que deben ser individuales"
+);
+phase2Assert(
+  phase2WinningTimes.every((time, index) => {
+    const stage = phase2Game.tour.stages[index];
+    return time > stage.lengthKm / 60 * 3600 && time < stage.lengthKm / 20 * 3600;
+  }),
+  "Algún tiempo de etapa sigue expresado en segundos acelerados"
 );
 phase2Assert(
   [...phase2Game.tour.conditions.values()].every((condition) =>

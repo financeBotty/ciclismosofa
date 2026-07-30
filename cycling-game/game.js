@@ -243,12 +243,23 @@ const createTourCalendar = (seed) => {
   const random = new SeededRandom(seed);
   const secondTimeTrial = 4 + Math.floor(random.next() * 5);
   const available = Array.from({ length: 9 }, (_, index) => index + 1)
-    .filter((index) => index !== secondTimeTrial);
+    .filter((index) => index !== secondTimeTrial && index !== TOUR_STAGE_COUNT - 1);
   const mountainStages = new Set(shuffleWith(available, random).slice(0, 4));
   const variableProfiles = ["flat", "mixed", "mixed", "flat", "mountain"];
   let variableIndex = 0;
   return Array.from({ length: TOUR_STAGE_COUNT }, (_, index) => {
     const number = index + 1;
+    if (index === TOUR_STAGE_COUNT - 1) {
+      return {
+        number,
+        type: "road",
+        profile: "flat",
+        lengthKm: 100,
+        name: "Gran Final de la Ciudad",
+        label: "FINAL DEL TOUR · LLANA",
+        finale: true
+      };
+    }
     const timeTrial = index === 0 || index === secondTimeTrial;
     const hardMountain = mountainStages.has(index);
     const profile = timeTrial ? (random.next() < 0.25 ? "mixed" : "flat")
@@ -383,6 +394,7 @@ class Road {
     this.ascents = [0];
     const profileRoll = random.next();
     this.stageProfile = options.profile || (profileRoll < 0.3 ? "flat" : profileRoll < 0.7 ? "mixed" : "mountain");
+    this.isTourFinal = options.finale === true;
     this.generateStage();
     this.generateSceneryZones();
     this.buildElevationMap();
@@ -398,6 +410,10 @@ class Road {
       this.profile.push({ startKm: km, endKm, gradient, label, kind });
       km = endKm;
     };
+    if (this.isTourFinal) {
+      add(this.lengthKm, 0, "Circuito final urbano", "flat");
+      return;
+    }
     add(10 + this.random.next() * 8, this.random.next() * 0.8 - 0.2, "Salida neutralizada", "flat");
     let mountainIndex = 0;
     const maxClimbs = this.stageProfile === "flat"
@@ -544,7 +560,9 @@ class Road {
     ];
     // El paisaje define la identidad visual de la etapa completa: una etapa
     // árida no se convierte a mitad de recorrido en bosque o campiña.
-    const biome = biomes[Math.floor(this.random.next() * biomes.length)];
+    const biome = this.isTourFinal
+      ? biomes.find((candidate) => candidate.id === "city")
+      : biomes[Math.floor(this.random.next() * biomes.length)];
     this.sceneryZones.push({
       startKm: 0,
       endKm: this.lengthKm,
@@ -562,6 +580,10 @@ class Road {
   }
 
   spectatorDensityAt(km) {
+    if (this.isTourFinal) {
+      const finishDistance = this.lengthKm - km;
+      return finishDistance <= 3 ? 1 : 0.72;
+    }
     const finishDistance = this.lengthKm - km;
     if (finishDistance >= 0 && finishDistance <= 3) {
       return finishDistance < 1.5 ? 1 : finishDistance < 2.3 ? 0.88 : 0.64;
@@ -1515,10 +1537,10 @@ class Race {
     this.groupTrends = [];
     this.currentBiomeId = this.road.biomeAt(0).id;
     this.pointStandings = { mountain: new Map(), sprint: new Map() };
-    this.difficulty = difficulty;
-    this.difficultyConfig = difficulty === "easy"
+    this.difficulty = this.stageDefinition.finale ? "easy" : difficulty;
+    this.difficultyConfig = this.difficulty === "easy"
       ? { reactionMultiplier: 2.2, errorRate: 0.48, mistakeLowChance: 0.09, coordination: 0.52, warningLead: 1.65 }
-      : difficulty === "hard"
+      : this.difficulty === "hard"
         ? { reactionMultiplier: 1.05, errorRate: 0.15, mistakeLowChance: 0.01, coordination: 0.92, warningLead: 0.85 }
         : { reactionMultiplier: 1.35, errorRate: 0.28, mistakeLowChance: 0.025, coordination: 0.76, warningLead: 1.15 };
     this.difficultyBonus = 0;
@@ -1553,6 +1575,8 @@ class Race {
       turnIndex: 0,
       turnTimer: 0,
       elapsed: 0,
+      paceSpeed: 0,
+      paceEffort: 0,
       lastRivalAttackAt: -20,
       blockedByAttack: null
     };
@@ -1570,9 +1594,9 @@ class Race {
       { id: "tv-0", type: "tv", distance: -0.06, lateral: -0.52, speed: 40, cruiseSpeed: 40, color: "#ffcc33", active: true },
       { id: "tv-1", type: "tv", distance: -0.22, lateral: 0.5, speed: 35, cruiseSpeed: 35, color: "#62d8f2", active: true },
       { id: "tv-2", type: "tv", distance: -0.38, lateral: -0.08, speed: 31, cruiseSpeed: 31, color: "#f4f1e9", active: true },
-      { id: "team-0", type: "team", distance: 0.55, lateral: 0.5, speed: 29, cruiseSpeed: 29, color: colors[0] || "#2f80ed", active: true },
-      { id: "team-1", type: "team", distance: Math.max(1.1, this.road.lengthKm * 0.34), lateral: -0.48, speed: 31, cruiseSpeed: 31, color: colors[1] || "#ef476f", active: true },
-      { id: "team-2", type: "team", distance: Math.max(1.7, this.road.lengthKm * 0.68), lateral: 0.12, speed: 28, cruiseSpeed: 28, color: colors[2] || "#36bd69", active: true },
+      { id: "team-0", type: "team", distance: -0.18, lateral: 0.5, speed: 29, cruiseSpeed: 29, color: colors[0] || "#2f80ed", active: true },
+      { id: "team-1", type: "team", distance: -0.38, lateral: -0.48, speed: 31, cruiseSpeed: 31, color: colors[1] || "#ef476f", active: true },
+      { id: "team-2", type: "team", distance: -0.58, lateral: 0.12, speed: 28, cruiseSpeed: 28, color: colors[2] || "#36bd69", active: true },
       { id: "broom", type: "broom", distance: -0.56, lateral: 0.55, speed: 28, color: "#f0a62b", active: true }
     ];
   }
@@ -1583,13 +1607,11 @@ class Race {
       .sort((a, b) => b.distance - a.distance);
     const leader = this.timeTrial ? this.player : activeRiders[0] || this.player;
     const tail = this.timeTrial ? this.player : activeRiders.at(-1) || this.player;
-    const teamCars = this.raceVehicles.filter((vehicle) => vehicle.type === "team" && vehicle.active);
-    const trafficVehicles = this.raceVehicles.filter((vehicle) =>
-      (vehicle.type === "team" || vehicle.type === "tv") && vehicle.active);
+    const teamCars = this.raceVehicles.filter((vehicle) => vehicle.type === "team");
+    const trafficVehicles = this.raceVehicles.filter((vehicle) => vehicle.type === "tv" && vehicle.active);
     const broom = this.raceVehicles.find((vehicle) => vehicle.type === "broom");
 
-    // Motos y coches se comportan como tráfico real: avanzan con velocidad
-    // propia, frenan ante lo que tienen delante y conservan su trazada.
+    // Las motos avanzan delante de carrera con velocidad propia.
     const orderedTraffic = [...trafficVehicles].sort((a, b) => b.distance - a.distance);
     let motorcycleCeiling = leader.distance - 0.06;
     for (let index = 0; index < orderedTraffic.length; index += 1) {
@@ -1617,6 +1639,24 @@ class Race {
       }
       if (vehicle.distance > this.road.lengthKm + 0.25) vehicle.active = false;
     }
+
+    // Los coches de equipo forman un convoy estable detrás de los grupos.
+    // No nacen en puntos arbitrarios de la etapa ni atraviesan al pelotón.
+    const vehicleGroups = this.groups?.length ? this.groups : [{ riders: activeRiders }];
+    teamCars.forEach((vehicle, index) => {
+      const group = vehicleGroups[Math.min(index, vehicleGroups.length - 1)];
+      const groupTail = group?.riders?.length
+        ? Math.min(...group.riders.filter((rider) => !rider.finished).map((rider) => rider.distance))
+        : tail.distance;
+      const targetDistance = (Number.isFinite(groupTail) ? groupTail : tail.distance) - 0.16 - index * 0.08;
+      const targetSpeed = group?.riders?.length
+        ? group.riders.reduce((sum, rider) => sum + rider.speed, 0) / group.riders.length
+        : tail.speed;
+      vehicle.distance = lerp(vehicle.distance, targetDistance, 1 - Math.exp(-dt * 2.2));
+      vehicle.speed = lerp(vehicle.speed, Math.max(8, targetSpeed), 1 - Math.exp(-dt * 2.4));
+      vehicle.lateral = clamp(vehicle.lateral, -0.62, 0.62);
+      vehicle.active = activeRiders.length > 0 && vehicle.distance < this.road.lengthKm;
+    });
 
     if (broom) {
       let targetDistance = tail.distance - 0.42;
@@ -2024,6 +2064,8 @@ class Race {
     const pool = (playerGroup?.riders || this.cyclists)
       .filter((rider) => rider !== this.player && !rider.finished && rider.crashTimer <= 0 &&
         rider.attacking <= 0 && rider.sprinting !== true && rider.energy > 24 &&
+        Math.abs(rider.speed - this.player.speed) <= 2.5 &&
+        Math.abs(rider.effort - this.player.effort) <= 1 &&
         Math.abs(rider.distance - this.player.distance) <= 0.22)
       .sort((a, b) => Math.abs(a.distance - this.player.distance) - Math.abs(b.distance - this.player.distance));
     const selected = [];
@@ -2076,6 +2118,8 @@ class Race {
     this.relay.turnIndex = 0;
     this.relay.turnTimer = 4.8;
     this.relay.elapsed = 0;
+    this.relay.paceSpeed = this.player.speed;
+    this.relay.paceEffort = this.player.effort;
     this.player.relayTurns += 1;
     this.relay.participants.forEach((rider) => {
       rider.relayParticipant = true;
@@ -2104,6 +2148,8 @@ class Race {
     this.relay.turnIndex = 0;
     this.relay.turnTimer = 0;
     this.relay.elapsed = 0;
+    this.relay.paceSpeed = 0;
+    this.relay.paceEffort = 0;
     this.relay.blockedByAttack = null;
     if (announce && !this.simulationOnly) this.game.notify(reason || "Relevos terminados. Vuelves a rodar por libre.");
     return true;
@@ -2141,7 +2187,10 @@ class Race {
     }
     for (const rider of [...this.relay.participants]) {
       if (rider === this.player) continue;
-      if (rider.finished || rider.crashTimer > 0 || Math.abs(rider.distance - this.player.distance) > 0.42) {
+      const speedMismatch = Math.abs(rider.speed - this.player.speed) > 4;
+      const paceMismatch = Math.abs(rider.effort - this.relay.paceEffort) > 1;
+      if (rider.finished || rider.crashTimer > 0 || speedMismatch || paceMismatch ||
+        Math.abs(rider.distance - this.player.distance) > 0.42) {
         this.removeRelayParticipant(rider);
       }
     }
@@ -2173,7 +2222,11 @@ class Race {
     rider.relayPulling = position === 0;
     rider.relayBonus = position === 0 ? 0.85 : 0.24;
     if (position === 0) {
-      rider.effort = Math.max(4, rider.effort);
+      // El relevo no toma el control táctico de un rival: conserva su ritmo.
+      // Si lo cambia de forma apreciable, updateRelay lo saca de la rotación.
+      if (rider === this.player || rider.team === this.player.team) {
+        rider.effort = Math.max(this.relay.paceEffort, rider.effort);
+      }
       rider.targetWheel = null;
       if (rider === this.player) {
         rider.seekingWheel = false;
@@ -2183,7 +2236,9 @@ class Race {
       return;
     }
     const wheel = ordered[position - 1];
-    rider.effort = rider === this.player ? 2 : rider.energy < 34 ? 2 : 3;
+    if (rider === this.player || rider.team === this.player.team) {
+      rider.effort = Math.max(1, this.relay.paceEffort - 1);
+    }
     rider.targetWheel = wheel;
     rider.targetLateral = clamp(wheel.lateral + Math.sin(position * 1.7) * 0.045, -0.9, 0.9);
     if (rider === this.player) {
@@ -2963,7 +3018,7 @@ class HUD {
     this.elements = {};
     const ids = [
       "currentKm", "totalKm", "remainingKm", "gradientValue", "altitudeValue", "ascentValue", "startElevationLabel", "finishElevationLabel",
-      "stageName", "stageEyebrow", "weatherValue", "weatherIcon", "leaderGap", "leaderGapLabel",
+      "stageName", "stageEyebrow", "weatherValue", "weatherIcon",
       "positionValue", "groupValue", "energyValue", "powerValue", "nutritionValue", "gripValue",
       "energyBar", "powerBar", "nutritionBar", "gripBar",
       "effortNumber", "effortName", "sprintButton", "attackButton",
@@ -3148,8 +3203,6 @@ class HUD {
     const position = race.positionOf(player);
     const remaining = Math.max(0, race.road.lengthKm - player.distance);
     const gradient = race.road.getGradient(player.distance);
-    const leaderDistance = race.leader.distance - player.distance;
-    const secondsGap = leaderDistance > 0 ? leaderDistance / Math.max(0.01, player.speed) * 3600 : 0;
     this.elements.currentKm.textContent = formatNumber(player.distance);
     this.elements.totalKm.textContent = Math.round(race.road.lengthKm);
     this.elements.remainingKm.textContent = `${formatNumber(remaining)} km`;
@@ -3165,18 +3218,6 @@ class HUD {
     this.elements.finishElevationLabel.textContent = `META · ${Math.round(race.road.finishElevation).toLocaleString("es-ES")} m`;
     this.elements.weatherValue.textContent = race.weather.label;
     this.elements.weatherIcon.textContent = race.weather.icon;
-    const chaseGroup = position === 1 ? race.groups[1] : null;
-    if (race.timeTrial) {
-      this.elements.leaderGapLabel.textContent = "ORDEN CRONO";
-      this.elements.leaderGap.textContent = `${ordinal(race.startPosition)} / 100`;
-    } else if (chaseGroup) {
-      const advantage = (player.distance - chaseGroup.leader.distance) / Math.max(10, player.speed) * 3600;
-      this.elements.leaderGapLabel.textContent = "VENTAJA";
-      this.elements.leaderGap.textContent = `G2 +${this.formatGap(advantage)}`;
-    } else {
-      this.elements.leaderGapLabel.textContent = "CABEZA";
-      this.elements.leaderGap.textContent = secondsGap < 1 ? "MISMO TIEMPO" : `+${this.formatGap(secondsGap)}`;
-    }
     this.elements.positionValue.innerHTML = `${position}<sup>º</sup>`;
     this.elements.groupValue.textContent = player.group;
     const order = TEAM_ORDERS[race.playerTeamOrder];
@@ -3402,7 +3443,7 @@ class HUD {
     this.elements.mobileStageSprints.textContent = `${race.road.intermediateSprints.length} · 10 pt`;
     this.elements.mobileStageBiome.textContent = race.road.biomeAt(race.player.distance).name;
     this.elements.mobileStageWeather.textContent = `${race.weather.icon} ${race.weather.label}`;
-    this.elements.mobileStageElapsed.textContent = formatTime(race.elapsed);
+    this.elements.mobileStageElapsed.textContent = formatTime(race.elapsed * race.simulationScale);
     this.elements.mobileStageGroups.textContent = race.groups.length;
   }
 
@@ -4127,7 +4168,17 @@ class Game {
     this.tour = {
       seed: source.seed >>> 0,
       stageIndex: clamp(source.completedStages, 0, TOUR_STAGE_COUNT - 1),
-      stages: source.stages,
+      stages: source.stages.map((stage, index) => index === TOUR_STAGE_COUNT - 1
+        ? {
+          number: TOUR_STAGE_COUNT,
+          type: "road",
+          profile: "flat",
+          lengthKm: 100,
+          name: "Gran Final de la Ciudad",
+          label: "FINAL DEL TOUR · LLANA",
+          finale: true
+        }
+        : stage),
       roster,
       totals: new Map(source.totals.map((entry) => [entry.tourId, { ...entry }])),
       conditions,
@@ -4196,9 +4247,9 @@ class Game {
   }
 
   createCurrentRace(options = {}) {
-    const difficulty = document.getElementById("difficultySelect").value;
-    const weather = document.getElementById("weatherSelect").value;
     const stage = this.tour.stages[this.tour.stageIndex];
+    const difficulty = stage.finale ? "easy" : document.getElementById("difficultySelect").value;
+    const weather = document.getElementById("weatherSelect").value;
     const general = this.getTourRanking("time");
     const timeTrialOrder = stage.type === "itt" && general.length
       ? [...general].reverse().map((entry) => entry.tourId) : null;
@@ -4649,7 +4700,7 @@ class Game {
     quickButton.setAttribute("aria-selected", String(quick));
     document.getElementById("tourModePanel").classList.toggle("is-hidden", quick);
     document.getElementById("quickModePanel").classList.toggle("is-hidden", !quick);
-    document.getElementById("profileOption").classList.toggle("is-hidden", !quick);
+    document.getElementById("profileOption").classList.add("is-hidden");
   }
 
   startQuickRace() {
@@ -4828,7 +4879,10 @@ class Game {
       stageRanking.forEach((rider) => official.set(rider, rawFinishTime(rider)));
       return official;
     }
-    const sameTimeWindow = 0.75;
+    // Los valores recibidos ya son segundos reales. En etapas en línea se
+    // aplica la regla de los tres segundos para que un pelotón que cruza
+    // junto no acumule diferencias artificiales en la general.
+    const sameTimeWindow = 3;
     let groupTime = rawFinishTime(stageRanking[0]);
     let groupLeaderTime = groupTime;
     stageRanking.forEach((rider, index) => {
@@ -4986,7 +5040,7 @@ class Game {
       ability = rider.climbing * 0.3 + rider.endurance * 0.3 +
         rider.sprint * 0.18 + rider.intelligence * 0.14 + rider.technique * 0.08;
     }
-    const difficulty = document.getElementById("difficultySelect").value;
+    const difficulty = stage.finale ? "easy" : document.getElementById("difficultySelect").value;
     const playerModifier = rider.tourId === 0
       ? difficulty === "easy" ? 3.5 : difficulty === "hard" ? -2 : 0.75
       : 0;
@@ -5056,7 +5110,7 @@ class Game {
       : stage.profile === "flat" ? 44 : 38;
     scored.forEach(({ rider, score }) => {
       const effectiveSpeed = baseSpeed * clamp(0.9 + (score - 70) * 0.0042, 0.84, 1.12);
-      rider.finishTime = stage.lengthKm / effectiveSpeed * 3600 / race.simulationScale;
+      rider.finishTime = stage.lengthKm / effectiveSpeed * 3600;
       rider.distance = race.road.lengthKm;
       rider.previousDistance = rider.distance;
       rider.finished = true;
@@ -5070,7 +5124,7 @@ class Game {
     const stageRanking = scored.sort((a, b) => b.score - a.score).map((entry) => entry.rider);
     simulatedBreakaway.won = simulatedBreakaway.riders.includes(stageRanking[0]);
     stageRanking.forEach((rider, index) => {
-      rider.finishTime += index * 0.045;
+      rider.finishTime += index * 0.18;
       rider.victory = index === 0;
     });
     race.ranking = stageRanking;
@@ -5130,8 +5184,10 @@ class Game {
     const race = this.race;
     const player = race.player;
     race.finalizeRacePoints();
-    const rawFinishTime = (rider) => rider.finishTime ||
-      race.elapsed + Math.max(0, race.road.lengthKm - rider.distance) / Math.max(10, rider.speed) * 3600 / race.simulationScale;
+    const rawFinishTime = race.resolutionMode === "simulated"
+      ? (rider) => rider.finishTime
+      : (rider) => (rider.finishTime || race.elapsed) * race.simulationScale +
+        Math.max(0, race.road.lengthKm - rider.distance) / Math.max(10, rider.speed) * 3600;
     const stageRanking = [...race.cyclists].sort((a, b) => rawFinishTime(a) - rawFinishTime(b));
     const officialTimes = this.officialStageTimes(stageRanking, rawFinishTime);
     const officialFinishTime = (rider) => officialTimes.get(rider);
@@ -5718,12 +5774,6 @@ class Game {
       ctx.fillStyle = wet > 0.3 ? "rgba(196,218,222,.18)" : "rgba(30,35,38,.2)";
       ctx.fillRect(Math.round(x - 6), Math.round(y), 12, 2);
       ctx.fillRect(Math.round(x + 3), Math.round(y - 4), 3, 4);
-      if (Math.abs(hash) > 0.72) {
-        ctx.fillStyle = "rgba(30,34,36,.28)";
-        ctx.fillRect(Math.round(point.x - point.roadHalf * 0.42), Math.round(y + 8), 16, 5);
-        ctx.fillStyle = "rgba(115,120,120,.34)";
-        ctx.fillRect(Math.round(point.x - point.roadHalf * 0.42 + 3), Math.round(y + 9), 10, 2);
-      }
       ctx.fillStyle = "#b9b197";
       ctx.fillRect(Math.round(point.x - point.roadHalf - 10), Math.round(y + 4), 4, 3);
       ctx.fillRect(Math.round(point.x + point.roadHalf + 6), Math.round(y - 5), 5, 3);
@@ -5949,8 +5999,6 @@ class Game {
     if (rider.crashTimer > 0) return "crash";
     if (rider.sprinting || rider.attacking > 0) return "standing";
     if (rider.energy < 22 || rider.fatigue > 70) return "fatigue";
-    const gradient = this.race?.road?.getGradient?.(rider.distance) ?? 0;
-    if (rider.effort >= 4 && gradient > RECOVERY_DESCENT_GRADIENT) return "standing";
     return "normal";
   }
 
@@ -6186,7 +6234,7 @@ class Game {
   drawRaceVehicle(ctx, vehicle, point) {
     const originalScale = clamp(this.roadHalfWidth / 135, 0.8, 1.24);
     const sprite = this.buildRaceVehicleSprite(vehicle.type, vehicle.color);
-    const scale = originalScale * (vehicle.type === "tv" ? 0.72 : 0.78);
+    const scale = originalScale * (vehicle.type === "tv" ? 0.86 : 1.02);
     if (this.race.weather.intensity > 0.25) {
       ctx.fillStyle = "rgba(205,230,234,.35)";
       ctx.fillRect(point.x - 12 * scale, point.y + 35 * scale, 24 * scale, 4 * scale);
@@ -6219,7 +6267,7 @@ class Game {
 
   drawLateralRaceVehicle(ctx, vehicle, pixelsPerKm) {
     const sprite = this.buildSideRaceVehicleSprite(vehicle.type, vehicle.color);
-    const scale = vehicle.type === "tv" ? 0.82 : 0.8;
+    const scale = vehicle.type === "tv" ? 0.94 : 1.04;
     const bob = this.reducedMotion ? 0 : Math.floor(this.race.elapsed * 8 + vehicle.distance * 10) % 2;
     if (this.race.weather.intensity > 0.25) {
       ctx.fillStyle = "rgba(205,230,234,.34)";
@@ -6343,6 +6391,12 @@ class Game {
     pixel.fillRect(leftFoot.x - 3, leftFoot.y - 1, 7, 3);
     pixel.fillRect(rightFoot.x - 3, rightFoot.y - 1, 7, 3);
 
+    // Fuera del sillín el cuerpo se desplaza hacia atrás respecto a la bici.
+    // En vista cenital este cambio, junto al balanceo, distingue el ataque.
+    pixel.save();
+    if (pose === "standing") pixel.translate(0, 5);
+    else if (pose === "fatigue") pixel.translate(0, 3);
+
     // Torso grande y sombreado, inspirado en sprites arcade de 16 bits.
     pixel.fillStyle = outline;
     pixel.beginPath();
@@ -6445,6 +6499,7 @@ class Game {
       pixel.fillRect(31, 12, 2, 4);
       pixel.fillRect(34, 16, 2, 3);
     }
+    pixel.restore();
 
     this.spriteCache.set(key, sprite);
     return sprite;
@@ -6504,16 +6559,17 @@ class Game {
     ctx.drawImage(sprite, -21 * scale, -30 * scale, 42 * scale, 60 * scale);
 
     if (isPlayer) {
-      ctx.fillStyle = "#ffcc33";
+      const arrowColor = rider.color || "#ffcc33";
+      ctx.fillStyle = arrowColor;
       ctx.strokeStyle = "#101820";
       ctx.lineWidth = 2;
-      ctx.fillRect(-15 * scale, 34 * scale, 30 * scale, 14 * scale);
-      ctx.strokeRect(-15 * scale, 34 * scale, 30 * scale, 14 * scale);
-      ctx.font = `bold ${10 * scale}px Menlo, Monaco, Consolas, monospace`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#101820";
-      ctx.fillText("TÚ", 0, 41 * scale);
+      ctx.beginPath();
+      ctx.moveTo(0, 32 * scale);
+      ctx.lineTo(-10 * scale, 47 * scale);
+      ctx.lineTo(10 * scale, 47 * scale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -6543,7 +6599,7 @@ class Game {
         continue;
       }
       const originalScale = clamp(this.roadHalfWidth / 135, 0.8, 1.24);
-      const scale = originalScale * 0.75;
+      const scale = originalScale * 0.62;
       const hitScale = Math.max(scale, 0.86);
       this.drawCyclist(ctx, item.rider, item.point.x, item.point.y, scale, item.rider === player, item.angle);
       this.riderHitAreas.push({ rider: item.rider, x: item.point.x, y: item.point.y, width: 48 * hitScale, height: 68 * hitScale });
@@ -6781,6 +6837,7 @@ class Game {
     // Torso ancho, inclinado y con sombras duras.
     pixel.save();
     if (standing) pixel.translate(-6, -3);
+    else if (pose === "fatigue") pixel.translate(3, 4);
     pixel.fillStyle = outline;
     pixel.beginPath();
     pixel.moveTo(20, 11); pixel.lineTo(39, 9); pixel.lineTo(50, 24); pixel.lineTo(35, 34); pixel.lineTo(18, 25); pixel.closePath(); pixel.fill();
@@ -6810,6 +6867,7 @@ class Game {
     // Cabeza adelantada sobre los hombros, cerca del manillar.
     pixel.save();
     if (standing) pixel.translate(-6, 0);
+    else if (pose === "fatigue") pixel.translate(3, 4);
     pixel.fillStyle = outline;
     pixel.fillRect(34, 3, 21, 18);
     pixel.fillRect(52, 7, 6, 10);
@@ -6876,7 +6934,9 @@ class Game {
     const elevation = this.race.road.elevationAt(km);
     // Exageración vertical deliberada para que la inclinación sea legible en
     // una pantalla pequeña sin alterar la pendiente física de la carretera.
-    return this.height * 0.69 - (elevation - centerElevation) * 0.82;
+    const elevationDelta = elevation - centerElevation;
+    const visualScale = elevationDelta < 0 ? 1.08 : 0.82;
+    return this.height * 0.69 - elevationDelta * visualScale;
   }
 
   sideRoadAngleAt(km, pixelsPerKm) {
@@ -7097,7 +7157,7 @@ class Game {
       const depthScale = 1 + (item.rider.lateral + 0.9) * 0.07;
       // En móvil el pelotón debe dejar carretera visible. La escala de toque
       // conserva algo más de margen que el sprite para no dificultar las fichas.
-      const scale = 0.855 * depthScale * riderViewportScale;
+      const scale = 0.7 * depthScale * riderViewportScale;
       const minimumHitScale = riderViewportScale < 1 ? riderViewportScale + 0.06 : 1;
       const hitScale = Math.max(scale, minimumHitScale);
       const actionColor = item.rider.sprinting ? "#62d8f2" : item.rider.attacking > 0 ? "#ff7158" : null;
@@ -7150,16 +7210,16 @@ class Game {
         ctx.strokeRect(item.x - 39 * scale, item.y - 61 * scale, 78 * scale, 64 * scale);
       }
       if (item.rider === this.race.player) {
-        ctx.fillStyle = "#ffcc33";
-        ctx.fillRect(item.x - 18, item.y - 78 * scale, 36, 14);
+        ctx.fillStyle = item.rider.color || "#ffcc33";
         ctx.strokeStyle = "#071018";
         ctx.lineWidth = 3;
-        ctx.strokeRect(item.x - 18, item.y - 78 * scale, 36, 14);
-        ctx.fillStyle = "#101820";
-        ctx.font = "bold 10px Menlo, Monaco, Consolas, monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("TÚ", item.x, item.y - 71 * scale);
+        ctx.beginPath();
+        ctx.moveTo(item.x, item.y - 66 * scale);
+        ctx.lineTo(item.x - 11, item.y - 84 * scale);
+        ctx.lineTo(item.x + 11, item.y - 84 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
       }
     }
     this.renderLateralGroupMarkers(ctx, focusX, pixelsPerKm);

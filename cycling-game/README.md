@@ -25,7 +25,7 @@ La raíz del repositorio contiene además una entrada de compatibilidad que redi
 
 GitHub Pages sirve el juego mediante HTTPS, por lo que la instalación y el modo sin conexión quedan habilitados tras la primera visita. Las tres partidas se guardan en el almacenamiento local del navegador: una partida de `localhost` o `file://` no se copia automáticamente a la versión publicada, y tampoco se sincroniza entre dispositivos.
 
-La portada es una pantalla independiente del simulador y permite elegir claramente entre **Tour** y **Carrera rápida**, además de configurar dificultad y clima. Los perfiles **todoterreno**, **escalador**, **sprinter** y **rodador** se utilizan en Carrera rápida; en el Tour se elige uno de los diez equipos y se controla a su líder predefinido.
+La portada es una pantalla independiente del simulador y permite elegir claramente entre **Tour** y **Carrera rápida**, además de configurar dificultad y clima. La habilidad del corredor no se puede editar; en el Tour se elige uno de los diez equipos y se controla a su líder predefinido.
 
 El modo **Tour** utiliza tres slots de partida. Al abrir un slot vacío se elige equipo y esa elección queda fijada durante las diez etapas. Cada club cuenta con escudo SVG propio, identidad táctica, líder nominal y diez ciclistas estables. El Tour genera y guarda inmediatamente su calendario aleatorio y su plantilla de 100 ciclistas. Después se actualiza automáticamente al terminar cada etapa. `Cargar` abre el dashboard del Tour en la siguiente jornada pendiente; si se abandona una carrera a medias, esa etapa comienza de nuevo. Cada slot se puede borrar por separado mediante una confirmación.
 
@@ -108,6 +108,8 @@ Al terminar cada etapa, la pantalla oficial muestra el resultado de la jornada y
 
 En las etapas en línea se aplican tiempos oficiales por grupos: corredores que cruzan juntos comparten el tiempo del primero de su bloque, evitando diferencias ficticias de centésimas en la general. Las contrarrelojes mantienen el tiempo individual de cada participante.
 
+La décima etapa es siempre el gran final: 100 km llanos y fáciles por ciudad, con público abundante durante todo el circuito. El indicador del corredor controlado es una flecha triangular del color de su equipo.
+
 ## Simulación
 
 La velocidad objetivo combina una base con el esfuerzo, ataques, sprint, rebufo y estilo de conducción; descuenta pendiente, fatiga, nutrición baja y clima. La velocidad real interpola suavemente hacia ese objetivo.
@@ -116,7 +118,7 @@ Las caídas no se deciden con una tirada aislada. Primero se calcula un riesgo a
 
 Los corredores utilizan evitación predictiva de colisiones. Calculan la velocidad de cierre y el tiempo hasta alcanzar al ciclista precedente, buscan el carril con más espacio y frenan cuando están encerrados. Un contacto real separa las bicicletas, reduce la velocidad y la energía y aumenta el riesgo de caída.
 
-Los relevos reúnen al jugador con ciclistas de su mismo grupo que estén a menos de 220 metros y con energía suficiente. Cada turno dura unos cinco segundos: quien pasa al frente rueda en Alto y los demás se ordenan a su rueda. Esa rueda interna no abre la ficha `RUEDA` ni genera avisos en cada rotación; el estado permanece en el botón de Relevo. Elegir otra potencia, atacar, esprintar o seleccionar una rueda concreta termina la rotación. Un rival puede aprovechar su turno para atacar; un compañero participante tiene esa acción bloqueada. Mientras haya un ataque rival activo no se puede iniciar otro relevo para cancelarlo. El botón indica `NO FRENA ATAQUE`; el jugador debe alcanzar la velocidad del atacante.
+Los relevos reúnen al jugador con ciclistas de su mismo grupo que estén a menos de 220 metros, con energía suficiente y rodando a un ritmo y una velocidad compatibles. Cada turno dura unos cinco segundos: quien pasa al frente conserva el ritmo acordado y los demás se ordenan a su rueda. Si un rival cambia de ritmo o se aleja, sale de la rotación en vez de quedar frenado por ella. Esa rueda interna no abre la ficha `RUEDA` ni genera avisos en cada rotación; el estado permanece en el botón de Relevo. Elegir otra potencia, atacar, esprintar o seleccionar una rueda concreta termina la rotación. Un rival puede aprovechar su turno para atacar; un compañero participante tiene esa acción bloqueada. Mientras haya un ataque rival activo no se puede iniciar otro relevo para cancelarlo. El botón indica `NO FRENA ATAQUE`; el jugador debe alcanzar la velocidad del atacante.
 
 La clasificación se divide dinámicamente por distancia, tendencia y tamaño del corte. Los bloques pequeños se fusionan con el pelotón más cercano salvo que tengan ventaja real, evitando falsos grupos por pequeños estiramientos. Se muestran como máximo cuatro grupos tácticamente relevantes. El panel y las etiquetas sobre la carretera muestran líder y nacionalidad, integrantes, equipos presentes, diferencia respecto al grupo anterior y tendencia. Cuando el jugador lidera, la cabecera muestra su ventaja sobre el primer grupo perseguidor.
 

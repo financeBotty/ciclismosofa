@@ -88,17 +88,16 @@ const poseRider = {
   victory: false, crashTimer: 0, sprinting: false, attacking: 0,
   energy: 80, fatigue: 10, effort: 4, distance: 20
 };
-assertMountain(poseGame.riderPose(poseRider) === "standing",
-  "El ciclista no se levanta cuando rueda fuerte en subida");
+assertMountain(poseGame.riderPose(poseRider) === "normal",
+  "El ritmo alto normal usa por error la postura de ataque");
 poseRider.effort = 2;
 poseRider.attacking = 2;
 assertMountain(poseGame.riderPose(poseRider) === "standing",
   "El ciclista no se levanta durante un ataque");
 poseRider.attacking = 0;
-poseRider.effort = 4;
-poseGradient = -4;
-assertMountain(poseGame.riderPose(poseRider) === "normal",
-  "El ciclista permanece levantado durante un descenso rápido");
+poseRider.energy = 18;
+assertMountain(poseGame.riderPose(poseRider) === "fatigue",
+  "El ciclista cansado no usa su postura propia");
 
 const raceLeader = { distance: 50, finished: false, color: "#ffcc33" };
 const raceMiddle = { distance: 47, finished: false, color: "#2f80ed" };
