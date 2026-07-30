@@ -3445,15 +3445,13 @@ class HUD {
     this.lastMobilePanelUpdate = performance.now();
     const playerPosition = race.positionOf(race.player);
     this.elements.mobileRacePosition.textContent = `TÚ · ${ordinal(playerPosition)}`;
-    const visibleRiders = race.ranking.slice(0, 12);
-    if (playerPosition > 12) visibleRiders.push(race.player);
+    const visibleRiders = race.ranking;
     const leader = race.ranking[0];
     const list = document.createDocumentFragment();
-    visibleRiders.forEach((rider) => {
-      const position = race.positionOf(rider);
+    visibleRiders.forEach((rider, index) => {
+      const position = index + 1;
       const item = document.createElement("li");
       if (rider === race.player) item.classList.add("player");
-      if (position > 12) item.classList.add("player-jump");
       const rank = document.createElement("b");
       rank.textContent = ordinal(position);
       const identity = document.createElement("span");
@@ -3637,6 +3635,7 @@ class Game {
     this.directoryRosterCache = null;
     this.simulationCheckpoint = null;
     this.lastTimestamp = 0;
+    this.raceSpeed = 1;
     this.cameraFocusKm = 0;
     this.cameraInspection = null;
     const storedCamera = safeStorageGet("ultimoPuerto.camera", "top");
@@ -3795,6 +3794,9 @@ class Game {
     document.getElementById("nextTutorialButton").addEventListener("click", () => this.nextTutorialStep());
     document.getElementById("skipTutorialButton").addEventListener("click", () => this.completeTutorial());
     document.getElementById("pauseButton").addEventListener("click", () => this.pause());
+    document.getElementById("raceSpeedButton").addEventListener("click", () => {
+      this.setRaceSpeed(this.raceSpeed === 1 ? 5 : 1);
+    });
     document.getElementById("resumeButton").addEventListener("click", () => this.resume());
     document.getElementById("quitButton").addEventListener("click", () => this.showMenu());
     document.getElementById("replayButton").addEventListener("click", () => this.continueTour());
@@ -4354,7 +4356,8 @@ class Game {
       list.appendChild(empty);
       return;
     }
-    entries.slice(0, 5).forEach((entry, index) => {
+    const visibleEntries = elementId === "dashboardGcList" ? entries : entries.slice(0, 5);
+    visibleEntries.forEach((entry, index) => {
       const item = document.createElement("li");
       if (entry.tourId === 0) item.classList.add("player");
       const name = document.createElement("span");
@@ -4794,6 +4797,7 @@ class Game {
     this.storage.difficulty = difficulty;
     this.saveStorage();
     this.race = this.createCurrentRace();
+    this.setRaceSpeed(1);
     this.saveTour();
     this.state = "COUNTDOWN";
     this.cameraFocusKm = 0;
@@ -4857,6 +4861,18 @@ class Game {
     if (this.state !== "RACING") return;
     this.state = "PAUSED";
     document.getElementById("pauseOverlay").classList.remove("is-hidden");
+  }
+
+  setRaceSpeed(speed) {
+    this.raceSpeed = speed === 5 ? 5 : 1;
+    const button = document.getElementById("raceSpeedButton");
+    if (!button) return;
+    const fast = this.raceSpeed === 5;
+    button.textContent = fast ? "×5" : "×1";
+    button.classList.toggle("fast", fast);
+    button.setAttribute("aria-pressed", String(fast));
+    button.setAttribute("aria-label", `Velocidad de carrera por ${fast ? "cinco" : "uno"}`);
+    button.title = fast ? "Volver a velocidad normal" : "Aumentar la carrera a velocidad ×5";
   }
 
   resume() {
@@ -5237,7 +5253,7 @@ class Game {
     document.getElementById("finalTime").textContent = formatTime(playerTime);
     this.recordStageResult(stageRanking, officialFinishTime);
     this.updateTourStandings(stageRanking, officialFinishTime);
-    this.renderFinalClassification("classificationList", stageRanking.slice(0, 10), (rider, index) =>
+    this.renderFinalClassification("classificationList", stageRanking, (rider, index) =>
       index === 0 ? formatTime(officialFinishTime(rider)) : `+${formatTime(officialFinishTime(rider) - winnerTime)}`);
 
     const pointsRanking = (type) => [...race.cyclists]
@@ -5252,7 +5268,7 @@ class Game {
       (rider) => `${race.pointStandings.mountain.get(rider)} pt`);
     this.renderFinalClassification("sprintClassificationList", sprintRanking.slice(0, 5),
       (rider) => `${race.pointStandings.sprint.get(rider)} pt`);
-    this.renderTourClassification("gcClassificationList", this.getTourRanking("time").slice(0, 5), "time");
+    this.renderTourClassification("gcClassificationList", this.getTourRanking("time"), "time");
     this.renderTourClassification("tourPointsClassificationList", this.getTourRanking("points").slice(0, 5), "points");
     this.renderTourClassification("tourMountainClassificationList",
       this.getTourRanking("mountain").filter((entry) => entry.mountain > 0).slice(0, 5), "mountain");
@@ -7577,7 +7593,11 @@ class Game {
     const dt = this.lastTimestamp ? Math.min(0.05, (timestamp - this.lastTimestamp) / 1000) : 0;
     this.lastTimestamp = timestamp;
     const updateStarted = performance.now();
-    this.update(dt);
+    const updateSteps = this.state === "RACING" && this.raceSpeed === 5 ? 5 : 1;
+    for (let step = 0; step < updateSteps; step += 1) {
+      this.update(dt);
+      if (this.state !== "RACING") break;
+    }
     const updateEnded = performance.now();
     this.render();
     const renderEnded = performance.now();

@@ -112,6 +112,28 @@ phase3Game.cameraMode = "top";
 let phase3MobileView = "";
 phase3Game.hud.setMobileView = (view) => { phase3MobileView = view; };
 phase3Game.hud.mobileView = "classification";
+phase3Game.raceSpeed = 1;
+phase3Game.setRaceSpeed(5);
+phase3Assert(phase3Game.raceSpeed === 5, "El selector no activó la velocidad ×5");
+phase3Assert(document.getElementById("raceSpeedButton").textContent === "×5",
+  "El botón no mostró la velocidad ×5");
+let phase3SpeedUpdates = 0;
+const phase3LoopGame = Object.create(Game.prototype);
+phase3LoopGame.state = "RACING";
+phase3LoopGame.raceSpeed = 5;
+phase3LoopGame.lastTimestamp = 1000;
+phase3LoopGame.update = () => { phase3SpeedUpdates += 1; };
+phase3LoopGame.render = () => {};
+phase3LoopGame.performanceStats = {
+  fps: 0, updateMs: 0, renderMs: 0, frameMs: 0,
+  frames: 0, sampleStarted: performance.now(),
+  updateTotal: 0, renderTotal: 0, frameTotal: 0
+};
+globalThis.requestAnimationFrame = () => {};
+phase3LoopGame.loop(1050);
+phase3Assert(phase3SpeedUpdates === 5, "La velocidad ×5 no ejecutó cinco pasos estables");
+phase3Game.setRaceSpeed(1);
+phase3Assert(phase3Game.raceSpeed === 1, "El selector no recuperó la velocidad ×1");
 window.innerWidth = 390;
 phase3Game.toggleCamera();
 phase3Assert(phase3Game.cameraMode === "side", "El botón móvil no activó la cámara lateral");
