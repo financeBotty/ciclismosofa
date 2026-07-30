@@ -95,6 +95,7 @@ phase2Assert(
 const phase2RoadUniqueCounts = [];
 const phase2IttUniqueCounts = [];
 const phase2WinningTimes = [];
+const phase2PlayerFatigue = [];
 for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
   phase2Game.tour.stageIndex = stageIndex;
   const race = phase2Game.createCurrentRace({ simulationOnly: true });
@@ -137,6 +138,7 @@ for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
   phase2WinningTimes.push(officialTime(ranking[0]));
   phase2Game.recordStageResult(ranking, officialTime);
   phase2Game.updateTourStandings(ranking, officialTime);
+  phase2PlayerFatigue.push(phase2Game.tour.conditions.get(0).fatigue);
 }
 
 phase2Assert(phase2Game.tour.stageResults.length === 10, "El historial no contiene las 10 etapas");
@@ -161,10 +163,22 @@ phase2Assert(
 );
 phase2Assert(
   [...phase2Game.tour.conditions.values()].every((condition) =>
-    Number.isFinite(condition.fatigue) && condition.fatigue >= 0 && condition.fatigue <= 82 &&
+    Number.isFinite(condition.fatigue) && condition.fatigue >= 0 && condition.fatigue <= 88 &&
     Number.isFinite(condition.form) && condition.form >= -8 && condition.form <= 8
   ),
   "La forma o la fatiga salió de rango"
+);
+phase2Assert(
+  phase2PlayerFatigue[3] >= 50,
+  "La fatiga acumulada antes del descanso sigue siendo demasiado baja"
+);
+phase2Assert(
+  phase2PlayerFatigue[4] === 0,
+  "La jornada de descanso tras la quinta etapa no recuperó la fatiga al 100 %"
+);
+phase2Assert(
+  phase2PlayerFatigue[8] >= 50,
+  "La fatiga de la segunda mitad del Tour no vuelve a acumularse"
 );
 const phase2FinalPlayerCondition = { ...phase2Game.tour.conditions.get(0) };
 
@@ -291,6 +305,7 @@ JSON.stringify({
   stages: 10,
   roadUniqueTimes: phase2RoadUniqueCounts,
   ittUniqueTimes: phase2IttUniqueCounts,
+  playerFatigueByStage: phase2PlayerFatigue,
   finalPlayerCondition: phase2FinalPlayerCondition,
   physicalBreakaway: phase2BreakawayAudit,
   integratedFinish: {

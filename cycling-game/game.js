@@ -156,6 +156,13 @@ const STAGE_ROLES = {
   points: { label: "PUNTOS", short: "Buscar puntos", description: "Prioriza metas y final" },
   mountain: { label: "MONTAÑA", short: "Buscar montaña", description: "Prioriza puertos puntuables" }
 };
+const fixedStageRoleFor = (rider) => ({
+  leader: "leader",
+  sprinter: "points",
+  climber: "mountain",
+  attacker: "stage",
+  domestique: "support"
+}[rider?.role] || "support");
 const derivedSpecialty = (rider) => {
   const scores = [
     ["ESCALADOR", rider.climbing * 0.62 + rider.endurance * 0.25 + rider.technique * 0.13],
@@ -3113,12 +3120,19 @@ class HUD {
   bindProfileMap() {
     const canvas = this.elements.profileCanvas;
     canvas.addEventListener("pointermove", (event) => {
+      // Safari y Chrome móviles sintetizan movimientos mientras el dedo está
+      // apoyado. No son un hover real y alternaban la ficha al mínimo gesto.
+      if (event.pointerType === "touch") return;
       const hit = this.profileHitAt(event);
       canvas.style.cursor = hit ? "pointer" : "crosshair";
-      if (hit) this.showProfileTooltip(hit.groupIndex);
+      if (hit) this.showProfileTooltip(hit.groupIndex, true);
       else this.elements.profileTooltip.classList.add("is-hidden");
     });
-    canvas.addEventListener("pointerleave", () => this.elements.profileTooltip.classList.add("is-hidden"));
+    canvas.addEventListener("pointerleave", () => {
+      this.elements.profileTooltip.classList.add("is-hidden");
+      if (this.profileTooltipTimer !== null) window.clearTimeout(this.profileTooltipTimer);
+      this.profileTooltipTimer = null;
+    });
     canvas.addEventListener("click", (event) => {
       if (!this.game.race) return;
       const hit = this.profileHitAt(event);
@@ -3161,16 +3175,18 @@ class HUD {
         distance = markerDistance;
       }
     }
-    return distance <= 13 ? nearest : null;
+    return distance <= 18 ? nearest : null;
   }
 
-  showProfileTooltip(groupIndex) {
+  showProfileTooltip(groupIndex, persistent = false) {
     const group = this.game.race?.groups[groupIndex];
     if (!group) return;
     const teams = group.teams.slice(0, 4).join(", ");
     this.elements.profileTooltip.textContent = `${group.label} · ${group.leader.flag || ""} ${group.leader.name} · km ${formatNumber(group.leader.distance)} · ${group.riders.length} ciclistas · ${teams} · ${groupIndex ? `+${formatGap(group.gapPreviousSeconds)} al grupo anterior · ${group.tendency}` : "cabeza"}`;
     this.elements.profileTooltip.classList.remove("is-hidden");
     if (this.profileTooltipTimer !== null) window.clearTimeout(this.profileTooltipTimer);
+    this.profileTooltipTimer = null;
+    if (persistent) return;
     this.profileTooltipTimer = window.setTimeout(() => {
       this.elements.profileTooltip.classList.add("is-hidden");
       this.profileTooltipTimer = null;
@@ -3379,22 +3395,49 @@ class HUD {
     this.elements.mobileGroupsCount.textContent = race.groups.length;
     this.elements.groupsPanel.classList.toggle("multiple", race.groups.length > 1);
     this.elements.groupsPanel.classList.toggle("context-quiet", race.groups.length <= 1);
-    const groupsMarkup = race.groups.slice(0, 7).map((group, index) => {
+    const visibleGroups = race.groups.slice(0, 7);
+    this.syncGroupList(this.elements.groupsList, visibleGroups, race);
+    this.syncGroupList(this.elements.mobileGroupsList, visibleGroups, race);
+  }
+
+  syncGroupList(container, groups, race) {
+    const existingRows = [...container.querySelectorAll(".race-group")];
+    groups.forEach((group, index) => {
       const gap = index === 0 ? "0:00" : `+${this.formatGap(group.gapPreviousSeconds)}`;
       const playerClass = group.riders.includes(race.player) ? " player-group" : "";
       const leader = group.leader;
       const selected = this.game.cameraInspection?.type === "group" && this.game.cameraInspection.groupIndex === index ? " selected" : "";
       const teams = group.teams.slice(0, 3).join(", ") + (group.teams.length > 3 ? ` +${group.teams.length - 3}` : "");
-      return `<button class="race-group${playerClass}${selected}" data-group-index="${index}" type="button">
-        <i style="background:${leader.color}"></i>
-        <span><b>${group.label}</b> · ${leader.flag || ""} ${leader.name} · ${group.riders.length}
-          <small>${teams} · ${group.tendency}</small>
-        </span>
-        <strong>${gap}</strong>
-      </button>`;
-    }).join("") + (race.groups.length > 7 ? `<div class="groups-more">+${race.groups.length - 7} grupos</div>` : "");
-    this.elements.groupsList.innerHTML = groupsMarkup;
-    this.elements.mobileGroupsList.innerHTML = groupsMarkup;
+      let row = existingRows[index];
+      if (!row) {
+        row = document.createElement("button");
+        row.type = "button";
+        row.innerHTML = "<i></i><span><b></b><small></small></span><strong></strong>";
+        container.appendChild(row);
+      }
+      row.className = `race-group${playerClass}${selected}`;
+      row.dataset.groupIndex = String(index);
+      row.querySelector("i").style.background = leader.color;
+      const identity = row.querySelector("span");
+      identity.querySelector("b").textContent =
+        `${group.label} · ${leader.flag || ""} ${leader.name} · ${group.riders.length}`;
+      identity.querySelector("small").textContent = `${teams} · ${group.tendency}`;
+      row.querySelector("strong").textContent = gap;
+    });
+    existingRows.slice(groups.length).forEach((row) => row.remove());
+
+    let more = container.querySelector(".groups-more");
+    const hiddenGroupCount = Math.max(0, race.groups.length - groups.length);
+    if (hiddenGroupCount > 0) {
+      if (!more) {
+        more = document.createElement("div");
+        more.className = "groups-more";
+        container.appendChild(more);
+      }
+      more.textContent = `+${hiddenGroupCount} grupos`;
+    } else {
+      more?.remove();
+    }
   }
 
   updateMobilePanels(race, force = false) {
@@ -4156,12 +4199,12 @@ class Game {
       }
     });
     const playerTeamId = TEAM_BY_ID.has(source.playerTeamId) ? source.playerTeamId : "solaris";
-    const restoredAssignments = source.stageAssignments && typeof source.stageAssignments === "object"
-      ? { ...source.stageAssignments } : {};
+    const restoredAssignments = {};
     const selectedTeam = TEAM_BY_ID.get(playerTeamId);
     roster.forEach((rider) => {
-      if (rider.team !== selectedTeam.name || rider.role === "leader" || restoredAssignments[rider.tourId]) return;
-      restoredAssignments[rider.tourId] = "support";
+      if (rider.team !== selectedTeam.name || rider.role === "leader") return;
+      restoredAssignments[rider.tourId] = fixedStageRoleFor(rider);
+      rider.stageRole = restoredAssignments[rider.tourId];
     });
     this.activeSaveSlot = slot;
     this.gameMode = "tour";
@@ -4274,9 +4317,8 @@ class Game {
     const selectedTeam = TEAM_BY_ID.get(this.tour.playerTeamId) || TEAM_DEFINITIONS[0];
     if (!this.tour.stageAssignments) this.tour.stageAssignments = {};
     this.tour.roster.forEach((rider) => {
-      if (rider.team === selectedTeam.name && rider.role !== "leader" &&
-        !this.tour.stageAssignments[rider.tourId]) {
-        this.tour.stageAssignments[rider.tourId] = "support";
+      if (rider.team === selectedTeam.name && rider.role !== "leader") {
+        this.tour.stageAssignments[rider.tourId] = fixedStageRoleFor(rider);
         rider.stageRole = this.tour.stageAssignments[rider.tourId];
       }
       this.tour.totals.set(rider.tourId, {
@@ -4410,8 +4452,12 @@ class Game {
       const team = TEAM_BY_ID.get(this.tour.playerTeamId) || TEAM_DEFINITIONS[0];
       const formLabel = playerCondition.form >= 0
         ? `forma +${playerCondition.form.toFixed(1)}` : `forma ${playerCondition.form.toFixed(1)}`;
+      const restLabel = this.tour.stageIndex === Math.floor(TOUR_STAGE_COUNT / 2) &&
+        this.tour.completedStages === Math.floor(TOUR_STAGE_COUNT / 2)
+        ? "DESCANSO COMPLETO · FATIGA 0 · "
+        : "";
       document.getElementById("dashboardStageScenery").textContent =
-        `${team.name} · ${derivedSpecialty(playerRider)} · ${formLabel} · fatiga ${Math.round(playerCondition.fatigue)} · ` +
+        `${restLabel}${team.name} · ${derivedSpecialty(playerRider)} · ${formLabel} · fatiga ${Math.round(playerCondition.fatigue)} · ` +
         `${stage.type === "itt" ? "Salida individual · sin rebufo ni colisiones" : "Etapa en línea · puertos y metas puntuables"} · ${scenery}`;
     }
 
@@ -4462,8 +4508,6 @@ class Game {
     roster.replaceChildren();
     riders.forEach((rider, index) => {
       const condition = this.tour.conditions.get(rider.tourId) || { fatigue: 0, form: 0 };
-      const assignment = rider.role === "leader"
-        ? "leader" : this.tour.stageAssignments?.[rider.tourId] || "support";
       const row = document.createElement("article");
       row.className = `managed-rider${rider.tourId === 0 ? " player" : ""}`;
       const number = document.createElement("b");
@@ -4484,27 +4528,13 @@ class Game {
       const status = document.createElement("div");
       status.className = `rider-condition${condition.fatigue >= 45 ? " tired" : ""}`;
       const form = condition.form >= 0 ? `+${condition.form.toFixed(1)}` : condition.form.toFixed(1);
-      status.innerHTML = `<span>FATIGA · FORMA</span><strong>${Math.round(condition.fatigue)}% · ${form}</strong>`;
+      status.innerHTML =
+        `<span>CANSANCIO / FATIGA</span><strong>${Math.round(condition.fatigue)}%</strong><em>FORMA ${form}</em>`;
       row.appendChild(status);
-      const select = document.createElement("select");
-      select.setAttribute("aria-label", `Función de ${rider.name}`);
-      Object.entries(STAGE_ROLES).forEach(([value, role]) => {
-        if (value === "leader" && rider.role !== "leader") return;
-        if (value !== "leader" && rider.role === "leader") return;
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = role.short;
-        option.selected = value === assignment;
-        select.appendChild(option);
-      });
-      select.disabled = rider.role === "leader" || this.tour.completedStages >= TOUR_STAGE_COUNT;
-      select.addEventListener("change", () => {
-        if (!this.tour.stageAssignments) this.tour.stageAssignments = {};
-        this.tour.stageAssignments[rider.tourId] = select.value;
-        rider.stageRole = select.value;
-        this.saveTour();
-      });
-      row.appendChild(select);
+      const role = document.createElement("div");
+      role.className = "rider-role";
+      role.innerHTML = `<span>ROL FIJO</span><strong>${rider.roleLabel || rider.type || "GREGARIO"}</strong>`;
+      row.appendChild(role);
       roster.appendChild(row);
     });
   }
@@ -4899,20 +4929,20 @@ class Game {
   updateTourConditions(stageRanking) {
     const race = this.race;
     if (!(this.tour.conditions instanceof Map)) this.tour.conditions = new Map();
+    const fullRestDay = this.tour.stageIndex === Math.floor(TOUR_STAGE_COUNT / 2) - 1;
     stageRanking.forEach((rider) => {
       const current = this.tour.conditions.get(rider.tourId) || {
         tourId: rider.tourId, fatigue: 0, form: 0
       };
-      const assignmentLoad = rider.stageRole === "finish" ? -7
-        : rider.stageRole === "support" ? 4
-          : ["stage", "points", "mountain"].includes(rider.stageRole) ? 2.5 : 0;
+      const assignmentLoad = rider.stageRole === "support" ? 4.5
+        : ["stage", "points", "mountain"].includes(rider.stageRole) ? 3.5 : 1.5;
       const stageLoad = clamp(
-        rider.fatigue * 0.38 + Math.max(0, 72 - rider.energy) * 0.24 +
-        race.road.totalAscent / 420 + race.road.lengthKm / 95 + assignmentLoad,
-        0,
-        42
+        12 + rider.fatigue * 0.5 + Math.max(0, 100 - rider.energy) * 0.35 +
+        race.road.totalAscent / 300 + race.road.lengthKm / 70 + assignmentLoad,
+        10,
+        32
       );
-      const fatigue = clamp(current.fatigue * 0.68 + stageLoad, 0, 82);
+      const fatigue = fullRestDay ? 0 : clamp(current.fatigue * 0.86 + stageLoad, 0, 88);
       const formRandom = new SeededRandom(
         (this.tour.seed + (this.tour.stageIndex + 2) * 104729 + rider.tourId * 7919) >>> 0
       );

@@ -40,7 +40,7 @@ Antes de cada etapa aparece el dashboard del Tour. Allí se ven el perfil de la 
 
 Ambas opciones muestran la misma pantalla oficial de resultados, actualizan las clasificaciones, guardan la partida y devuelven al dashboard antes de avanzar. Las etapas ya terminadas quedan activas en el calendario: al pulsarlas se abre su podio, el puesto y tiempo del jugador, y el desenlace de la escapada.
 
-El mismo dashboard incluye **Mi equipo**. Muestra montaña, sprint, resistencia y técnica, la especialidad derivada, forma y fatiga de cada corredor. Antes de la jornada se puede asignar a cada compañero una misión: gregario, terminar conservando, buscar etapa, buscar puntos o buscar montaña. El líder está bloqueado porque es el ciclista controlado. Las misiones afectan a la IA, la simulación y la fatiga posterior; las órdenes manuales dadas durante la carrera tienen prioridad.
+El mismo dashboard incluye **Mi equipo**. Muestra en formato grande montaña, sprint, resistencia, técnica, forma y fatiga de cada corredor. El rol —líder, sprinter, escalador, atacante o gregario— es fijo y no se puede editar. La fatiga se acumula con fuerza durante cada mitad del Tour; tras la quinta etapa hay una jornada de descanso que la recupera al 100 %. Las órdenes manuales dadas durante la carrera siguen teniendo prioridad táctica.
 
 Un Tour terminado permanece disponible en su slot mediante `Ver Tour`. Abre su calendario, resumen y clasificaciones finales sin sobrescribirlo. La creación de un Tour nuevo es una acción distinta y requiere confirmación.
 
