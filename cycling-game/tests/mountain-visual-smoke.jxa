@@ -141,6 +141,9 @@ assertMountain(typeof vehicleGame.renderRaceVehicles === "function" &&
   typeof vehicleGame.drawRaceVehicle === "function" &&
   typeof vehicleGame.drawLateralRaceVehicle === "function",
   "Falta alguna vista de los vehículos de carrera");
+assertMountain(vehicleGame.lateralRiderViewportScale(390) === 0.66 &&
+  vehicleGame.lateralRiderViewportScale(1280) === 1,
+  "Vehículos y ciclistas no pueden compartir una escala móvil estable");
 
 const layerOrder = [];
 const renderedRiderScales = new Map();

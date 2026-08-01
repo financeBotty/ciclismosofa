@@ -6313,7 +6313,10 @@ class Game {
 
   drawLateralRaceVehicle(ctx, vehicle, pixelsPerKm) {
     const sprite = this.buildSideRaceVehicleSprite(vehicle.type, vehicle.color);
-    const scale = vehicle.type === "tv" ? 0.94 : 1.04;
+    // Ciclistas y vehículos deben responder al mismo ancho de viewport. Antes
+    // solo se reducían los ciclistas en móvil y los coches parecían gigantes.
+    const viewportScale = this.lateralRiderViewportScale();
+    const scale = (vehicle.type === "tv" ? 0.94 : 1.04) * viewportScale;
     const bob = this.reducedMotion ? 0 : Math.floor(this.race.elapsed * 8 + vehicle.distance * 10) % 2;
     if (this.race.weather.intensity > 0.25) {
       ctx.fillStyle = "rgba(205,230,234,.34)";
