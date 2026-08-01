@@ -3794,7 +3794,6 @@ html, body {
   .dashboard-standings { grid-column: 1; }
   .dashboard-standing-grid { grid-template-columns: 1fr 1fr; }
   .menu-options { grid-template-columns: 1fr 1fr; }
-  .menu-options .profile-option { grid-column: 1 / -1; }
 }
 
 @media (max-width: 420px) {

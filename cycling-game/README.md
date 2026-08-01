@@ -148,13 +148,18 @@ Las tablas de puntuación son:
 ## Estructura
 
 - `index.html`: interfaz, menús, HUD y controles.
-- `styles.css`: realización deportiva, diseño adaptable y estados visuales.
+- `styles.css`: dirección artística base y estados visuales.
+- `responsive.css`: capa responsive final, zonas táctiles y navegación compacta.
+- `storage.js`: acceso seguro y tolerante a errores a `localStorage`.
+- `simulation-rules.js`: fatiga acumulada y objetivos secundarios de etapa.
+- `ui-helpers.js`: estados contextuales del ciclista y nivel de riesgo.
+- `render-utils.js`: escalas compartidas por ciclistas y vehículos.
 - `game.js`: clases `Game`, `Race`, `Cyclist`, `PlayerCyclist`, `AICyclist`, `Road`, `WeatherSystem`, `ParticleSystem`, `HUD` y `AudioManager`.
 - `tests/phase2-smoke.jxa`: prueba reproducible de Tour completo, tiempos por grupos, condición, perfiles, fugas y migración de guardados; se ejecuta en macOS con `osascript -l JavaScript tests/phase2-smoke.jxa`.
 - `tests/phase2-balance.jxa`: muestra de 90 Tours simulados —30 por dificultad— para vigilar victorias, top 10, general y triunfos de escapada.
 - `tests/quick-race-smoke.jxa`: valida las cuatro familias de carrera rápida, la etapa independiente y el pelotón de 100 ciclistas.
 - `tests/simulation-flow-smoke.m`: reproduce en WebKit el flujo Simular etapa → resultado → Siguiente etapa y comprueba que ninguna capa intercepta el botón.
-- `tests/phase3-smoke.jxa`: valida las cuatro órdenes de equipo, ataques, bloqueo de relevos durante un ataque rival, sprint de respuesta, tutorial, movimiento reducido y vibración.
+- `tests/phase3-smoke.jxa`: valida las cuatro órdenes de equipo, ataques, bloqueo de relevos durante un ataque rival, sprint de respuesta, tutorial, movimiento reducido, vibración y 4.000 ciclos acelerados con 100 ciclistas y vehículos persistentes.
 - `tests/energy-rules-smoke.jxa`: comprueba recuperación de Bajo en subida, pérdida lenta de Medio en llano, recuperación de Medio en descenso, Alto gratuito cuesta abajo y penalización por aislamiento.
 - `tests/team-management-smoke.jxa`: valida los diez equipos, sus líderes únicos, la selección de club, las plantillas de diez y las especialidades derivadas.
 - `manifest.webmanifest`, `service-worker.js` y `assets/icon.svg`: instalación y caché offline del juego.
@@ -162,7 +167,7 @@ Las tablas de puntuación son:
 
 ## Guardado local
 
-`localStorage` conserva la mejor posición, el mejor tiempo, las carreras disputadas, las victorias, la dificultad, el perfil preferido, la cámara elegida, el silencio, el volumen, el tutorial y las opciones de accesibilidad. También mantiene tres partidas completas con calendario, etapa pendiente, plantilla, edades, tiempos, puntos, líderes, maillots, forma, fatiga e historial de resultados. Las preferencias y partidas se validan antes de utilizarlas; los slots creados antes de la Fase 2 se migran con valores seguros, y un valor corrupto o un almacenamiento no disponible no impide que el juego arranque.
+`localStorage` conserva la mejor posición, el mejor tiempo, las carreras disputadas, las victorias, la dificultad, la cámara elegida, el silencio, el volumen, el tutorial y las opciones de accesibilidad. También mantiene tres partidas completas con calendario, etapa pendiente, plantilla, edades, tiempos, puntos, líderes, maillots, forma, fatiga e historial de resultados. La habilidad y el rol no se guardan como preferencias editables: proceden del líder y la plantilla fija de cada equipo. Las preferencias y partidas se validan antes de utilizarlas; los slots antiguos se migran con valores seguros, y un valor corrupto o un almacenamiento no disponible no impide que el juego arranque.
 
 Al servir la carpeta mediante `http://localhost` o HTTPS, el navegador registra un *service worker* y guarda la aplicación base para abrirla sin conexión después de la primera carga. La apertura directa de `index.html` sigue funcionando, pero los navegadores no permiten instalación ni caché offline desde `file://`.
 

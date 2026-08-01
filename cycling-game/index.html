@@ -14,6 +14,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="responsive.css">
 </head>
 <body>
   <main id="gameShell" class="game-shell">
@@ -71,7 +72,7 @@
         <button type="button" data-mobile-view="stage" aria-selected="false" aria-label="Ver etapa"><i aria-hidden="true">▲</i><span>ETAPA</span></button>
       </nav>
       <section id="mobileClassificationPanel" class="mobile-view-panel mobile-classification-panel is-hidden" aria-label="Clasificación en directo">
-        <header><span>☷ RANKING</span><strong id="mobileRacePosition">—</strong><button type="button" class="mobile-route-return" data-return-to-race>▶ RUTA</button></header>
+        <header><span>☷ RANKING</span><strong id="mobileRacePosition">—</strong><button id="mobileJumpToPlayer" type="button" class="mobile-jump-player">IR A MÍ</button><button type="button" class="mobile-route-return" data-return-to-race>▶ RUTA</button></header>
         <ol id="mobileClassificationList"></ol>
       </section>
       <section id="mobileStagePanel" class="mobile-view-panel mobile-stage-panel is-hidden" aria-label="Estadísticas de la etapa">
@@ -104,7 +105,7 @@
         <span>!</span><div><small>ATENCIÓN</small><strong>CURVA PELIGROSA</strong><em id="dangerDistance">EN 200 m</em></div>
       </div>
       <button id="raceSpeedButton" class="race-speed-button" type="button"
-        aria-label="Velocidad de carrera por uno" aria-pressed="false">×1</button>
+        aria-label="Velocidad de carrera por uno" aria-pressed="false"><span>×1</span></button>
       <button id="pauseButton" class="icon-button pause-button" aria-label="Pausar partida">Ⅱ</button>
       <button id="returnCameraButton" class="camera-return is-hidden" aria-label="Volver a tu ciclista">⌖ TÚ</button>
       <div id="cameraSwitcher" class="camera-switcher" role="group" aria-label="Cámara de carrera">
@@ -114,6 +115,9 @@
       <button id="teamOrderButton" class="team-order-button" type="button" aria-expanded="false" aria-controls="teamOrderPanel">
         <span>♟</span><b id="teamOrderCurrent">PROTEGER</b>
       </button>
+      <div id="raceContextStrip" class="race-context-strip" role="status" aria-live="polite">
+        <strong id="contextSpeed">0 km/h</strong><span id="contextRiderState">EN GRUPO</span><span id="contextEnergyRate">E —</span><span id="contextRisk" data-level="low">RIESGO BAJO</span>
+      </div>
       <aside id="teamOrderPanel" class="team-order-panel is-hidden" aria-label="Órdenes al equipo">
         <header><span id="teamOrderTitle">♟ EQUIPO SOLARIS</span><button id="closeTeamOrderButton" type="button" aria-label="Cerrar órdenes">×</button></header>
         <div role="group" aria-label="Orden táctica">
@@ -168,14 +172,6 @@
                 <option value="dynamic" selected>Dinámico</option>
                 <option value="dry">Seco</option>
                 <option value="rain">Lluvia</option>
-              </select>
-            </label>
-            <label id="profileOption" class="profile-option is-hidden">CORREDOR
-              <select id="riderProfileSelect">
-                <option value="allrounder" selected>Todoterreno</option>
-                <option value="climber">Escalador</option>
-                <option value="sprinter">Sprinter</option>
-                <option value="rouleur">Rodador</option>
               </select>
             </label>
           </div>
@@ -243,8 +239,14 @@
               <strong id="dashboardProgress">ETAPA 1 / 10</strong>
             </div>
           </header>
+          <nav class="dashboard-mobile-nav" aria-label="Secciones del Tour">
+            <button type="button" data-dashboard-section="stage" class="active">ETAPA</button>
+            <button type="button" data-dashboard-section="calendar">RECORRIDO</button>
+            <button type="button" data-dashboard-section="standings">CLASIF.</button>
+            <button type="button" data-dashboard-section="team">EQUIPO</button>
+          </nav>
           <main class="dashboard-grid">
-            <section class="next-stage-card">
+            <section class="next-stage-card dashboard-section-active" data-dashboard-panel="stage">
               <div class="dashboard-section-title"><span id="dashboardStageSectionLabel">SIGUIENTE ETAPA</span><b id="dashboardStageType">LLANA</b></div>
               <h3 id="dashboardStageName">—</h3>
               <div class="next-stage-stats">
@@ -254,6 +256,7 @@
                 <div><span>◆</span><small id="dashboardSprintsLabel">SPRINTS</small><strong id="dashboardStageSprints">—</strong></div>
               </div>
               <p id="dashboardStageScenery" class="dashboard-stage-scenery">—</p>
+              <div id="dashboardObjective" class="dashboard-objective"><span>OBJETIVO SECUNDARIO</span><strong>—</strong><small>—</small></div>
               <div class="stage-choice">
                 <button id="playStageButton" type="button" class="dashboard-play"><i>▶</i><span>JUGAR ETAPA<small>Abrir el simulador</small></span></button>
                 <button id="simulateStageButton" type="button" class="dashboard-simulate"><i>⚡</i><span>SIMULAR ETAPA<small>Generar y guardar resultado</small></span></button>
@@ -261,7 +264,7 @@
               </div>
             </section>
 
-            <section class="tour-calendar-card">
+            <section class="tour-calendar-card" data-dashboard-panel="calendar">
               <div class="dashboard-section-title"><span>RECORRIDO</span><b>10 ETAPAS</b></div>
               <ol id="dashboardCalendar" class="dashboard-calendar"></ol>
               <article id="dashboardStageHistory" class="dashboard-stage-history is-hidden" aria-live="polite">
@@ -276,7 +279,7 @@
               </article>
             </section>
 
-            <section class="dashboard-standings">
+            <section class="dashboard-standings" data-dashboard-panel="standings">
               <div class="dashboard-section-title"><span>CLASIFICACIONES</span><b id="dashboardPlayerGc">SIN CLASIFICAR</b></div>
               <div class="dashboard-standing-grid">
                 <article class="dashboard-standing yellow"><h3>● GENERAL</h3><ol id="dashboardGcList"></ol></article>
@@ -285,7 +288,7 @@
                 <article class="dashboard-standing white"><h3>○ JÓVENES</h3><ol id="dashboardYoungList"></ol></article>
               </div>
             </section>
-            <section id="teamManagementCard" class="team-management-card">
+            <section id="teamManagementCard" class="team-management-card" data-dashboard-panel="team">
               <div class="dashboard-section-title"><span>MI EQUIPO</span><b id="managedTeamIdentity">—</b></div>
               <header class="managed-team-header">
                 <div id="managedTeamCrest"></div>
@@ -358,6 +361,7 @@
             <p class="eyebrow accent" id="resultEyebrow">CLASIFICACIÓN OFICIAL</p>
             <div><span id="finalPosition">1º</span><div><small>TU RESULTADO</small><strong id="resultMessage">¡VICTORIA!</strong></div></div>
             <p id="finalTime">01:28:42</p>
+            <p id="resultObjective" class="result-objective">OBJETIVO SECUNDARIO · —</p>
           </div>
           <div class="stage-podium">
             <div class="podium-heading">
@@ -405,10 +409,15 @@
               </g>
             </svg>
           </div>
+          <nav class="result-view-tabs" aria-label="Vistas del resultado">
+            <button type="button" data-result-view="stage" class="active">ETAPA</button>
+            <button type="button" data-result-view="tour">TOUR</button>
+            <button type="button" data-result-view="stats">TUS DATOS</button>
+          </nav>
           <div class="results-body">
-            <div class="final-classifications">
+            <div class="final-classifications results-section-view" data-result-panel="stage">
               <section class="classification-card stage-ranking">
-                <h3><span>🏁</span> GANADOR DE ETAPA</h3>
+                <h3><span>🏁</span> CLASIFICACIÓN DE ETAPA <button type="button" class="classification-jump" data-jump-classification="classificationList">IR A MÍ</button></h3>
                 <ol id="classificationList" class="classification-list"></ol>
               </section>
               <section class="classification-card mountain-ranking">
@@ -420,9 +429,9 @@
                 <ol id="sprintClassificationList" class="classification-list points-list"></ol>
               </section>
             </div>
-            <div class="tour-classifications" aria-label="Clasificaciones del Tour">
+            <div class="tour-classifications results-section-view result-mobile-hidden" data-result-panel="tour" aria-label="Clasificaciones del Tour">
               <section class="classification-card gc-ranking">
-                <h3><span>●</span> AMARILLO · GENERAL</h3>
+                <h3><span>●</span> AMARILLO · GENERAL <button type="button" class="classification-jump" data-jump-classification="gcClassificationList">IR A MÍ</button></h3>
                 <ol id="gcClassificationList" class="classification-list"></ol>
               </section>
               <section class="classification-card tour-points-ranking">
@@ -438,7 +447,7 @@
                 <ol id="youngClassificationList" class="classification-list"></ol>
               </section>
             </div>
-            <div id="playerStats" class="player-stats"></div>
+            <div id="playerStats" class="player-stats results-section-view result-mobile-hidden" data-result-panel="stats"></div>
           </div>
         </div>
       </div>
@@ -493,6 +502,10 @@
       </div>
     </section>
   </main>
+  <script src="storage.js"></script>
+  <script src="simulation-rules.js"></script>
+  <script src="ui-helpers.js"></script>
+  <script src="render-utils.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

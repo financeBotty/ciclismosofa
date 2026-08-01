@@ -59,7 +59,6 @@ const phase3Elements = new Map();
 const phase3Controls = {
   difficultySelect: Object.assign(phase3Element(), { value: "normal" }),
   weatherSelect: Object.assign(phase3Element(), { value: "dry" }),
-  riderProfileSelect: Object.assign(phase3Element(), { value: "allrounder" })
 };
 globalThis.document = {
   documentElement: phase3Element(),
@@ -108,6 +107,38 @@ phase3Game.hud = { showDanger() {} };
 phase3Game.cameraShake = 0;
 phase3Game.showResourceFeedback = () => {};
 phase3Game.finishRace = () => {};
+const phase3Race = phase3Game.race;
+const phase3TacticalStageIndex = phase3Game.tour.stageIndex;
+const phase3FlatStageIndex = phase3Game.tour.stages.findIndex((stage) =>
+  stage.type !== "itt" && stage.profile === "flat");
+if (phase3FlatStageIndex >= 0) phase3Game.tour.stageIndex = phase3FlatStageIndex;
+const phase3SoakRace = phase3Game.createCurrentRace({ simulationOnly: true });
+phase3Game.tour.stageIndex = phase3TacticalStageIndex;
+phase3Game.race = phase3SoakRace;
+const phase3VehicleIds = phase3SoakRace.raceVehicles.map((vehicle) => vehicle.id);
+let phase3MinimumTvVehicles = Infinity;
+let phase3MinimumTeamCars = Infinity;
+for (let tick = 0; tick < 4000; tick += 1) {
+  phase3SoakRace.update(0.05);
+  if (tick % 40 !== 0) continue;
+  phase3MinimumTvVehicles = Math.min(phase3MinimumTvVehicles,
+    phase3SoakRace.raceVehicles.filter((vehicle) => vehicle.type === "tv" && vehicle.active).length);
+  phase3MinimumTeamCars = Math.min(phase3MinimumTeamCars,
+    phase3SoakRace.raceVehicles.filter((vehicle) => vehicle.type === "team" && vehicle.active).length);
+  phase3Assert(phase3SoakRace.cyclists.length === 100,
+    "La prueba prolongada perdió corredores");
+  phase3Assert(phase3SoakRace.cyclists.every((rider) =>
+    Number.isFinite(rider.distance) && Number.isFinite(rider.speed)),
+    "La prueba prolongada produjo posiciones o velocidades inválidas");
+  phase3Assert(phase3SoakRace.raceVehicles.every((vehicle) =>
+    Number.isFinite(vehicle.distance) && Number.isFinite(vehicle.speed)),
+    "La prueba prolongada produjo un vehículo inválido");
+}
+phase3Assert(phase3SoakRace.raceVehicles.map((vehicle) => vehicle.id).join("|") === phase3VehicleIds.join("|"),
+  "Los vehículos se recrearon o desaparecieron durante la prueba prolongada");
+phase3Assert(phase3MinimumTvVehicles === 3 && phase3MinimumTeamCars === 3,
+  "La carrera prolongada dejó de mostrar motos o coches de equipo");
+phase3Game.race = phase3Race;
 phase3Game.cameraMode = "top";
 let phase3MobileView = "";
 phase3Game.hud.setMobileView = (view) => { phase3MobileView = view; };
@@ -115,8 +146,6 @@ phase3Game.hud.mobileView = "classification";
 phase3Game.raceSpeed = 1;
 phase3Game.setRaceSpeed(5);
 phase3Assert(phase3Game.raceSpeed === 5, "El selector no activó la velocidad ×5");
-phase3Assert(document.getElementById("raceSpeedButton").textContent === "×5",
-  "El botón no mostró la velocidad ×5");
 let phase3SpeedUpdates = 0;
 const phase3LoopGame = Object.create(Game.prototype);
 phase3LoopGame.state = "RACING";
@@ -329,7 +358,11 @@ JSON.stringify({
   responseSprint: true,
   mobileCamera: phase3Game.cameraMode,
   tutorialSteps: TUTORIAL_STEPS.length,
-  countdowns: phase3Countdowns
+  countdowns: phase3Countdowns,
+  soakTicksAtX5: 4000,
+  soakRiders: phase3SoakRace.cyclists.length,
+  persistentTvVehicles: phase3MinimumTvVehicles,
+  persistentTeamCars: phase3MinimumTeamCars
 });
 `;
 

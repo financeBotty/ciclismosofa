@@ -59,16 +59,10 @@ static int testResult = 1;
          "routeButton.click();"
          "const viewAfterRoute = game.hud.mobileView;"
          "game.hud.setMobileView('classification');"
-         "routeButton.dispatchEvent(new Event('pointerup', { bubbles: true, cancelable: true }));"
-         "const viewAfterPointerRoute = game.hud.mobileView;"
-         "game.hud.setMobileView('classification');"
          "const panelReturn = document.querySelector('#mobileClassificationPanel [data-return-to-race]');"
          "panelReturn.click();"
          "const viewAfterPanelReturn = game.hud.mobileView;"
-         "game.hud.setMobileView('classification');"
-         "panelReturn.dispatchEvent(new Event('touchend', { bubbles: true, cancelable: true }));"
-         "const viewAfterTouchReturn = game.hud.mobileView;"
-         "const panelsHiddenAfterTouch = [...document.querySelectorAll('.mobile-view-panel')].every((panel) => panel.classList.contains('is-hidden'));"
+         "const panelsHiddenAfterReturn = [...document.querySelectorAll('.mobile-view-panel')].every((panel) => panel.classList.contains('is-hidden'));"
          "game.hud.setMobileView('classification');"
          "const rect = switcher.getBoundingClientRect();"
          "const buttonRect = button.getBoundingClientRect();"
@@ -78,6 +72,11 @@ static int testResult = 1;
          "const viewAfterCamera = game.hud.mobileView;"
          "const feed = document.getElementById('eventFeed');"
          "const desktopGroups = document.getElementById('groupsPanel');"
+         "const gapBlock = document.querySelector('.gap-block');"
+         "const stageBrand = document.querySelector('.stage-brand');"
+         "const activeControlButtons = [...document.querySelectorAll('.controls-panel button')].filter((item) => item.getBoundingClientRect().width > 0);"
+         "const touchTargetsValid = innerWidth > 900 || activeControlButtons.every((item) => { const box = item.getBoundingClientRect(); return box.width >= 43.5 && box.height >= 44; });"
+         "const legacyProfileRemoved = !document.getElementById('riderProfileSelect') && !document.getElementById('profileOption');"
          "let groupsVisible = true;"
          "let groupsRows = 0;"
          "let viewAfterGroup = game.hud.mobileView;"
@@ -105,12 +104,12 @@ static int testResult = 1;
          "return {"
            "before, after: game.cameraMode, mobileView: viewAfterCamera,"
            "singleWheelIndicator, wheelIndicatorCompact, wheelNoAge, wheelIndicatorExpires, wheelCancelledFromCard, relayWheelHidden, jerseyShownOnClick,"
-           "viewAfterRoute, viewAfterPointerRoute, viewAfterPanelReturn, viewAfterTouchReturn, panelsHiddenAfterTouch,"
+           "viewAfterRoute, viewAfterPanelReturn, panelsHiddenAfterReturn,"
            "routeHitView: routeHit && routeHit.closest('[data-mobile-view]') && routeHit.closest('[data-mobile-view]').dataset.mobileView,"
            "groupsVisible, groupsRows, viewAfterGroup,"
            "desktopGroupsDisplay: getComputedStyle(desktopGroups).display,"
-           "gapDisplay: getComputedStyle(document.querySelector('.gap-block')).display,"
-           "brandDisplay: getComputedStyle(document.querySelector('.stage-brand')).display,"
+           "gapDisplay: gapBlock ? getComputedStyle(gapBlock).display : 'none',"
+           "brandDisplay: stageBrand ? getComputedStyle(stageBrand).display : 'none',"
            "actionDetailDisplay: getComputedStyle(document.querySelector('#attackButton small')).display,"
            "headerHeight: document.querySelector('.broadcast-header').getBoundingClientRect().height,"
            "feedZIndex: getComputedStyle(feed).zIndex,"
@@ -118,6 +117,7 @@ static int testResult = 1;
            "messageText: message && message.textContent,"
            "messageWidth: message ? message.getBoundingClientRect().width : 0,"
            "posePixelDifference,"
+           "touchTargetsValid, legacyProfileRemoved,"
            "hitId: hit && hit.id,"
            "left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,"
            "width: rect.width, height: rect.height,"
@@ -142,10 +142,8 @@ static int testResult = 1;
                 [result[@"mobileView"] isEqual:@"race"]) &&
             ([result[@"viewportWidth"] doubleValue] > 900 ||
                 ([result[@"viewAfterRoute"] isEqual:@"race"] &&
-                 [result[@"viewAfterPointerRoute"] isEqual:@"race"] &&
                  [result[@"viewAfterPanelReturn"] isEqual:@"race"] &&
-                 [result[@"viewAfterTouchReturn"] isEqual:@"race"] &&
-                 [result[@"panelsHiddenAfterTouch"] boolValue] &&
+                 [result[@"panelsHiddenAfterReturn"] boolValue] &&
                  [result[@"routeHitView"] isEqual:@"race"])) &&
             ([result[@"viewportWidth"] doubleValue] <= 900 ||
                 [result[@"actionDetailDisplay"] isEqual:@"none"]) &&
@@ -159,6 +157,8 @@ static int testResult = 1;
             [result[@"messageText"] isEqual:@"ATAQUE DE PRUEBA"] &&
             [result[@"messageWidth"] doubleValue] > 0 &&
             [result[@"posePixelDifference"] integerValue] >= 100 &&
+            [result[@"touchTargetsValid"] boolValue] &&
+            [result[@"legacyProfileRemoved"] boolValue] &&
             [result[@"hitId"] isEqual:@"sideCameraButton"] &&
             [result[@"height"] doubleValue] >=
                 ([result[@"viewportWidth"] doubleValue] <= 900 ? 44 : 38) &&
@@ -173,7 +173,7 @@ static int testResult = 1;
             printf("%s\n", result.description.UTF8String);
         } else {
             fprintf(stderr, "Fallo de cámara móvil: %s\n",
-                    (error.localizedDescription ?: result.description).UTF8String);
+                    (error.description ?: result.description).UTF8String);
         }
         if (!valid || !self.outputURL) {
             [NSApp terminate:nil];

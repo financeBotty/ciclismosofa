@@ -22,7 +22,6 @@ globalThis.localStorage = {
 const balanceControls = {
   difficultySelect: { value: "normal" },
   weatherSelect: { value: "dry" },
-  riderProfileSelect: { value: "allrounder" }
 };
 globalThis.document = {
   getElementById: (id) => balanceControls[id] || { value: "" }

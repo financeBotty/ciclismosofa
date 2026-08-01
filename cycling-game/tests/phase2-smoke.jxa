@@ -26,7 +26,6 @@ globalThis.localStorage = {
 const phase2Controls = {
   difficultySelect: { value: "normal" },
   weatherSelect: { value: "dry" },
-  riderProfileSelect: { value: "allrounder" }
 };
 const phase2Element = () => ({
   value: "",
@@ -96,6 +95,7 @@ const phase2RoadUniqueCounts = [];
 const phase2IttUniqueCounts = [];
 const phase2WinningTimes = [];
 const phase2PlayerFatigue = [];
+const phase2ExpectedGeneralTimes = new Map(phase2Game.tour.roster.map((rider) => [rider.tourId, 0]));
 for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
   phase2Game.tour.stageIndex = stageIndex;
   const race = phase2Game.createCurrentRace({ simulationOnly: true });
@@ -135,8 +135,17 @@ for (let stageIndex = 0; stageIndex < TOUR_STAGE_COUNT; stageIndex += 1) {
   if (race.timeTrial) phase2IttUniqueCounts.push(uniqueCount);
   else phase2RoadUniqueCounts.push(uniqueCount);
   const officialTime = (rider) => official.get(rider);
+  ranking.forEach((rider) => phase2ExpectedGeneralTimes.set(
+    rider.tourId,
+    phase2ExpectedGeneralTimes.get(rider.tourId) + officialTime(rider)
+  ));
   phase2WinningTimes.push(officialTime(ranking[0]));
   phase2Game.recordStageResult(ranking, officialTime);
+  const recordedStage = phase2Game.tour.stageResults.at(-1);
+  phase2Assert(recordedStage.player.time === officialTime(race.player),
+    "El historial muestra un tiempo distinto al oficial en la etapa " + (stageIndex + 1));
+  phase2Assert(recordedStage.podium.every((entry, index) => entry.time === officialTime(ranking[index])),
+    "El podio muestra tiempos distintos a los oficiales en la etapa " + (stageIndex + 1));
   phase2Game.updateTourStandings(ranking, officialTime);
   phase2PlayerFatigue.push(phase2Game.tour.conditions.get(0).fatigue);
 }
@@ -145,6 +154,11 @@ phase2Assert(phase2Game.tour.stageResults.length === 10, "El historial no contie
 phase2Assert(
   [...phase2Game.tour.totals.values()].every((total) => total.stages === 10),
   "La general no acumuló las 10 etapas"
+);
+phase2Assert(
+  [...phase2Game.tour.totals.values()].every((total) =>
+    Math.abs(total.time - phase2ExpectedGeneralTimes.get(total.tourId)) < 1e-7),
+  "La general no coincide con la suma exacta de los diez tiempos oficiales"
 );
 phase2Assert(
   phase2RoadUniqueCounts.every((count) => count < 100),
@@ -163,7 +177,7 @@ phase2Assert(
 );
 phase2Assert(
   [...phase2Game.tour.conditions.values()].every((condition) =>
-    Number.isFinite(condition.fatigue) && condition.fatigue >= 0 && condition.fatigue <= 88 &&
+    Number.isFinite(condition.fatigue) && condition.fatigue >= 0 && condition.fatigue <= 96 &&
     Number.isFinite(condition.form) && condition.form >= -8 && condition.form <= 8
   ),
   "La forma o la fatiga salió de rango"
@@ -223,7 +237,6 @@ phase2Assert(phase2Game.tour.playerProfile === "allrounder", "La migración no a
 
 const phase2ProfileStats = {};
 Object.keys(PLAYER_PROFILES).forEach((profileName) => {
-  phase2Controls.riderProfileSelect.value = profileName;
   const profileGame = Object.create(Game.prototype);
   profileGame.activeSaveSlot = null;
   profileGame.saveTour = () => true;
@@ -248,7 +261,6 @@ Object.keys(PLAYER_PROFILES).forEach((profileName) => {
   phase2ProfileStats[profileName] = [rider.climbing, rider.sprint, rider.endurance];
 });
 
-phase2Controls.riderProfileSelect.value = "allrounder";
 const phase2FinishGame = Object.create(Game.prototype);
 phase2FinishGame.activeSaveSlot = null;
 phase2FinishGame.simulationCheckpoint = null;

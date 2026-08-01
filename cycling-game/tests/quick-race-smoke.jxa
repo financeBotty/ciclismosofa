@@ -21,7 +21,6 @@ const quickAssert = (condition, message) => {
 const quickControls = {
   difficultySelect: { value: "normal" },
   weatherSelect: { value: "dynamic" },
-  riderProfileSelect: { value: "allrounder" }
 };
 globalThis.document = {
   getElementById: (id) => quickControls[id] || {

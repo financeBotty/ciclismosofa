@@ -1,10 +1,15 @@
 "use strict";
 
-const CACHE_NAME = "ciclimo-tour-v32";
+const CACHE_NAME = "ciclimo-tour-v34";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
+  "./responsive.css",
+  "./storage.js",
+  "./simulation-rules.js",
+  "./ui-helpers.js",
+  "./render-utils.js",
   "./game.js",
   "./manifest.webmanifest",
   "./assets/icon.svg"

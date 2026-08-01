@@ -16,7 +16,6 @@ const assertTeam = (condition, message) => {
 const controls = {
   difficultySelect: { value: "normal" },
   weatherSelect: { value: "dry" },
-  riderProfileSelect: { value: "allrounder" }
 };
 globalThis.document = {
   getElementById: (id) => controls[id] || {
