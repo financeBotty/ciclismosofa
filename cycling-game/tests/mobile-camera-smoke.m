@@ -76,25 +76,93 @@ static int testResult = 1;
          "const gapBlock = document.querySelector('.gap-block');"
          "const stageBrand = document.querySelector('.stage-brand');"
          "const activeControlButtons = [...document.querySelectorAll('.controls-panel button')].filter((item) => item.getBoundingClientRect().width > 0);"
-         "const touchTargetsValid = innerWidth > 900 || activeControlButtons.every((item) => { const box = item.getBoundingClientRect(); return box.width >= 43.5 && box.height >= 44; });"
+         "const aggressiveFontSize = parseFloat(getComputedStyle(document.querySelector('[data-risk=\"aggressive\"] span')).fontSize);"
+         "const headerLabelFontSize = parseFloat(getComputedStyle(document.querySelector('.broadcast-header .data-block .label')).fontSize);"
+         "const headerValueFontSize = parseFloat(getComputedStyle(document.querySelector('.broadcast-header .data-block strong')).fontSize);"
+         "const visibleHeaderValues = [...document.querySelectorAll('.broadcast-header .data-block strong')].filter((item) => item.getBoundingClientRect().width > 0);"
+         "const headerTextFits = visibleHeaderValues.every((item) => item.scrollWidth <= item.clientWidth + 1);"
+         "const headerClipped = visibleHeaderValues.filter((item) => item.scrollWidth > item.clientWidth + 1).map((item) => `${item.id || item.parentElement.className}:${item.scrollWidth}/${item.clientWidth}`);"
+         "const lateralRiderScale = game.lateralRiderViewportScale();"
+         "const topRiderScale = game.topRiderViewportScale();"
+         "const touchTargetsValid = activeControlButtons.every((item) => { const box = item.getBoundingClientRect(); return box.width >= 43.5 && box.height >= 44; });"
          "const legacyProfileRemoved = !document.getElementById('riderProfileSelect') && !document.getElementById('profileOption');"
          "let groupsVisible = true;"
          "let groupsRows = 0;"
          "let viewAfterGroup = game.hud.mobileView;"
-         "if (innerWidth <= 900) {"
-           "game.hud.setMobileView('groups');"
-           "groupsVisible = !document.getElementById('mobileGroupsPanel').classList.contains('is-hidden');"
-           "groupsRows = document.querySelectorAll('#mobileGroupsList [data-group-index]').length;"
-           "game.state = 'RACING';"
-           "document.querySelector('#mobileGroupsList [data-group-index]').click();"
-           "viewAfterGroup = game.hud.mobileView;"
-         "}"
+         "game.hud.setMobileView('groups');"
+         "groupsVisible = !document.getElementById('mobileGroupsPanel').classList.contains('is-hidden');"
+         "groupsRows = document.querySelectorAll('#mobileGroupsList [data-group-index]').length;"
+         "game.state = 'RACING';"
+         "document.querySelector('#mobileGroupsList [data-group-index]').click();"
+         "viewAfterGroup = game.hud.mobileView;"
+         "const boxInsideViewport = (selector) => {"
+           "const element = document.querySelector(selector);"
+           "if (!element) return false;"
+           "const style = getComputedStyle(element);"
+           "const box = element.getBoundingClientRect();"
+           "return style.display !== 'none' && style.visibility !== 'hidden' &&"
+             "box.width > 0 && box.height > 0 && box.left >= -1 && box.top >= -1 &&"
+             "box.right <= innerWidth + 1 && box.bottom <= innerHeight + 1;"
+         "};"
+         "const tabAuditValid = ['groups', 'classification', 'stage'].every((view) => {"
+           "const tab = document.querySelector(`[data-mobile-view=\"${view}\"]`);"
+           "tab.click();"
+           "const panel = document.getElementById(`mobile${view[0].toUpperCase()}${view.slice(1)}Panel`);"
+           "const tabBox = tab.getBoundingClientRect();"
+           "const hitTarget = document.elementFromPoint(tabBox.left + tabBox.width / 2, tabBox.top + tabBox.height / 2);"
+           "return game.hud.mobileView === view && tab.classList.contains('active') &&"
+             "tab.getAttribute('aria-selected') === 'true' && !panel.classList.contains('is-hidden') &&"
+             "boxInsideViewport(`#${panel.id}`) && hitTarget && hitTarget.closest('[data-mobile-view]') === tab;"
+         "});"
+         "routeButton.click();"
+         "game.toggleTeamOrders();"
+         "const teamOrderPanel = document.getElementById('teamOrderPanel');"
+         "const teamOrderButtons = [...teamOrderPanel.querySelectorAll('[data-team-order]')];"
+         "const teamOrderPanelBox = teamOrderPanel.getBoundingClientRect();"
+         "const teamOrderFontSize = parseFloat(getComputedStyle(teamOrderButtons[0].querySelector('span')).fontSize);"
+         "const teamOrderMinButtonHeight = Math.min(...teamOrderButtons.map((item) => item.getBoundingClientRect().height));"
+         "const teamOrderColumns = getComputedStyle(teamOrderPanel.querySelector('[role=group]')).gridTemplateColumns.trim().split(/\\s+/).length;"
+         "const teamOrdersValid = !teamOrderPanel.classList.contains('is-hidden') &&"
+           "boxInsideViewport('#teamOrderPanel') && document.getElementById('teamOrderButton').getAttribute('aria-expanded') === 'true' &&"
+           "teamOrderButtons.length === 4 && teamOrderColumns === 2 &&"
+           "teamOrderMinButtonHeight >= (innerWidth > 900 ? 72 : 51) &&"
+           "teamOrderFontSize >= (innerWidth > 900 ? 15 : 11);"
+         "game.closeTeamOrders();"
+         "game.pause();"
+         "const pauseOverlayValid = !document.getElementById('pauseOverlay').classList.contains('is-hidden') &&"
+           "boxInsideViewport('#pauseOverlay .compact-card');"
+         "game.resume();"
+         "game.openTeamsDirectory();"
+         "const teamsDirectoryValid = !document.getElementById('teamsDirectoryOverlay').classList.contains('is-hidden') &&"
+           "boxInsideViewport('#teamsDirectoryOverlay .team-browser-shell') &&"
+           "document.querySelectorAll('#teamDirectoryTabs button').length === 10;"
+         "game.closeTeamsDirectory();"
+         "game.openTeamSelection(1);"
+         "const selectionShell = document.querySelector('#teamSelectionOverlay .team-browser-shell');"
+         "const selectionButton = document.getElementById('confirmTeamSelectionButton');"
+         "selectionShell.scrollTop = selectionShell.scrollHeight;"
+         "const selectionShellBox = selectionShell.getBoundingClientRect();"
+         "const selectionButtonBox = selectionButton.getBoundingClientRect();"
+         "const selectionCanScroll = selectionShell.scrollHeight > selectionShell.clientHeight + 1;"
+         "const selectionButtonSticky = getComputedStyle(selectionButton).position === 'sticky' &&"
+           "(!selectionCanScroll || (selectionButtonBox.top >= selectionShellBox.top - 1 && selectionButtonBox.top <= selectionShellBox.top + 16)) &&"
+           "boxInsideViewport('#confirmTeamSelectionButton');"
+         "const teamSelectionValid = !document.getElementById('teamSelectionOverlay').classList.contains('is-hidden') &&"
+           "boxInsideViewport('#teamSelectionOverlay .team-browser-shell') &&"
+           "document.querySelectorAll('#teamSelectionGrid .team-select-card').length === 10 && selectionButtonSticky;"
+         "selectionShell.scrollTop = 0;"
+         "game.closeTeamSelection();"
+         "game.openTutorial();"
+         "const tutorialValid = !document.getElementById('tutorialOverlay').classList.contains('is-hidden') &&"
+           "boxInsideViewport('#tutorialOverlay > article');"
+         "document.getElementById('tutorialOverlay').classList.add('is-hidden');"
+         "game.state = 'RACING';"
          "game.notify('ATAQUE DE PRUEBA', 'urgent');"
          "const message = feed.querySelector('.event-message');"
          "const tabsRect = document.getElementById('mobileViewTabs').getBoundingClientRect();"
          "const speedRect = document.getElementById('raceSpeedButton').getBoundingClientRect();"
          "const cameraRect = switcher.getBoundingClientRect();"
-         "const floatingNavigationSeparated = innerWidth > 900 || (tabsRect.right <= speedRect.left && speedRect.right <= cameraRect.left);"
+         "const floatingNavigationSeparated = tabsRect.right <= speedRect.left && speedRect.right <= cameraRect.left;"
          "const racePointCard = document.getElementById('racePointCard');"
          "followCard.classList.remove('is-hidden');"
          "racePointCard.classList.remove('is-hidden');"
@@ -118,6 +186,7 @@ static int testResult = 1;
            "viewAfterRoute, viewAfterPanelReturn, panelsHiddenAfterReturn,"
            "routeHitView: routeHit && routeHit.closest('[data-mobile-view]') && routeHit.closest('[data-mobile-view]').dataset.mobileView,"
            "groupsVisible, groupsRows, viewAfterGroup,"
+           "tabAuditValid, teamOrdersValid, teamOrderColumns, teamOrderFontSize, teamOrderMinButtonHeight, teamOrderPanelWidth: teamOrderPanelBox.width, pauseOverlayValid, teamsDirectoryValid, teamSelectionValid, selectionButtonSticky, tutorialValid,"
            "desktopGroupsDisplay: getComputedStyle(desktopGroups).display,"
            "gapDisplay: gapBlock ? getComputedStyle(gapBlock).display : 'none',"
            "brandDisplay: stageBrand ? getComputedStyle(stageBrand).display : 'none',"
@@ -128,6 +197,7 @@ static int testResult = 1;
            "messageText: message && message.textContent,"
            "messageWidth: message ? message.getBoundingClientRect().width : 0,"
            "posePixelDifference,"
+           "aggressiveFontSize, headerLabelFontSize, headerValueFontSize, headerTextFits, headerClipped, lateralRiderScale, topRiderScale,"
            "touchTargetsValid, legacyProfileRemoved,"
            "floatingNavigationSeparated, popupPriorityValid,"
            "hitId: hit && hit.id,"
@@ -150,32 +220,45 @@ static int testResult = 1;
             [result[@"relayWheelHidden"] boolValue] &&
             [result[@"jerseyShownOnClick"] boolValue] &&
             [result[@"brandDisplay"] isEqual:@"none"] &&
-            ([result[@"viewportWidth"] doubleValue] > 900 ||
-                [result[@"mobileView"] isEqual:@"race"]) &&
-            ([result[@"viewportWidth"] doubleValue] > 900 ||
-                ([result[@"viewAfterRoute"] isEqual:@"race"] &&
-                 [result[@"viewAfterPanelReturn"] isEqual:@"race"] &&
-                 [result[@"panelsHiddenAfterReturn"] boolValue] &&
-                 [result[@"routeHitView"] isEqual:@"race"])) &&
-            ([result[@"viewportWidth"] doubleValue] <= 900 ||
-                [result[@"actionDetailDisplay"] isEqual:@"none"]) &&
-            ([result[@"viewportWidth"] doubleValue] > 900 ||
-                ([result[@"groupsVisible"] boolValue] &&
-                 [result[@"groupsRows"] integerValue] > 0 &&
-                 [result[@"viewAfterGroup"] isEqual:@"race"] &&
-                 [result[@"desktopGroupsDisplay"] isEqual:@"none"] &&
-                 [result[@"gapDisplay"] isEqual:@"none"])) &&
+            [result[@"mobileView"] isEqual:@"race"] &&
+            [result[@"viewAfterRoute"] isEqual:@"race"] &&
+            [result[@"viewAfterPanelReturn"] isEqual:@"race"] &&
+            [result[@"panelsHiddenAfterReturn"] boolValue] &&
+            [result[@"routeHitView"] isEqual:@"race"] &&
+            [result[@"actionDetailDisplay"] isEqual:@"none"] &&
+            [result[@"groupsVisible"] boolValue] &&
+            [result[@"groupsRows"] integerValue] > 0 &&
+            [result[@"viewAfterGroup"] isEqual:@"race"] &&
+            [result[@"desktopGroupsDisplay"] isEqual:@"none"] &&
+            [result[@"gapDisplay"] isEqual:@"none"] &&
+            [result[@"tabAuditValid"] boolValue] &&
+            [result[@"teamOrdersValid"] boolValue] &&
+            [result[@"pauseOverlayValid"] boolValue] &&
+            [result[@"teamsDirectoryValid"] boolValue] &&
+            [result[@"teamSelectionValid"] boolValue] &&
+            [result[@"tutorialValid"] boolValue] &&
             [result[@"feedZIndex"] integerValue] > [result[@"groupsZIndex"] integerValue] &&
             [result[@"messageText"] isEqual:@"ATAQUE DE PRUEBA"] &&
             [result[@"messageWidth"] doubleValue] > 0 &&
             [result[@"posePixelDifference"] integerValue] >= 100 &&
+            [result[@"aggressiveFontSize"] doubleValue] >=
+                ([result[@"viewportWidth"] doubleValue] > 900 ? 14 :
+                  [result[@"viewportWidth"] doubleValue] <= 360 ? 6.3 : 6.5) &&
+            [result[@"headerLabelFontSize"] doubleValue] >=
+                ([result[@"viewportWidth"] doubleValue] > 900 ? 7 : 9) &&
+            [result[@"headerValueFontSize"] doubleValue] >=
+                ([result[@"viewportWidth"] doubleValue] > 900 ? 15 : 19) &&
+            [result[@"headerTextFits"] boolValue] &&
+            [result[@"lateralRiderScale"] doubleValue] >=
+                ([result[@"viewportWidth"] doubleValue] > 900 ? 1 : 0.73) &&
+            [result[@"topRiderScale"] doubleValue] >=
+                ([result[@"viewportWidth"] doubleValue] > 900 ? 1 : 1.12) &&
             [result[@"touchTargetsValid"] boolValue] &&
             [result[@"legacyProfileRemoved"] boolValue] &&
             [result[@"floatingNavigationSeparated"] boolValue] &&
             [result[@"popupPriorityValid"] boolValue] &&
             [result[@"hitId"] isEqual:@"sideCameraButton"] &&
-            [result[@"height"] doubleValue] >=
-                ([result[@"viewportWidth"] doubleValue] <= 900 ? 44 : 38) &&
+            [result[@"height"] doubleValue] >= 44 &&
             [result[@"left"] doubleValue] >= 0 &&
             [result[@"right"] doubleValue] <= [result[@"viewportWidth"] doubleValue] &&
             [result[@"top"] doubleValue] >= 0 &&
@@ -211,7 +294,7 @@ static int testResult = 1;
              "game.race.player.distance = game.cameraFocusKm;"
              "%@"
              "game.render();"
-             "if (innerWidth <= 900) game.hud.setMobileView('%@');"
+             "game.hud.setMobileView('%@');"
              "%@"
              "return true;"
              "})();",

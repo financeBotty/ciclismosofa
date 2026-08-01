@@ -30,9 +30,11 @@ const uiRules = globalThis.CiclimoUI || {
   riderState: () => "EN GRUPO"
 };
 const renderRules = globalThis.CiclimoRender || {
-  lateralViewportScale: (width) => width <= 480 ? 0.66 : width <= 900 ? 0.76 : 1,
+  lateralViewportScale: (width) => width <= 480 ? 0.73 : width <= 900 ? 0.82 : 1,
+  topRiderScale: (width) => width <= 900 ? 1.12 : 1,
   raceStructureScale: (width) => width <= 520 ? 0.58 : width <= 900 ? 0.72 : 1
 };
+const FIXED_DIFFICULTY = "hard";
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -151,6 +153,17 @@ const TEAM_DEFINITIONS = [
   }
 ];
 const TEAM_BY_ID = new Map(TEAM_DEFINITIONS.map((team) => [team.id, team]));
+const repairLegacyDuplicateNames = (roster) => {
+  let solarisLeaderFound = false;
+  return roster.map((rider) => {
+    if (rider.team !== "Solaris" || rider.name !== "Iker Laredo") return { ...rider };
+    if (rider.role === "leader" && !solarisLeaderFound) {
+      solarisLeaderFound = true;
+      return { ...rider };
+    }
+    return { ...rider, name: "Iker Montiel" };
+  });
+};
 const STAGE_ROLES = {
   leader: { label: "LÍDER", short: "Líder", description: "Objetivo principal del equipo" },
   support: { label: "GREGARIO", short: "Gregario", description: "Protege y trabaja para el líder" },
@@ -1547,7 +1560,7 @@ class Race {
     this.groupTrends = [];
     this.currentBiomeId = this.road.biomeAt(0).id;
     this.pointStandings = { mountain: new Map(), sprint: new Map() };
-    this.difficulty = this.stageDefinition.finale ? "easy" : difficulty;
+    this.difficulty = difficulty || FIXED_DIFFICULTY;
     this.difficultyConfig = this.difficulty === "easy"
       ? { reactionMultiplier: 2.2, errorRate: 0.48, mistakeLowChance: 0.09, coordination: 0.52, warningLead: 1.65 }
       : this.difficulty === "hard"
@@ -1684,6 +1697,7 @@ class Race {
 
   createPeloton() {
     this.teams = TEAM_DEFINITIONS.map((team) => ({ ...team, leader: { ...team.leader } }));
+    const usedRiderNames = new Set(TEAM_DEFINITIONS.map((team) => team.leader.name));
     const playerTeamIndex = Math.max(0, this.teams.findIndex((team) => team.id === this.playerTeamId));
     const playerTeam = this.teams[playerTeamIndex];
     const profile = PLAYER_PROFILES[this.playerProfile];
@@ -1730,7 +1744,18 @@ class Race {
         const secondSurname = nationalIndex >= nation.first.length
           ? `-${nation.last[(nationalIndex + riderIndex + 2) % nation.last.length]}` : "";
         const teamLeader = slot === 0 ? team.leader : null;
-        const name = teamLeader?.name || `${firstName} ${firstSurname}${secondSurname}`;
+        let name = teamLeader?.name || `${firstName} ${firstSurname}${secondSurname}`;
+        if (!teamLeader) {
+          let surnameOffset = 1;
+          while (usedRiderNames.has(name) && surnameOffset < nation.last.length) {
+            const alternateSurname = nation.last[
+              (nationalIndex + riderIndex + surnameOffset) % nation.last.length
+            ];
+            name = `${firstName} ${alternateSurname}${secondSurname}`;
+            surnameOffset += 1;
+          }
+          usedRiderNames.add(name);
+        }
         const base = role === "leader"
           ? { climbing: 82, sprint: 80, endurance: 86, aggression: 76, intelligence: 88 }
           : role === "sprinter"
@@ -3123,7 +3148,7 @@ class HUD {
       panel.setAttribute("aria-hidden", String(hidden));
     });
     const teamButton = document.getElementById("teamOrderButton");
-    if (teamButton && window.innerWidth <= 900) {
+    if (teamButton) {
       teamButton.classList.toggle("is-hidden", this.mobileView !== "race" || Boolean(this.game.race?.timeTrial));
       if (this.mobileView !== "race") this.game.closeTeamOrders();
     }
@@ -3466,7 +3491,7 @@ class HUD {
   }
 
   updateMobilePanels(race, force = false) {
-    if (window.innerWidth > 900 || this.mobileView === "race") return;
+    if (this.mobileView === "race") return;
     if (!force && performance.now() - this.lastMobilePanelUpdate < 400) return;
     this.lastMobilePanelUpdate = performance.now();
     const playerPosition = race.positionOf(race.player);
@@ -3719,10 +3744,7 @@ class Game {
   loadStorage() {
     const stored = safeJsonParse(safeStorageGet("ultimoPuerto.stats"), null);
     const source = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
-    const storedDifficulty = safeStorageGet("ultimoPuerto.difficulty");
     const storedWeather = safeStorageGet("ultimoPuerto.weather");
-    const difficulty = ["easy", "normal", "hard"].includes(source.difficulty)
-      ? source.difficulty : ["easy", "normal", "hard"].includes(storedDifficulty) ? storedDifficulty : "normal";
     const weather = ["dynamic", "dry", "rain"].includes(source.weather)
       ? source.weather : ["dynamic", "dry", "rain"].includes(storedWeather) ? storedWeather : "dynamic";
     const systemReducedMotion = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
@@ -3731,7 +3753,7 @@ class Game {
       bestTime: Number.isFinite(source.bestTime) && source.bestTime > 0 ? source.bestTime : null,
       races: Number.isFinite(source.races) && source.races >= 0 ? Math.floor(source.races) : 0,
       wins: Number.isFinite(source.wins) && source.wins >= 0 ? Math.floor(source.wins) : 0,
-      difficulty,
+      difficulty: FIXED_DIFFICULTY,
       weather,
       reducedMotion: typeof source.reducedMotion === "boolean" ? source.reducedMotion : systemReducedMotion,
       haptics: typeof source.haptics === "boolean" ? source.haptics : false,
@@ -3740,7 +3762,7 @@ class Game {
   }
 
   saveStorage() {
-    this.storage.difficulty = document.getElementById("difficultySelect").value;
+    this.storage.difficulty = FIXED_DIFFICULTY;
     this.storage.weather = document.getElementById("weatherSelect").value;
     this.storage.reducedMotion = Boolean(this.reducedMotion);
     this.storage.haptics = Boolean(this.hapticsEnabled);
@@ -3755,7 +3777,6 @@ class Game {
     document.getElementById("bestPosition").textContent = this.storage.bestPosition ? ordinal(this.storage.bestPosition) : "—";
     document.getElementById("raceCount").textContent = this.storage.races;
     document.getElementById("winCount").textContent = this.storage.wins;
-    document.getElementById("difficultySelect").value = this.storage.difficulty || "normal";
     document.getElementById("weatherSelect").value = this.storage.weather || "dynamic";
     this.syncAccessibilityButtons();
   }
@@ -3774,9 +3795,9 @@ class Game {
     document.querySelectorAll("[data-slot-delete]").forEach((button) => {
       button.addEventListener("click", () => this.deleteSaveSlot(Number(button.dataset.slotDelete)));
     });
-    ["difficultySelect", "weatherSelect"].forEach((id) => {
+    ["weatherSelect"].forEach((id) => {
       document.getElementById(id).addEventListener("change", () => {
-        this.storage.difficulty = document.getElementById("difficultySelect").value;
+        this.storage.difficulty = FIXED_DIFFICULTY;
         this.storage.weather = document.getElementById("weatherSelect").value;
         this.saveStorage();
       });
@@ -3860,26 +3881,6 @@ class Game {
     });
     document.querySelectorAll("[data-camera-mode]").forEach((button) => {
       button.addEventListener("click", () => this.setCameraMode(button.dataset.cameraMode));
-    });
-    const volumeRange = document.getElementById("volumeRange");
-    const soundToggle = document.getElementById("soundToggle");
-    volumeRange.value = String(Math.round(this.audio.volume * 100));
-    const syncSoundButton = () => {
-      soundToggle.setAttribute("aria-pressed", String(this.audio.enabled));
-      soundToggle.textContent = this.audio.enabled ? "SONIDO · ON" : "SONIDO · OFF";
-    };
-    syncSoundButton();
-    volumeRange.addEventListener("input", () => {
-      this.audio.setVolume(Number(volumeRange.value) / 100);
-      if (this.audio.enabled) {
-        this.audio.unlock();
-        this.audio.play("power");
-      }
-    });
-    soundToggle.addEventListener("click", () => {
-      this.audio.toggle();
-      syncSoundButton();
-      if (this.audio.enabled) this.audio.play("power");
     });
     this.canvas.addEventListener("pointermove", (event) => {
       this.canvas.style.cursor = this.riderAtPointer(event) ? "pointer" : "default";
@@ -4248,11 +4249,11 @@ class Game {
   restoreTour(save, slot) {
     const source = save.tour;
     const playerProfile = DEFAULT_PLAYER_PROFILE;
-    const roster = source.roster.map((rider) => {
+    const roster = repairLegacyDuplicateNames(source.roster.map((rider) => {
       if (save.version !== 1 || rider.role !== "leader") return { ...rider };
       const team = TEAM_DEFINITIONS.find((candidate) => candidate.name === rider.team);
       return team ? { ...rider, ...team.leader, role: "leader", roleLabel: "LÍDER" } : { ...rider };
-    });
+    }));
     if (roster[0] && !PLAYER_PROFILES[source.playerProfile]) {
       const fallback = PLAYER_PROFILES.allrounder;
       roster[0] = {
@@ -4369,7 +4370,7 @@ class Game {
 
   createCurrentRace(options = {}) {
     const stage = this.tour.stages[this.tour.stageIndex];
-    const difficulty = stage.finale ? "easy" : document.getElementById("difficultySelect").value;
+    const difficulty = FIXED_DIFFICULTY;
     const weather = document.getElementById("weatherSelect").value;
     const general = this.getTourRanking("time");
     const timeTrialOrder = stage.type === "itt" && general.length
@@ -4872,7 +4873,7 @@ class Game {
       this.tour = this.createTour();
     }
     this.ensureTourRoster();
-    const difficulty = document.getElementById("difficultySelect").value;
+    const difficulty = FIXED_DIFFICULTY;
     this.storage.difficulty = difficulty;
     this.saveStorage();
     this.race = this.createCurrentRace();
@@ -5176,7 +5177,7 @@ class Game {
       ability = rider.climbing * 0.3 + rider.endurance * 0.3 +
         rider.sprint * 0.18 + rider.intelligence * 0.14 + rider.technique * 0.08;
     }
-    const difficulty = stage.finale ? "easy" : document.getElementById("difficultySelect").value;
+    const difficulty = FIXED_DIFFICULTY;
     const playerModifier = rider.tourId === 0
       ? difficulty === "easy" ? 3.5 : difficulty === "hard" ? -2 : 0.75
       : 0;
@@ -5603,7 +5604,7 @@ class Game {
     this.cameraMode = mode;
     safeStorageSet("ultimoPuerto.camera", this.cameraMode);
     this.updateCameraButton();
-    if (window.innerWidth <= 900 && this.hud?.mobileView !== "race") {
+    if (this.hud?.mobileView !== "race") {
       this.hud.setMobileView("race");
     }
     if (changed) {
@@ -6439,8 +6440,12 @@ class Game {
     ctx.restore();
   }
 
-  lateralRiderViewportScale(viewportWidth = window.innerWidth) {
+  lateralRiderViewportScale(viewportWidth = globalThis.window?.innerWidth || this.width || 1280) {
     return renderRules.lateralViewportScale(viewportWidth);
+  }
+
+  topRiderViewportScale(viewportWidth = globalThis.window?.innerWidth || this.width || 1280) {
+    return renderRules.topRiderScale(viewportWidth);
   }
 
   raceStructureScale(viewportWidth = this.width || globalThis.window?.innerWidth || 1280) {
@@ -6752,7 +6757,7 @@ class Game {
         continue;
       }
       const originalScale = clamp(this.roadHalfWidth / 135, 0.8, 1.24);
-      const scale = originalScale * 0.62;
+      const scale = originalScale * 0.62 * this.topRiderViewportScale();
       const hitScale = Math.max(scale, 0.86);
       this.drawCyclist(ctx, item.rider, item.point.x, item.point.y, scale, item.rider === player, item.angle);
       this.riderHitAreas.push({ rider: item.rider, x: item.point.x, y: item.point.y, width: 48 * hitScale, height: 68 * hitScale });

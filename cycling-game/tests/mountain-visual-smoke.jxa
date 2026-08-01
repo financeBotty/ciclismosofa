@@ -56,12 +56,15 @@ assertMountain(SIDE_ROAD_LANE_DEPTH >= 10,
   "Los cambios de carril siguen sin apreciarse en la vista lateral");
 assertMountain(Math.abs(visualGame.sideLaneOffset(1)) <= SIDE_ROAD_ASPHALT_WIDTH / 2 - 8,
   "Un cambio de carril puede sacar al ciclista del asfalto lateral");
-assertMountain(visualGame.lateralRiderViewportScale(390) <= 0.68,
-  "Los ciclistas laterales siguen siendo demasiado grandes en un móvil estrecho");
-assertMountain(visualGame.lateralRiderViewportScale(800) < 0.8,
-  "Los ciclistas laterales no se reducen en móviles grandes");
+assertMountain(visualGame.lateralRiderViewportScale(390) === 0.73,
+  "La nueva escala de los ciclistas laterales no se aplica en móvil estrecho");
+assertMountain(visualGame.lateralRiderViewportScale(800) === 0.82,
+  "La nueva escala de los ciclistas laterales no se aplica en móviles grandes");
 assertMountain(visualGame.lateralRiderViewportScale(1200) === 1,
   "La reducción móvil está alterando también la vista lateral de escritorio");
+assertMountain(visualGame.topRiderViewportScale(390) === 1.12 &&
+  visualGame.topRiderViewportScale(800) === 1.12 && visualGame.topRiderViewportScale(1200) === 1,
+  "La ampliación móvil de los ciclistas cenitales no es estable");
 assertMountain(visualGame.raceStructureScale(390) === 0.58 &&
   visualGame.raceStructureScale(800) === 0.72 && visualGame.raceStructureScale(1200) === 1,
   "Metas y vehículos no comparten una escala estructural responsive estable");
@@ -144,7 +147,7 @@ assertMountain(typeof vehicleGame.renderRaceVehicles === "function" &&
   typeof vehicleGame.drawRaceVehicle === "function" &&
   typeof vehicleGame.drawLateralRaceVehicle === "function",
   "Falta alguna vista de los vehículos de carrera");
-assertMountain(vehicleGame.lateralRiderViewportScale(390) === 0.66 &&
+assertMountain(vehicleGame.lateralRiderViewportScale(390) === 0.73 &&
   vehicleGame.lateralRiderViewportScale(1280) === 1,
   "Vehículos y ciclistas no pueden compartir una escala móvil estable");
 

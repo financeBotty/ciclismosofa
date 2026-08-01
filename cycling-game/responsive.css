@@ -1,5 +1,5 @@
-/* Capa final y única para ergonomía móvil. Mantiene los controles visualmente
-   compactos, pero nunca reduce su superficie táctil por debajo de 44 px. */
+/* Ergonomía común en móvil y web: controles compactos con una superficie
+   interactiva mínima de 44 px. */
 .race-context-strip {
   position: absolute;
   z-index: 17;
@@ -69,7 +69,7 @@
 .classification-jump { margin-left: auto; padding: 0 7px; color: #07131f; background: var(--cyan); font-size: 7px; }
 .mobile-jump-player { min-width: 62px; padding: 0 6px; color: #07131f; background: var(--lime); font-size: 8px; }
 
-@media (max-width: 900px) {
+@media all {
   .game-shell { grid-template-rows: 116px minmax(220px, 1fr) 190px; }
   .broadcast-header {
     height: 116px;
@@ -362,10 +362,378 @@
 
 @media (max-width: 360px) {
   .mobile-view-tabs button i { display: none; }
-  .broadcast-header #remainingKm { font-size: 14px; }
+  .broadcast-header #remainingKm { font-size: 19px; }
 }
 
-@media (min-width: 901px) {
+/* Lectura móvil: cifras mayores dentro de la misma cabecera compacta. */
+@media (max-width: 900px) {
+  .broadcast-header .race-data {
+    grid-template-columns: .72fr .82fr 1.32fr 1.14fr;
+  }
+  .broadcast-header .data-block .label,
+  .broadcast-header .race-data .position-tile > .label {
+    font-size: clamp(9px, 2.6vw, 10px);
+    letter-spacing: .02em;
+  }
+  .broadcast-header .data-block strong,
+  .broadcast-header .main-distance strong,
+  .broadcast-header .race-data .position-tile strong {
+    font-size: clamp(19px, 5.6vw, 22px);
+  }
+  .broadcast-header .profile-labels {
+    font-size: 9px;
+    line-height: 12px;
+  }
+}
+
+@media not all {
   .dashboard-mobile-nav,
   .result-view-tabs { display: none; }
+}
+
+/* Menús simplificados: menos texto secundario, decisiones más claras y
+   tipografía legible sin perder acceso a listados largos. */
+.menu-card {
+  width: min(620px, 100%);
+  gap: 9px;
+  padding: clamp(14px, 2.2vw, 22px);
+}
+.menu-card .menu-copy,
+.game-mode-choice small,
+.quick-mode-panel p,
+.save-slots > header small,
+.save-slot > span small { display: none; }
+.menu-card .eyebrow { font-size: 13px; }
+.menu-card h2 {
+  margin: 0;
+  font-size: clamp(54px, min(8vw, 11vh), 82px);
+  line-height: .8;
+}
+.game-mode-choice button {
+  min-height: 58px;
+  padding: 8px 12px;
+}
+.game-mode-choice i { font-size: 27px; }
+.game-mode-choice span { font-size: clamp(15px, 2.2vw, 18px); }
+.menu-section-label,
+.save-slots > header { font-size: 13px; }
+.menu-options label,
+.audio-options label { font-size: 13px; }
+.menu-options select {
+  min-height: 46px;
+  font-size: 17px;
+}
+.audio-options button,
+.accessibility-options button {
+  min-height: 44px;
+  font-size: 12px;
+}
+.accessibility-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.save-slot {
+  min-height: 48px;
+  grid-template-columns: 58px minmax(0, 1fr) 86px 36px;
+}
+.save-slot > strong,
+.save-slot > span b,
+.slot-action { font-size: 12px; }
+.quick-mode-panel {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, .8fr);
+  padding: 8px;
+}
+.quick-mode-panel > div { padding: 5px; }
+.quick-mode-panel > div span { font-size: 12px; }
+.quick-mode-panel > div strong { font-size: 18px; }
+#quickRaceButton {
+  min-height: 60px;
+  padding: 9px 12px;
+}
+#quickRaceButton span { font-size: 16px; }
+#quickRaceButton small { display: none; }
+.record-strip {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.record-strip span {
+  width: auto;
+  max-width: none;
+  font-size: 11px;
+}
+.record-strip strong { font-size: 19px; }
+
+.mobile-view-tabs button {
+  font-size: clamp(9px, 2.35vw, 12px);
+  letter-spacing: 0;
+}
+.mobile-view-panel > header,
+.mobile-route-return { font-size: 11px; }
+.mobile-view-panel > header strong { font-size: 13px; }
+.mobile-classification-panel li,
+.mobile-groups-list .race-group { font-size: 12px; }
+.mobile-stage-stats span { font-size: 9px; }
+.mobile-stage-stats strong { font-size: 14px; }
+
+.dashboard-mobile-nav button,
+.result-view-tabs button {
+  min-height: 48px;
+  font-size: 12px;
+}
+.dashboard-stage-scenery,
+.dashboard-objective small,
+.team-management-help,
+.stage-choice small { display: none; }
+.dashboard-section-title { font-size: 12px; }
+.next-stage-card h3 { font-size: clamp(22px, 4vw, 32px); }
+.stage-choice button { min-height: 54px; }
+.stage-choice button span { font-size: 13px; }
+
+.team-browser-shell > p,
+.team-select-card small { display: none; }
+.team-browser-shell h2 { font-size: clamp(24px, 5vw, 38px); }
+.team-browser-shell > header > button {
+  min-width: 46px;
+  min-height: 46px;
+  font-size: 24px;
+}
+.team-select-card strong { font-size: 14px; }
+.team-select-card span,
+.team-directory-tabs button { font-size: 11px; }
+.directory-rider { font-size: 11px; }
+
+.tutorial-overlay h2 { font-size: clamp(27px, 6vw, 38px); }
+.tutorial-overlay article > p:not(.eyebrow) { font-size: 15px; }
+.tutorial-actions button { font-size: 14px; }
+.pause-overlay .compact-card h2 { font-size: clamp(42px, 10vw, 72px); }
+.pause-overlay .compact-card button,
+.results-actions button { font-size: 13px; }
+.classification-card h3 { font-size: 11px; }
+
+@media (max-width: 600px) {
+  .menu-card { gap: 7px; padding: 12px; }
+  .menu-card .eyebrow { font-size: 10px; }
+  .menu-card h2 { font-size: clamp(46px, 14vw, 60px); }
+  .game-mode-choice button { min-height: 54px; padding: 7px; }
+  .game-mode-choice i { min-width: 25px; font-size: 23px; }
+  .game-mode-choice span { font-size: 14px; }
+  .menu-section-label,
+  .save-slots > header,
+  .menu-options label,
+  .audio-options label { font-size: 11px; }
+  .save-slot {
+    min-height: 44px;
+    grid-template-columns: 48px minmax(0, 1fr) 70px 32px;
+    gap: 4px;
+    padding: 4px;
+  }
+  .save-slot > strong,
+  .save-slot > span b,
+  .slot-action { font-size: 10px; }
+  .quick-mode-panel { grid-template-columns: minmax(0, 1fr) minmax(150px, .9fr); }
+  .quick-mode-panel > div strong { font-size: 14px; }
+  #quickRaceButton span { font-size: 13px; }
+  .record-strip span { font-size: 9px; }
+}
+
+@media (max-height: 620px) {
+  .menu-card .eyebrow,
+  .record-strip { display: none; }
+  .menu-card h2 { font-size: clamp(40px, 10vh, 54px); }
+  .game-mode-choice button { min-height: 48px; }
+  .audio-options button,
+  .accessibility-options button { min-height: 38px; }
+}
+
+/* Portada esencial: dificultad fija, sin controles de audio y sin necesidad
+   de desplazarse para iniciar una partida. */
+.menu-overlay { background: #071523; }
+.menu-card {
+  max-height: none;
+  overflow: visible;
+  border-width: 2px;
+  border-left-width: 5px;
+  background: #10283d;
+  box-shadow: 4px 4px 0 #05090e;
+}
+.menu-card > .eyebrow,
+.record-strip { display: none; }
+.menu-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+.menu-options label { width: 100%; }
+.game-mode-choice button,
+.menu-options select,
+.accessibility-options button,
+.save-slot,
+.slot-action,
+.slot-delete,
+.quick-mode-panel,
+#quickRaceButton {
+  border-width: 2px;
+  box-shadow: none;
+}
+.game-mode-choice button,
+.accessibility-options button { background: #1c4059; }
+.game-mode-choice button.active,
+#quickRaceButton,
+.slot-action { background: var(--lime); }
+.quick-mode-panel { background: #0d2232; }
+.save-slot { background: #0d2232; }
+
+.team-browser-shell,
+.tutorial-overlay article,
+.pause-overlay .compact-card {
+  border-width: 2px;
+  border-left-width: 5px;
+  box-shadow: 4px 4px 0 #05090e;
+}
+
+@media (min-width: 601px) and (max-height: 620px) {
+  .menu-overlay {
+    justify-content: center;
+    padding: 6px;
+  }
+  .menu-card {
+    width: calc(100vw - 12px);
+    max-width: 820px;
+    grid-template-columns: minmax(250px, .85fr) minmax(330px, 1.15fr);
+    grid-template-rows: auto auto auto 1fr;
+    gap: 7px 12px;
+    padding: 10px 14px;
+  }
+  .menu-card h2 { grid-column: 1; grid-row: 1; }
+  .game-mode-choice { grid-column: 1; grid-row: 2; }
+  .menu-options { grid-column: 1; grid-row: 3; }
+  .accessibility-options { grid-column: 1; grid-row: 4; }
+  .mode-panel {
+    grid-column: 2;
+    grid-row: 1 / 5;
+    width: auto;
+    min-width: 0;
+    align-self: center;
+  }
+  .save-slots,
+  .quick-mode-panel { min-width: 0; }
+  .menu-card h2 { font-size: clamp(40px, 11vh, 52px); }
+}
+
+/* Escala web: aprovecha el ancho de escritorio sin alterar la composición
+   móvil ni reducir la superficie disponible para la carrera. */
+@media (min-width: 901px) {
+  .menu-card {
+    width: min(720px, 100%);
+    gap: 12px;
+    padding: 24px;
+  }
+  .menu-card h2 { font-size: clamp(76px, min(7vw, 11vh), 94px); }
+  .game-mode-choice button { min-height: 70px; padding: 12px 16px; }
+  .game-mode-choice span { font-size: 22px; }
+  .menu-options label,
+  .save-slots > header { font-size: 16px; }
+  .menu-options select { min-height: 54px; font-size: 21px; }
+  .accessibility-options button { min-height: 50px; font-size: 15px; }
+  .save-slot {
+    min-height: 58px;
+    grid-template-columns: 68px minmax(0, 1fr) 100px 42px;
+  }
+  .save-slot > strong,
+  .save-slot > span b,
+  .slot-action { font-size: 15px; }
+  .quick-mode-panel > div span { font-size: 15px; }
+  .quick-mode-panel > div strong { font-size: 22px; }
+  #quickRaceButton { min-height: 72px; }
+  #quickRaceButton span { font-size: 20px; }
+
+  .mobile-view-tabs button { font-size: 15px; }
+  .mobile-view-panel > header,
+  .mobile-route-return { font-size: 14px; }
+  .mobile-view-panel > header strong { font-size: 16px; }
+  .mobile-classification-panel li,
+  .mobile-groups-list .race-group { font-size: 14px; }
+  .mobile-stage-stats span { font-size: 11px; }
+  .mobile-stage-stats strong { font-size: 17px; }
+
+  .dashboard-mobile-nav button,
+  .result-view-tabs button { font-size: 15px; }
+  .dashboard-section-title { font-size: 15px; }
+  .stage-choice button span { font-size: 16px; }
+  .dashboard-standing h3,
+  .classification-card h3 { font-size: 14px; }
+  .dashboard-standing li,
+  .classification-list li,
+  .player-stats .stat { font-size: 13px; }
+
+  .team-browser-shell h2 { font-size: 40px; }
+  .team-select-card strong { font-size: 17px; }
+  .team-select-card span,
+  .team-directory-tabs button,
+  .directory-rider { font-size: 14px; }
+  .tutorial-overlay article > p:not(.eyebrow) { font-size: 18px; }
+  .tutorial-actions button,
+  .pause-overlay .compact-card button,
+  .results-actions button { font-size: 16px; }
+
+  /* En escritorio conserva la misma interacción móvil de tarjetas 2 × 2,
+     pero con una escala proporcionada al espacio disponible. */
+  .team-order-button {
+    right: 16px;
+    bottom: 16px;
+    min-width: 142px;
+    height: 52px;
+    padding: 0 14px;
+    gap: 9px;
+    font-size: 14px;
+  }
+  .team-order-button span { font-size: 21px; }
+  .team-order-panel {
+    right: 16px;
+    bottom: 80px;
+    width: min(460px, calc(100% - 32px));
+    padding: 12px;
+  }
+  .team-order-panel header {
+    padding-bottom: 10px;
+    font-size: 14px;
+  }
+  .team-order-panel header button {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  .team-order-panel > div { gap: 8px; }
+  .team-order-panel [data-team-order] {
+    min-height: 72px;
+    gap: 11px;
+    padding: 10px 12px;
+  }
+  .team-order-panel [data-team-order] i {
+    min-width: 28px;
+    font-size: 24px;
+  }
+  .team-order-panel [data-team-order] span { font-size: 15px; }
+  .team-order-panel [data-team-order] small { font-size: 11px; }
+
+  .control-category {
+    grid-template-rows: 16px minmax(0, 1fr);
+    gap: 3px;
+  }
+  .control-group-label {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .controls-panel .risk-buttons span {
+    display: block !important;
+    overflow: visible;
+    font-size: 14px !important;
+    letter-spacing: 0;
+  }
+  .controls-panel .risk-buttons i { display: none !important; }
+  .metrics-panel .metric > div:first-child span { font-size: 11px; }
+  .metrics-panel .metric > div:first-child strong { font-size: 16px; }
 }

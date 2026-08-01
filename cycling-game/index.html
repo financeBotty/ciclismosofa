@@ -158,15 +158,7 @@
               <i>⚡</i><span>CARRERA RÁPIDA<small>Una etapa aleatoria</small></span>
             </button>
           </div>
-          <div class="menu-section-label">⚙ CONFIGURACIÓN</div>
           <div class="menu-options">
-            <label>DIFICULTAD
-              <select id="difficultySelect">
-                <option value="easy">Dominguero</option>
-                <option value="normal" selected>Pro</option>
-                <option value="hard">Leyenda</option>
-              </select>
-            </label>
             <label>CLIMA
               <select id="weatherSelect">
                 <option value="dynamic" selected>Dinámico</option>
@@ -174,12 +166,6 @@
                 <option value="rain">Lluvia</option>
               </select>
             </label>
-          </div>
-          <div class="audio-options">
-            <label for="volumeRange">VOLUMEN
-              <input id="volumeRange" type="range" min="0" max="100" step="5" value="55">
-            </label>
-            <button id="soundToggle" type="button" aria-pressed="false">SONIDO · ON</button>
           </div>
           <div class="accessibility-options" aria-label="Accesibilidad y ayuda">
             <button id="reducedMotionToggle" type="button" aria-pressed="false">MOVIMIENTO · ON</button>
@@ -308,9 +294,9 @@
             <div><span class="eyebrow accent">NUEVO TOUR</span><h2 id="teamSelectionTitle">ELIGE TU EQUIPO</h2></div>
             <button id="closeTeamSelectionButton" type="button" aria-label="Cancelar selección">×</button>
           </header>
+          <button id="confirmTeamSelectionButton" class="primary-button" type="button"><span>EMPEZAR CON <b id="selectedTeamName">SOLARIS</b></span><b>▶</b></button>
           <p>Controlarás al líder predefinido durante las diez etapas. La elección quedará guardada en este slot.</p>
           <div id="teamSelectionGrid" class="team-selection-grid"></div>
-          <button id="confirmTeamSelectionButton" class="primary-button" type="button"><span>EMPEZAR CON <b id="selectedTeamName">SOLARIS</b></span><b>▶</b></button>
         </div>
       </section>
 

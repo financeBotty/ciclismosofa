@@ -63,8 +63,28 @@ quickAssert(quickGame.tour.quickRace === true, "La sesión no es una carrera rá
 quickAssert(quickGame.tour.stages.length === 1, "La sesión rápida contiene más de una etapa");
 quickAssert(quickGame.tour.roster.length === 100, "La carrera rápida no tiene 100 ciclistas");
 
+const tourStage = createTourCalendar(42)[0];
+const solarisRace = new Race(quickGame, "hard", "dynamic", {
+  seed: 42, stageDefinition: tourStage, playerTeamId: "solaris", simulationOnly: true
+});
+const solarisNames = solarisRace.cyclists.map((rider) => rider.name);
+quickAssert(
+  solarisNames.filter((name) => name === "Iker Laredo").length === 1,
+  "Iker Laredo aparece repetido en el pelotón del Tour"
+);
+quickAssert(
+  new Set(solarisNames).size === solarisNames.length,
+  "El pelotón del Tour contiene nombres repetidos"
+);
+const repairedRoster = repairLegacyDuplicateNames([
+  { name: "Iker Laredo", team: "Solaris", role: "leader" },
+  { name: "Iker Laredo", team: "Solaris", role: "sprinter" }
+]);
+quickAssert(repairedRoster[1].name === "Iker Montiel", "No se migró el duplicado antiguo");
+
 const quickRace = quickGame.createCurrentRace({ simulationOnly: true });
 quickAssert(quickRace.cyclists.length === 100, "El simulador no recibió los 100 ciclistas");
+quickAssert(quickRace.difficulty === "hard", "La carrera rápida no usa dificultad fija Leyenda");
 quickAssert(quickRace.road.timeOfDay === "day", "La etapa no está fijada en horario diurno");
 quickAssert(
   quickRace.road.sceneryZones.every((zone) => zone.timeOfDay === "day"),
@@ -83,7 +103,8 @@ quickAssert(
 JSON.stringify({
   variants: [...foundTypes].sort(),
   stage: quickGame.tour.stages[0],
-  cyclists: quickRace.cyclists.length
+  cyclists: quickRace.cyclists.length,
+  difficulty: quickRace.difficulty
 });
 `;
 

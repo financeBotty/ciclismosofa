@@ -12,11 +12,15 @@
     NSString *inspect = [NSString stringWithFormat:
         @"(() => {"
          "window.ciclimoTourGame.setMenuGameMode('%@');"
-         "const card = document.querySelector('.menu-card').getBoundingClientRect();"
+         "const menuCard = document.querySelector('.menu-card');"
+         "const card = menuCard.getBoundingClientRect();"
          "const mode = getComputedStyle(document.querySelector('#tourModeButton span'));"
          "const slot = getComputedStyle(document.querySelector('.slot-action'));"
          "return {"
            "cardTop: card.top, cardBottom: card.bottom, viewportHeight: innerHeight,"
+           "cardFitsWithoutScroll: menuCard.scrollHeight <= menuCard.clientHeight + 1 && menuCard.scrollWidth <= menuCard.clientWidth + 1,"
+           "difficultyRemoved: !document.getElementById('difficultySelect'),"
+           "audioRemoved: !document.getElementById('volumeRange') && !document.getElementById('soundToggle'),"
            "modeFont: mode.fontSize, slotFont: slot.fontSize,"
            "quickVisible: !document.querySelector('#quickModePanel').classList.contains('is-hidden'),"
            "tourHidden: document.querySelector('#tourModePanel').classList.contains('is-hidden')"
@@ -29,7 +33,12 @@
             return;
         }
         if ([result[@"cardTop"] doubleValue] < 0 ||
-            [result[@"cardBottom"] doubleValue] > [result[@"viewportHeight"] doubleValue]) {
+            [result[@"cardBottom"] doubleValue] > [result[@"viewportHeight"] doubleValue] ||
+            ![result[@"cardFitsWithoutScroll"] boolValue] ||
+            ![result[@"difficultyRemoved"] boolValue] ||
+            ![result[@"audioRemoved"] boolValue] ||
+            (webView.bounds.size.width > 900 && [result[@"modeFont"] doubleValue] < 20) ||
+            (webView.bounds.size.width > 900 && [result[@"slotFont"] doubleValue] < 14)) {
             fprintf(stderr, "El menú no cabe en el viewport: %s\n", result.description.UTF8String);
             [NSApp terminate:nil];
             return;
@@ -55,6 +64,17 @@
                     @"(() => {"
                      "const game = window.ciclimoTourGame;"
                      "game.storage.tutorialSeen = true;"
+                     "game.startTour(null, 'solaris');"
+                     "const dashboardTabsValid = ['stage', 'calendar', 'standings', 'team'].every((section) => {"
+                       "const button = document.querySelector(`[data-dashboard-section=\"${section}\"]`);"
+                       "button.click();"
+                       "const panel = document.querySelector(`[data-dashboard-panel=\"${section}\"]`);"
+                       "return button.classList.contains('active') && button.getAttribute('aria-pressed') === 'true' &&"
+                         "panel.classList.contains('dashboard-section-active') && !panel.classList.contains('dashboard-mobile-hidden');"
+                     "});"
+                     "const dashboardVisible = !document.getElementById('tourDashboard').classList.contains('is-hidden');"
+                     "game.showMenu();"
+                     "game.setMenuGameMode('quick');"
                      "document.querySelector('#quickRaceButton').click();"
                      "game.state = 'RACING';"
                      "game.race.cyclists.forEach((rider, index) => {"
@@ -64,12 +84,19 @@
                      "});"
                      "game.race.elapsed = 3900;"
                      "game.finishRace();"
+                     "const resultTabsValid = ['stage', 'tour', 'stats'].every((view) => {"
+                       "const button = document.querySelector(`[data-result-view=\"${view}\"]`);"
+                       "button.click();"
+                       "const panel = document.querySelector(`[data-result-panel=\"${view}\"]`);"
+                       "return button.classList.contains('active') && button.getAttribute('aria-pressed') === 'true' &&"
+                         "!panel.classList.contains('result-mobile-hidden');"
+                     "});"
                      "const card = document.querySelector('.results-card');"
                      "const actions = document.querySelector('.results-actions');"
                      "const actionTopBefore = actions.getBoundingClientRect().top;"
                      "card.scrollTop = card.scrollHeight;"
                      "const actionTopAfter = actions.getBoundingClientRect().top;"
-                     "return { state: game.state, mode: game.gameMode,"
+                     "return { state: game.state, mode: game.gameMode, difficulty: game.race.difficulty, dashboardVisible, dashboardTabsValid, resultTabsValid,"
                        "stages: game.tour.stages.length, cyclists: game.race.cyclists.length,"
                        "actionTopBefore, actionTopAfter,"
                        "stickyDelta: Math.abs(actionTopBefore - actionTopAfter) };"
@@ -78,6 +105,10 @@
                     BOOL validLaunch = !launchError &&
                         [launch[@"state"] isEqual:@"FINISHED"] &&
                         [launch[@"mode"] isEqual:@"quick"] &&
+                        [launch[@"difficulty"] isEqual:@"hard"] &&
+                        [launch[@"dashboardVisible"] boolValue] &&
+                        [launch[@"dashboardTabsValid"] boolValue] &&
+                        [launch[@"resultTabsValid"] boolValue] &&
                         [launch[@"stages"] integerValue] == 1 &&
                         [launch[@"cyclists"] integerValue] == 100 &&
                         [launch[@"stickyDelta"] doubleValue] <= 1;
@@ -106,12 +137,17 @@ int main(int argc, const char *argv[]) {
             [NSURL fileURLWithPath:NSFileManager.defaultManager.currentDirectoryPath isDirectory:YES];
         NSURL *indexURL = [projectURL URLByAppendingPathComponent:@"index.html"];
         CGFloat captureWidth = argc > 1 ? MAX(320, atof(argv[1])) : 1440;
-        CGFloat captureHeight = argc > 2 ? MAX(560, atof(argv[2])) : 900;
+        CGFloat captureHeight = argc > 2 ? MAX(320, atof(argv[2])) : 900;
         NSString *captureMode = argc > 3 && strcmp(argv[3], "tour") == 0 ? @"tour" : @"quick";
         NSString *outputName = captureWidth <= 600
             ? [NSString stringWithFormat:@"captura-menu-movil-%@.png", captureMode]
             : @"captura-menu-modos.png";
-        NSURL *outputURL = [projectURL URLByAppendingPathComponent:outputName];
+        NSURL *artifactsURL = [projectURL URLByAppendingPathComponent:@"test-artifacts" isDirectory:YES];
+        [NSFileManager.defaultManager createDirectoryAtURL:artifactsURL
+                                withIntermediateDirectories:YES
+                                                 attributes:nil
+                                                      error:nil];
+        NSURL *outputURL = [artifactsURL URLByAppendingPathComponent:outputName];
 
         WKWebViewConfiguration *configuration = [WKWebViewConfiguration new];
         configuration.websiteDataStore = WKWebsiteDataStore.nonPersistentDataStore;
