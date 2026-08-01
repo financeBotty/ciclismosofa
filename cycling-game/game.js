@@ -30,7 +30,8 @@ const uiRules = globalThis.CiclimoUI || {
   riderState: () => "EN GRUPO"
 };
 const renderRules = globalThis.CiclimoRender || {
-  lateralViewportScale: (width) => width <= 480 ? 0.66 : width <= 900 ? 0.76 : 1
+  lateralViewportScale: (width) => width <= 480 ? 0.66 : width <= 900 ? 0.76 : 1,
+  raceStructureScale: (width) => width <= 520 ? 0.58 : width <= 900 ? 0.72 : 1
 };
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -3396,6 +3397,7 @@ class HUD {
     this.elements.directorTip.textContent = this.getDirectorTip(player, gradient, remaining);
     this.updateRacePoint(race, player);
     this.updateFollowedRider(race);
+    this.resolvePopupPriority();
     this.updateGroups(race);
     this.updateMobilePanels(race);
     const selectedGroup = this.game.cameraInspection?.type === "group" ? this.game.cameraInspection.groupIndex : -1;
@@ -3518,6 +3520,18 @@ class HUD {
     this.elements.mobileStageWeather.textContent = `${race.weather.icon} ${race.weather.label}`;
     this.elements.mobileStageElapsed.textContent = formatTime(race.elapsed * race.simulationScale);
     this.elements.mobileStageGroups.textContent = race.groups.length;
+  }
+
+  resolvePopupPriority() {
+    const dangerVisible = this.elements.dangerBanner.classList.contains("visible");
+    const lastKmVisible = this.elements.lastKmOverlay.classList.contains("active");
+    const followVisible = !this.elements.followCard.classList.contains("is-hidden");
+    if (dangerVisible || lastKmVisible) {
+      this.elements.racePointCard.classList.add("is-hidden");
+      this.elements.followCard.classList.add("is-hidden");
+      return;
+    }
+    if (followVisible) this.elements.racePointCard.classList.add("is-hidden");
   }
 
   updateRacePoint(race, player) {
@@ -5858,6 +5872,7 @@ class Game {
 
   renderRacePointGates(ctx) {
     if (!this.race) return;
+    const structureScale = this.raceStructureScale();
     for (const racePoint of this.race.road.racePoints) {
       const point = this.roadPointAt(racePoint.km);
       if (point.y < -90 || point.y > this.height + 90) continue;
@@ -5867,8 +5882,8 @@ class Game {
       // El centro de cada poste queda justo fuera del asfalto: con sus cinco
       // píxeles de semiancho, la cara interior coincide con el borde real.
       const halfWidth = sprintGate ? Math.max(64, point.roadHalf + 9) : Math.max(42, point.roadHalf - 7);
-      const gateHeight = sprintGate ? TOP_SPRINT_GATE_HEIGHT : 57;
-      const bannerHeight = sprintGate ? 29 : 23;
+      const gateHeight = Math.round((sprintGate ? TOP_SPRINT_GATE_HEIGHT : 57) * structureScale);
+      const bannerHeight = Math.round((sprintGate ? 29 : 23) * Math.max(0.72, structureScale));
       ctx.save();
       ctx.translate(Math.round(point.x), Math.round(point.y));
       ctx.rotate(this.roadAngleAt(racePoint.km));
@@ -5885,7 +5900,7 @@ class Game {
       ctx.fillStyle = color;
       ctx.fillRect(-halfWidth - 3, -gateHeight, halfWidth * 2 + 6, bannerHeight - 8);
       ctx.fillStyle = racePoint.type === "mountain" && racePoint.category === "4ª" ? "#101820" : "#fff7da";
-      ctx.font = `bold ${sprintGate ? 11 : 9}px Menlo, Monaco, Consolas, monospace`;
+      ctx.font = `bold ${Math.max(8, Math.round((sprintGate ? 11 : 9) * structureScale))}px Menlo, Monaco, Consolas, monospace`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(`${label} · ${racePoint.maxPoints} PT`, 0, -gateHeight + (bannerHeight - 8) / 2);
@@ -6089,17 +6104,19 @@ class Game {
       }
     }
     const halfWidth = this.roadHalfWidth + 24;
-    const gateHeight = 108;
+    const structureScale = this.raceStructureScale();
+    const gateHeight = Math.round(108 * structureScale);
+    const bannerHeight = Math.round(33 * Math.max(0.72, structureScale));
     ctx.fillStyle = "#101820";
     ctx.fillRect(-halfWidth - 7, -gateHeight, 12, gateHeight);
     ctx.fillRect(halfWidth - 5, -gateHeight, 12, gateHeight);
-    ctx.fillRect(-halfWidth - 10, -gateHeight - 5, halfWidth * 2 + 20, 33);
+    ctx.fillRect(-halfWidth - 10, -gateHeight - 5, halfWidth * 2 + 20, bannerHeight);
     ctx.fillStyle = "#ffcc33";
-    ctx.fillRect(-halfWidth - 5, -gateHeight, halfWidth * 2 + 10, 24);
+    ctx.fillRect(-halfWidth - 5, -gateHeight, halfWidth * 2 + 10, Math.max(16, bannerHeight - 9));
     ctx.fillStyle = "#101820";
-    ctx.font = "bold 15px Menlo, Monaco, Consolas, monospace";
+    ctx.font = `bold ${Math.max(9, Math.round(15 * structureScale))}px Menlo, Monaco, Consolas, monospace`;
     ctx.textAlign = "center";
-    ctx.fillText("META", 0, -91);
+    ctx.fillText("META", 0, -gateHeight + Math.max(13, bannerHeight * 0.68));
     ctx.restore();
   }
 
@@ -6362,7 +6379,10 @@ class Game {
   drawRaceVehicle(ctx, vehicle, point) {
     const originalScale = clamp(this.roadHalfWidth / 135, 0.8, 1.24);
     const sprite = this.buildRaceVehicleSprite(vehicle.type, vehicle.color);
-    const scale = originalScale * (vehicle.type === "tv" ? 0.86 : 1.02);
+    const mobile = this.raceStructureScale() < 1;
+    const scale = originalScale * (vehicle.type === "tv"
+      ? mobile ? 0.48 : 0.72
+      : mobile ? 0.64 : 0.9);
     if (this.race.weather.intensity > 0.25) {
       ctx.fillStyle = "rgba(205,230,234,.35)";
       ctx.fillRect(point.x - 12 * scale, point.y + 35 * scale, 24 * scale, 4 * scale);
@@ -6398,7 +6418,7 @@ class Game {
     // Ciclistas y vehículos deben responder al mismo ancho de viewport. Antes
     // solo se reducían los ciclistas en móvil y los coches parecían gigantes.
     const viewportScale = this.lateralRiderViewportScale();
-    const scale = (vehicle.type === "tv" ? 0.94 : 1.04) * viewportScale;
+    const scale = (vehicle.type === "tv" ? 0.62 : 0.78) * viewportScale;
     const bob = this.reducedMotion ? 0 : Math.floor(this.race.elapsed * 8 + vehicle.distance * 10) % 2;
     if (this.race.weather.intensity > 0.25) {
       ctx.fillStyle = "rgba(205,230,234,.34)";
@@ -6421,6 +6441,10 @@ class Game {
 
   lateralRiderViewportScale(viewportWidth = window.innerWidth) {
     return renderRules.lateralViewportScale(viewportWidth);
+  }
+
+  raceStructureScale(viewportWidth = this.width || globalThis.window?.innerWidth || 1280) {
+    return renderRules.raceStructureScale(viewportWidth);
   }
 
   buildCyclistSprite(color, isPlayer, frame, role = "domestique", pose = "normal", jerseyType = "") {
@@ -7228,19 +7252,20 @@ class Game {
     this.renderLateralScenery(ctx, focusX, pixelsPerKm);
     for (const point of this.race.road.racePoints) {
       const geometry = this.lateralRaceGateGeometry(point, focusX, pixelsPerKm);
-      const { x, leftX, rightX, leftBaseY, rightBaseY, topY, gateWidth, gateHeight } = geometry;
+      const { x, leftX, rightX, leftBaseY, rightBaseY, topY, gateWidth, gateHeight, structureScale } = geometry;
       if (x < -20 || x > this.width + 20) continue;
       const sprintGate = point.type === "sprint";
+      const bannerHeight = Math.max(18, Math.round((sprintGate ? 31 : 20) * Math.max(0.72, structureScale)));
       ctx.fillStyle = "#101820";
       ctx.fillRect(Math.round(leftX - 5), Math.round(topY), 9, Math.round(leftBaseY - topY));
       ctx.fillRect(Math.round(rightX - 4), Math.round(topY), 9, Math.round(rightBaseY - topY));
-      ctx.fillRect(Math.round(x - gateWidth / 2 - 7), Math.round(topY - 3), gateWidth + 14, sprintGate ? 31 : 20);
+      ctx.fillRect(Math.round(x - gateWidth / 2 - 7), Math.round(topY - 3), gateWidth + 14, bannerHeight);
       ctx.fillStyle = racePointColor(point);
-      ctx.fillRect(Math.round(x - gateWidth / 2 - 2), Math.round(topY + 2), gateWidth + 4, sprintGate ? 22 : 13);
+      ctx.fillRect(Math.round(x - gateWidth / 2 - 2), Math.round(topY + 2), gateWidth + 4, Math.max(12, bannerHeight - 9));
       ctx.fillStyle = "#101820";
-      ctx.font = `bold ${sprintGate ? 12 : 9}px Menlo, Monaco, Consolas, monospace`;
+      ctx.font = `bold ${Math.max(8, Math.round((sprintGate ? 12 : 9) * structureScale))}px Menlo, Monaco, Consolas, monospace`;
       ctx.textAlign = "center";
-      ctx.fillText(`${point.markerLabel || (point.type === "mountain" ? point.category : "SPR")} ${point.maxPoints}P`, x, topY + (sprintGate ? 17 : 12));
+      ctx.fillText(`${point.markerLabel || (point.type === "mountain" ? point.category : "SPR")} ${point.maxPoints}P`, x, topY + bannerHeight * 0.62);
     }
 
     this.renderLateralSpectators(ctx, focusX, pixelsPerKm);
@@ -7357,8 +7382,10 @@ class Game {
   lateralRaceGateGeometry(point, focusX, pixelsPerKm) {
     const x = focusX + (point.km - this.cameraKm) * pixelsPerKm;
     const sprintGate = point.type === "sprint";
-    const gateWidth = sprintGate ? 132 : 78;
-    const gateHeight = sprintGate ? SIDE_SPRINT_GATE_HEIGHT : 102;
+    const structureScale = this.raceStructureScale();
+    const baseGateWidth = sprintGate ? 132 : 78;
+    const gateWidth = Math.max(SIDE_ROAD_ASPHALT_WIDTH + 18, Math.round(baseGateWidth * structureScale));
+    const gateHeight = Math.round((sprintGate ? SIDE_SPRINT_GATE_HEIGHT : 102) * structureScale);
     const leftX = x - gateWidth / 2;
     const rightX = x + gateWidth / 2;
     const leftKm = this.cameraKm + (leftX - focusX) / pixelsPerKm;
@@ -7369,7 +7396,7 @@ class Game {
     const leftBaseY = this.sideSurfaceY(leftKm) + roadEdgeOffset;
     const rightBaseY = this.sideSurfaceY(rightKm) - roadEdgeOffset;
     const topY = Math.min(leftBaseY, rightBaseY) - gateHeight;
-    return { x, leftX, rightX, leftKm, rightKm, leftBaseY, rightBaseY, topY, gateWidth, gateHeight };
+    return { x, leftX, rightX, leftKm, rightKm, leftBaseY, rightBaseY, topY, gateWidth, gateHeight, structureScale };
   }
 
   renderLateralScenery(ctx, focusX, pixelsPerKm) {
@@ -7582,18 +7609,20 @@ class Game {
     const x = focusX + (finishKm - this.cameraKm) * pixelsPerKm;
     if (x < -80 || x > this.width + 80) return;
     const y = this.sideSurfaceY(finishKm);
-    const halfWidth = 78;
-    const gateHeight = SIDE_FINISH_GATE_HEIGHT;
+    const structureScale = this.raceStructureScale();
+    const halfWidth = Math.max(SIDE_ROAD_ASPHALT_WIDTH / 2 + 9, Math.round(78 * structureScale));
+    const gateHeight = Math.round(SIDE_FINISH_GATE_HEIGHT * structureScale);
+    const headerHeight = Math.max(27, Math.round(46 * structureScale));
     ctx.fillStyle = "#101820";
     ctx.fillRect(x - halfWidth - 7, y - gateHeight, 14, gateHeight);
     ctx.fillRect(x + halfWidth - 7, y - gateHeight, 14, gateHeight);
-    ctx.fillRect(x - halfWidth - 12, y - gateHeight - 6, halfWidth * 2 + 24, 46);
+    ctx.fillRect(x - halfWidth - 12, y - gateHeight - 6, halfWidth * 2 + 24, headerHeight);
     ctx.fillStyle = "#ffcc33";
-    ctx.fillRect(x - halfWidth - 6, y - gateHeight, halfWidth * 2 + 12, 35);
+    ctx.fillRect(x - halfWidth - 6, y - gateHeight, halfWidth * 2 + 12, Math.max(21, headerHeight - 11));
     ctx.fillStyle = "#101820";
-    ctx.font = "bold 18px Menlo, Monaco, Consolas, monospace";
+    ctx.font = `bold ${Math.max(10, Math.round(18 * structureScale))}px Menlo, Monaco, Consolas, monospace`;
     ctx.textAlign = "center";
-    ctx.fillText("META", x, y - gateHeight + 24);
+    ctx.fillText("META", x, y - gateHeight + Math.max(17, headerHeight * 0.62));
     for (let cell = -11; cell <= 11; cell += 1) {
       ctx.fillStyle = cell % 2 ? "#f8f5eb" : "#101820";
       ctx.fillRect(x + cell * 7, y - 5, 7, 5);

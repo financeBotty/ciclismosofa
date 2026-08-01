@@ -64,6 +64,7 @@ static int testResult = 1;
          "const viewAfterPanelReturn = game.hud.mobileView;"
          "const panelsHiddenAfterReturn = [...document.querySelectorAll('.mobile-view-panel')].every((panel) => panel.classList.contains('is-hidden'));"
          "game.hud.setMobileView('classification');"
+         "game.hud.setMobileView('race');"
          "const rect = switcher.getBoundingClientRect();"
          "const buttonRect = button.getBoundingClientRect();"
          "const hit = document.elementFromPoint(buttonRect.left + buttonRect.width / 2, buttonRect.top + buttonRect.height / 2);"
@@ -90,6 +91,16 @@ static int testResult = 1;
          "}"
          "game.notify('ATAQUE DE PRUEBA', 'urgent');"
          "const message = feed.querySelector('.event-message');"
+         "const tabsRect = document.getElementById('mobileViewTabs').getBoundingClientRect();"
+         "const speedRect = document.getElementById('raceSpeedButton').getBoundingClientRect();"
+         "const cameraRect = switcher.getBoundingClientRect();"
+         "const floatingNavigationSeparated = innerWidth > 900 || (tabsRect.right <= speedRect.left && speedRect.right <= cameraRect.left);"
+         "const racePointCard = document.getElementById('racePointCard');"
+         "followCard.classList.remove('is-hidden');"
+         "racePointCard.classList.remove('is-hidden');"
+         "game.hud.resolvePopupPriority();"
+         "const popupPriorityValid = !followCard.classList.contains('is-hidden') && racePointCard.classList.contains('is-hidden');"
+         "followCard.classList.add('is-hidden');"
          "const normalSprite = game.buildSideCyclistSprite('#ffcc33', true, 0, 'leader', 'normal', '');"
          "const standingSprite = game.buildSideCyclistSprite('#ffcc33', true, 0, 'leader', 'standing', '');"
          "const normalPixels = normalSprite.getContext('2d').getImageData(0, 0, normalSprite.width, normalSprite.height).data;"
@@ -118,6 +129,7 @@ static int testResult = 1;
            "messageWidth: message ? message.getBoundingClientRect().width : 0,"
            "posePixelDifference,"
            "touchTargetsValid, legacyProfileRemoved,"
+           "floatingNavigationSeparated, popupPriorityValid,"
            "hitId: hit && hit.id,"
            "left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,"
            "width: rect.width, height: rect.height,"
@@ -159,6 +171,8 @@ static int testResult = 1;
             [result[@"posePixelDifference"] integerValue] >= 100 &&
             [result[@"touchTargetsValid"] boolValue] &&
             [result[@"legacyProfileRemoved"] boolValue] &&
+            [result[@"floatingNavigationSeparated"] boolValue] &&
+            [result[@"popupPriorityValid"] boolValue] &&
             [result[@"hitId"] isEqual:@"sideCameraButton"] &&
             [result[@"height"] doubleValue] >=
                 ([result[@"viewportWidth"] doubleValue] <= 900 ? 44 : 38) &&
@@ -182,6 +196,7 @@ static int testResult = 1;
 
         BOOL poseSnapshot = [self.snapshotMode isEqualToString:@"normal"] ||
             [self.snapshotMode isEqualToString:@"standing"];
+        BOOL roadSnapshot = poseSnapshot || [self.snapshotMode isEqualToString:@"finish"];
         NSString *focusExpression = [self.snapshotMode isEqualToString:@"finish"]
             ? @"Math.max(0, game.race.road.lengthKm - 0.22)"
             : @"(game.race.road.mountains[0]"
@@ -215,8 +230,8 @@ static int testResult = 1;
                      [self.snapshotMode isEqualToString:@"standing"] ? @"4" : @"2",
                      [self.snapshotMode isEqualToString:@"standing"] ? @"2" : @"0"]
                 : @"",
-             poseSnapshot ? @"race" : @"groups",
-             poseSnapshot ? @"" : @"game.notify('¡ATAQUE! EL PELOTÓN REACCIONA', 'urgent');"];
+             roadSnapshot ? @"race" : @"groups",
+             roadSnapshot ? @"" : @"game.notify('¡ATAQUE! EL PELOTÓN REACCIONA', 'urgent');"];
         [webView evaluateJavaScript:prepareSnapshot completionHandler:^(id prepared, NSError *prepareError) {
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)),
                            dispatch_get_main_queue(), ^{

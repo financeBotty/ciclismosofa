@@ -70,7 +70,45 @@
 .mobile-jump-player { min-width: 62px; padding: 0 6px; color: #07131f; background: var(--lime); font-size: 8px; }
 
 @media (max-width: 900px) {
-  .game-shell { grid-template-rows: 132px minmax(220px, 1fr) 190px; }
+  .game-shell { grid-template-rows: 116px minmax(220px, 1fr) 190px; }
+  .broadcast-header {
+    height: 116px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44px 62px;
+    gap: 2px;
+    padding: 4px 6px 3px;
+  }
+  .broadcast-header .race-data {
+    display: grid;
+    grid-row: 1;
+    grid-template-columns: .82fr .92fr 1.12fr .94fr;
+    gap: 3px;
+    min-width: 0;
+  }
+  .broadcast-header .data-block,
+  .broadcast-header .race-data .position-tile {
+    min-width: 0;
+    padding: 3px 5px;
+    overflow: hidden;
+  }
+  .broadcast-header .data-block .label,
+  .broadcast-header .race-data .position-tile > .label {
+    margin-bottom: 2px;
+    font-size: clamp(7px, 2.15vw, 9px);
+    letter-spacing: .04em;
+  }
+  .broadcast-header .data-block strong,
+  .broadcast-header .main-distance strong,
+  .broadcast-header .race-data .position-tile strong {
+    overflow: hidden;
+    font-size: clamp(15px, 5vw, 20px);
+    line-height: 1;
+    text-overflow: ellipsis;
+  }
+  .broadcast-header .main-distance small { display: none; }
+  .broadcast-header .profile-wrap { grid-row: 2; min-height: 0; }
+  .broadcast-header .profile-wrap canvas { height: 45px; }
+  .broadcast-header .profile-labels { font-size: 7px; line-height: 11px; }
   .control-deck {
     height: 190px;
     grid-template-columns: minmax(108px, .8fr) minmax(0, 2.2fr);
@@ -100,20 +138,38 @@
     min-height: 44px;
   }
 
-  .mobile-view-tabs { height: 44px; }
+  .mobile-view-tabs {
+    top: 2px;
+    right: 138px;
+    left: 0;
+    width: auto;
+    height: 44px;
+  }
   .mobile-view-tabs button { height: 44px; }
   .mobile-view-panel { inset-block-start: 44px; }
-  .pause-button { width: 44px; height: 44px; }
+  .countdown-overlay { pointer-events: none; }
+  .pause-button { top: 50px; right: 3px; width: 44px; height: 44px; }
   .camera-switcher { height: 50px; }
   .camera-switcher button { min-width: 44px; }
+  .race-viewport > .camera-switcher {
+    z-index: 32;
+    top: 2px;
+    right: 2px;
+    width: 88px;
+    height: 44px;
+  }
 
   .race-speed-button {
+    z-index: 32;
+    top: 2px;
+    right: 94px;
     width: 44px;
     height: 44px;
     border: 0;
     background: transparent;
     backdrop-filter: none;
   }
+  .pause-button { z-index: 32; }
   .race-speed-button > span {
     display: grid;
     width: 36px;
@@ -148,6 +204,77 @@
     font-size: clamp(7px, 2vw, 9px);
   }
   .race-context-strip span { padding-left: 5px; }
+
+  .event-feed {
+    top: 52px;
+    left: 7px;
+    width: calc(100% - 62px);
+    max-width: 430px;
+    transform: none;
+  }
+  .event-message {
+    max-width: 100%;
+    padding: 7px 9px;
+    overflow: hidden;
+    font-size: 9px;
+    text-align: center;
+    text-overflow: ellipsis;
+  }
+  .follow-card,
+  .race-point-card {
+    top: 102px;
+    bottom: auto;
+    width: min(158px, calc(50% - 10px));
+    min-height: 0;
+    padding: 6px 8px;
+  }
+  .follow-card { right: auto; left: 7px; }
+  .race-point-card { left: 7px; }
+  .camera-return { top: 100px; right: 7px; bottom: auto; }
+  .profile-tooltip {
+    right: 7px;
+    bottom: 3px;
+    left: 7px;
+    width: auto;
+    max-width: none;
+    padding: 3px 5px;
+    overflow: hidden;
+    transform: none;
+    font-size: 6px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .danger-banner,
+  .last-km-overlay {
+    top: 102px;
+    bottom: auto;
+    max-width: calc(100% - 14px);
+  }
+  .danger-banner { width: max-content; }
+  .last-km-overlay { transform: translate(-50%, 0); }
+  .race-viewport:has(.danger-banner.visible) .event-feed,
+  .race-viewport:has(.last-km-overlay.active) .event-feed { visibility: hidden; }
+  .race-viewport:has(.team-order-panel:not(.is-hidden)) > .event-feed,
+  .race-viewport:has(.team-order-panel:not(.is-hidden)) > .resource-feedback,
+  .race-viewport:has(.team-order-panel:not(.is-hidden)) > .follow-card,
+  .race-viewport:has(.team-order-panel:not(.is-hidden)) > .race-point-card,
+  .race-viewport:has(.team-order-panel:not(.is-hidden)) > .danger-banner,
+  .race-viewport:has(.team-order-panel:not(.is-hidden)) > .last-km-overlay { visibility: hidden; }
+  .race-viewport.mobile-submenu-open > .camera-switcher,
+  .race-viewport.mobile-submenu-open > .camera-return,
+  .race-viewport.mobile-submenu-open > .race-speed-button,
+  .race-viewport.mobile-submenu-open > .pause-button,
+  .race-viewport.mobile-submenu-open > .event-feed,
+  .race-viewport.mobile-submenu-open > .resource-feedback,
+  .race-viewport.mobile-submenu-open > .follow-card,
+  .race-viewport.mobile-submenu-open > .race-point-card,
+  .race-viewport.mobile-submenu-open > .danger-banner,
+  .race-viewport.mobile-submenu-open > .last-km-overlay,
+  .race-viewport.mobile-submenu-open > .race-context-strip,
+  .race-viewport.mobile-submenu-open > .team-order-button {
+    visibility: hidden;
+    pointer-events: none;
+  }
 
   .mobile-classification-panel li {
     min-height: 44px;
@@ -189,6 +316,22 @@
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
+  .broadcast-header {
+    height: 58px;
+    grid-template-columns: minmax(0, 1fr) 250px;
+    grid-template-rows: 50px;
+    gap: 5px;
+    padding: 4px 7px;
+  }
+  .broadcast-header .race-data {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .broadcast-header .profile-wrap {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .broadcast-header .profile-wrap canvas { height: 38px; }
   .control-deck {
     height: calc(100dvh - 58px);
     grid-template-columns: minmax(0, 1fr);
@@ -215,6 +358,11 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-template-rows: minmax(0, 1fr);
   }
+}
+
+@media (max-width: 360px) {
+  .mobile-view-tabs button i { display: none; }
+  .broadcast-header #remainingKm { font-size: 14px; }
 }
 
 @media (min-width: 901px) {

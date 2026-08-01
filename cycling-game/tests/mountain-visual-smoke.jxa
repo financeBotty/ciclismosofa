@@ -62,6 +62,9 @@ assertMountain(visualGame.lateralRiderViewportScale(800) < 0.8,
   "Los ciclistas laterales no se reducen en móviles grandes");
 assertMountain(visualGame.lateralRiderViewportScale(1200) === 1,
   "La reducción móvil está alterando también la vista lateral de escritorio");
+assertMountain(visualGame.raceStructureScale(390) === 0.58 &&
+  visualGame.raceStructureScale(800) === 0.72 && visualGame.raceStructureScale(1200) === 1,
+  "Metas y vehículos no comparten una escala estructural responsive estable");
 assertMountain(SIDE_FINISH_GATE_HEIGHT >= 180,
   "La meta lateral puede quedar oculta por el público");
 assertMountain(TOP_SPRINT_GATE_HEIGHT >= 125 && SIDE_SPRINT_GATE_HEIGHT >= 180,
