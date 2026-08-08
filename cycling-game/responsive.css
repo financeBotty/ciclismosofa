@@ -682,6 +682,7 @@
   /* En escritorio conserva la misma interacción móvil de tarjetas 2 × 2,
      pero con una escala proporcionada al espacio disponible. */
   .team-order-button {
+    z-index: 35;
     right: 16px;
     bottom: 16px;
     min-width: 142px;
@@ -692,6 +693,7 @@
   }
   .team-order-button span { font-size: 21px; }
   .team-order-panel {
+    z-index: 36;
     right: 16px;
     bottom: 80px;
     width: min(460px, calc(100% - 32px));
@@ -736,4 +738,626 @@
   .controls-panel .risk-buttons i { display: none !important; }
   .metrics-panel .metric > div:first-child span { font-size: 11px; }
   .metrics-panel .metric > div:first-child strong { font-size: 16px; }
+}
+
+/* Mandos de sistema con la misma carcasa pixelada que los sprites. */
+.race-speed-button,
+.pause-button {
+  z-index: 32;
+  top: 50px;
+  height: 44px;
+  overflow: hidden;
+  color: #fff7da;
+  border: 3px solid #05090e;
+  border-radius: 0;
+  box-shadow:
+    inset 0 3px 0 rgba(255,255,255,.2),
+    inset 0 -5px 0 rgba(0,0,0,.32),
+    3px 3px 0 #05090e;
+  backdrop-filter: none;
+  image-rendering: pixelated;
+}
+.race-speed-button {
+  right: 51px;
+  display: grid;
+  width: 52px;
+  grid-template-rows: 10px minmax(0, 1fr);
+  place-items: center;
+  padding: 5px 3px 4px;
+  background: linear-gradient(#42627a 0 18%, #294b64 19% 72%, #142d43 73%);
+  font-family: Menlo, Monaco, Consolas, monospace;
+}
+.race-speed-button small {
+  color: #a9c3d0;
+  font-size: 7px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: .04em;
+}
+.race-speed-button > span {
+  display: block;
+  width: auto;
+  height: auto;
+  color: #fff7da;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 17px;
+  line-height: 1;
+}
+.race-speed-button.fast {
+  color: #171200;
+  border-color: #05090e;
+  background: linear-gradient(#ffe977 0 18%, #ffcc33 19% 72%, #a96d11 73%);
+}
+.race-speed-button.fast > span {
+  color: #171200;
+  border: 0;
+  background: transparent;
+}
+.race-speed-button.fast small { color: #514000; }
+
+/* Ritmo y vista forman una única unidad: antes vivían en anclajes distintos
+   y sus áreas táctiles se solapaban en pantallas estrechas. */
+.race-system-controls {
+  position: absolute;
+  z-index: 34;
+  top: 14px;
+  right: 68px;
+  display: grid;
+  grid-template-columns: 58px 104px;
+  height: 48px;
+  overflow: hidden;
+  border: 3px solid #05090e;
+  background: #102334;
+  box-shadow: 3px 3px 0 #05090e;
+}
+
+.race-system-controls .race-speed-button {
+  position: static;
+  z-index: auto;
+  display: grid;
+  width: auto;
+  height: auto;
+  grid-template-rows: 11px 1fr;
+  padding: 5px 4px 4px;
+  border: 0;
+  border-right: 3px solid #05090e;
+  background: linear-gradient(#42627a 0 18%, #294b64 19% 72%, #142d43 73%);
+  box-shadow: none;
+}
+
+.race-system-controls .race-speed-button.fast {
+  background: linear-gradient(#c7e4ff 0 18%, #62adf5 19% 72%, #2d679e 73%);
+}
+
+.race-system-controls .race-speed-button > span {
+  width: auto;
+  height: auto;
+  border: 0;
+  background: transparent;
+}
+
+.system-camera-control {
+  display: grid;
+  grid-template-rows: 12px minmax(0, 1fr);
+  min-width: 0;
+  padding: 4px;
+}
+
+.system-control-label {
+  color: #a9c3d0;
+  font: 950 7px/1 Menlo, Monaco, Consolas, monospace;
+  letter-spacing: .08em;
+  text-align: center;
+}
+
+.race-system-controls .camera-switcher {
+  position: static;
+  z-index: auto;
+  display: grid;
+  width: 100%;
+  height: auto;
+  grid-template-columns: 1fr 1fr;
+  padding: 0;
+  border: 2px solid #05090e;
+  background: #07131f;
+  box-shadow: none;
+}
+
+.race-system-controls .camera-switcher button {
+  min-height: 0;
+  padding: 0;
+  color: #d0dbe8;
+  background: #243650;
+  font-size: 9px;
+}
+
+.race-system-controls .camera-switcher button + button { border-left: 2px solid #05090e; }
+
+.race-system-controls .camera-switcher button.active {
+  color: #101820;
+  background: var(--lime);
+}
+
+@media (max-width: 740px) {
+  .race-system-controls {
+    top: 50px;
+    right: 51px;
+    grid-template-columns: 52px 88px;
+    height: 44px;
+  }
+
+  .race-system-controls .race-speed-button { grid-template-rows: 10px 1fr; }
+  .race-system-controls .race-speed-button > span { font-size: 16px; }
+  .system-camera-control { padding: 3px; }
+}
+.pause-button {
+  right: 3px;
+  display: grid;
+  width: 44px;
+  place-items: center;
+  background: linear-gradient(#df6b70 0 18%, #9b3542 19% 72%, #5c202a 73%);
+}
+.pause-glyph {
+  display: grid;
+  width: 21px;
+  height: 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.pause-glyph i {
+  display: block;
+  border: 2px solid #05090e;
+  background: #fff7da;
+  box-shadow: inset 2px 0 0 rgba(255,255,255,.35);
+}
+.race-speed-button:active,
+.pause-button:active {
+  transform: translate(3px, 3px);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.14), 1px 1px 0 #05090e;
+}
+
+@media (min-width: 901px) {
+  .pause-button { right: 16px; }
+  .race-speed-button { right: 64px; }
+}
+
+/* La navegación Ruta/Grupos/Pos./Etapa comparte una única franja con los
+   mandos de sistema, también en web. Reservar el ancho evita que VISTA tape
+   la pestaña Etapa. */
+.mobile-view-tabs {
+  right: auto;
+  left: 2px;
+  width: min(560px, calc(100% - 188px));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  height: 36px;
+  gap: 2px;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.mobile-view-tabs button {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  min-height: 32px;
+  height: 32px;
+  font-size: 8px;
+}
+
+.mobile-view-tabs button i { justify-self: center; }
+.mobile-view-tabs button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.mobile-view-panel { inset-block-start: 40px; }
+
+.race-system-controls {
+  top: 2px;
+  right: 2px;
+  grid-template-columns: 52px 88px 38px;
+  height: 36px;
+}
+
+.race-system-controls .race-speed-button { grid-template-rows: 1fr; }
+.race-system-controls .race-speed-button > span { font-size: 16px; }
+.race-system-controls .race-speed-button small,
+.system-control-label { display: none; }
+.system-camera-control { grid-template-rows: 1fr; padding: 3px; }
+
+.race-system-controls .pause-button {
+  position: static;
+  z-index: auto;
+  display: grid;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-left: 3px solid #05090e;
+  background: linear-gradient(#df6b70 0 18%, #9b3542 19% 72%, #5c202a 73%);
+  box-shadow: none;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Más carretera sin sacrificar botones táctiles: los mandos internos siguen
+   conservando su altura mínima de interacción. */
+@media all {
+  .game-shell { grid-template-rows: 116px minmax(220px, 1fr) 172px; }
+  .control-deck { height: 172px; }
+}
+
+/* Contraste final de la interfaz arcade. Estas reglas también neutralizan
+   los degradados dorados heredados de la primera versión del HUD. */
+.race-context-strip { color: #d5e1ed; background: rgba(11,18,32,.94); }
+.race-context-strip strong { color: var(--cream); }
+.race-context-strip [data-level="medium"], .result-objective { color: var(--cyan); }
+
+.primary-button,
+.risk-buttons button.active,
+.controls-panel .risk-buttons button.active,
+.controls-panel .power-preset[aria-pressed="true"],
+.action-button.sprint.ready {
+  color: #0b1712 !important;
+  border-color: #07110c !important;
+  background: linear-gradient(#c7e4ff 0 18%, #62adf5 19% 72%, #2d679e 73%) !important;
+  text-shadow: none;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 0 0 2px rgba(98,173,245,.26);
+}
+
+.risk-buttons button.active i,
+.primary-button .button-icon,
+.action-button.sprint.ready .button-icon { color: #0b1712; }
+
+.camera-switcher button:focus-visible { outline-color: var(--cyan); }
+.classification-card.gc-ranking, .dashboard-standing.yellow { border-color: var(--cyan); }
+.follow-card .follow-rider-jersey { color: #0b1712; background: var(--cyan); }
+
+.race-speed-button.fast,
+.race-system-controls .race-speed-button.fast {
+  color: #0b1712;
+  background: linear-gradient(#c7e4ff 0 18%, #62adf5 19% 72%, #2d679e 73%);
+}
+
+/* Estrategia compacta: conserva cuatro decisiones claras sin cubrir media
+   carretera. Los detalles se mantienen en la ayuda contextual de cada orden. */
+.team-order-button {
+  right: 7px;
+  bottom: 7px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border-width: 2px;
+  box-shadow: 2px 2px 0 #05090e;
+  background: var(--lime);
+}
+
+.team-order-button .strategy-wheel {
+  position: relative;
+  display: block;
+  width: 21px;
+  height: 21px;
+  border: 3px solid #172235;
+  border-radius: 50%;
+  background: radial-gradient(circle, #172235 0 2px, transparent 2.5px);
+}
+
+.team-order-button .strategy-wheel::before,
+.team-order-button .strategy-wheel::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 17px;
+  height: 2px;
+  background: #172235;
+  transform: translate(-50%, -50%);
+}
+
+.team-order-button .strategy-wheel::after { transform: translate(-50%, -50%) rotate(90deg); }
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.team-order-panel {
+  right: 7px;
+  bottom: 54px;
+  width: min(238px, calc(100% - 14px));
+  padding: 6px;
+  border-width: 3px;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.68);
+}
+
+.team-order-panel header {
+  padding-bottom: 5px;
+  font-size: 8px;
+}
+
+.team-order-panel header button {
+  width: 22px;
+  height: 22px;
+  font-size: 15px;
+}
+
+.team-order-panel > div { gap: 4px; }
+
+.team-order-panel [data-team-order] {
+  min-height: 42px;
+  gap: 5px;
+  padding: 5px 6px;
+}
+
+.team-order-panel [data-team-order] i {
+  min-width: 17px;
+  font-size: 15px;
+}
+
+.team-order-panel [data-team-order] span { font-size: 9px; }
+.team-order-panel [data-team-order] small { display: none; }
+
+/* Navegación de carrera: iconos abajo para despejar el horizonte de juego. */
+.mobile-view-tabs {
+  z-index: 33;
+  top: auto;
+  right: 54px;
+  bottom: 4px;
+  left: auto;
+  width: 164px;
+  height: 38px;
+  padding: 2px;
+  transform: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  border: 2px solid #05090e;
+  background: rgba(11,18,32,.94);
+  box-shadow: 2px 2px 0 #05090e;
+}
+
+.mobile-view-tabs button {
+  display: grid;
+  width: auto;
+  min-height: 30px;
+  height: 30px;
+  place-items: center;
+  padding: 0;
+  color: #cbd8e6;
+  border: 1px solid #31455f;
+  background: #1a2b43;
+  font-size: 16px;
+  text-shadow: none;
+}
+
+.mobile-view-tabs button i { font-style: normal; line-height: 1; }
+.mobile-view-tabs button span { display: none; }
+.mobile-view-tabs button.active { color: #0b1712; background: var(--lime); }
+
+.mobile-view-panel {
+  top: 0;
+  right: 0;
+  bottom: 46px;
+  left: 0;
+  inset-block-start: 0;
+}
+
+/* La energía conserva su significado propio: verde, independiente del azul
+   usado para navegación y acciones tácticas. */
+.metric.energy > div:first-child span,
+.metric.energy > div:first-child strong { color: var(--safe); }
+.metric.energy .meter i { background: var(--safe) !important; }
+
+/* Conducción se lee por silueta: conserva title y aria-label como ayuda. */
+.controls-panel .risk-buttons i {
+  display: grid !important;
+  place-items: center;
+  min-width: 0;
+  font-size: clamp(18px, 2.6vw, 28px);
+  line-height: 1;
+}
+.controls-panel .risk-buttons span { display: none !important; }
+
+/* Banda inferior unificada con el HUD: misma profundidad azul, bordes suaves
+   y color sólo cuando comunica un estado. */
+.control-deck {
+  background: #0b1220;
+  border-top-color: #2b405b;
+}
+
+.control-deck > div { border-right-color: #263951; }
+.metrics-panel, .controls-panel { background: transparent; }
+
+.metric > div:first-child span { color: #9aa9bb; }
+.metric > div:first-child strong { color: #f3f6fa; }
+.meter { background: #07101c !important; }
+
+.control-category {
+  border-color: #2b405b;
+  background: #172235;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.control-group-label { color: var(--cyan); }
+
+.controls-panel .power-preset,
+.controls-panel .risk-buttons button,
+.controls-panel .race-actions .action-button {
+  color: #d7e4f0;
+  border: 1px solid #31455f;
+  background: #203049;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.controls-panel .power-preset i,
+.controls-panel .risk-buttons i,
+.controls-panel .race-actions .button-icon {
+  color: #d7e4f0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.controls-panel .power-preset[aria-pressed="true"],
+.controls-panel .risk-buttons button.active {
+  color: #07131f !important;
+  border-color: #8bc7ff !important;
+  background: var(--lime) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.38), 0 0 0 1px rgba(98,173,245,.35);
+}
+
+.controls-panel .power-preset[aria-pressed="true"] i,
+.controls-panel .risk-buttons button.active i { color: #07131f; }
+
+.controls-panel .race-actions .action-button.attack { background: #733b4d; }
+.controls-panel .race-actions .action-button.sprint { background: #285a86; }
+.controls-panel .race-actions .action-button.relay { background: #24516f; }
+.controls-panel .race-actions .action-button.relay.active { background: var(--lime); }
+.controls-panel .race-actions .action-button.relay.active .button-icon { color: #07131f; }
+.controls-panel .race-actions #gelButton { background: #245b4c; }
+.controls-panel .race-actions .action-button:disabled { background: #182333; }
+
+/* HUD de carrera: lectura retro y una única jerarquía, sin tipografías de
+   cartel distintas para posición, distancia y meta. */
+.broadcast-header {
+  background: #0b1220;
+  border-bottom-color: #2b405b;
+  box-shadow: 0 4px 0 rgba(0,0,0,.22);
+}
+
+.broadcast-header .data-block,
+.broadcast-header .race-data .position-tile {
+  border-color: #263951;
+}
+
+.broadcast-header .data-block .label,
+.broadcast-header .race-data .position-tile > .label,
+.broadcast-header .profile-labels {
+  color: #86a0bd;
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.broadcast-header .data-block strong,
+.broadcast-header .main-distance strong,
+.broadcast-header .race-data .position-tile strong {
+  color: #f3f6fa;
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+.broadcast-header .gap-block strong,
+.broadcast-header .weather-icon,
+.broadcast-header .position-tile em { color: var(--cyan); }
+
+/* Conducción vuelve a nombrar cada opción: los tres niveles son más claros
+   que símbolos abstractos durante una carrera. */
+.controls-panel .risk-buttons i { display: none !important; }
+.controls-panel .risk-buttons span {
+  display: block !important;
+  color: inherit;
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: clamp(7px, 1.35vw, 10px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .02em;
+}
+.controls-panel .risk-buttons span small { display: none !important; }
+
+/* Mandos de sistema con la misma carcasa que el marcador superior. */
+.race-system-controls {
+  border-color: #2b405b;
+  background: #0b1220;
+  box-shadow: 2px 2px 0 rgba(0,0,0,.38);
+}
+
+.race-system-controls .race-speed-button {
+  color: #f3f6fa;
+  border-right-color: #263951;
+  background: #172235;
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  text-shadow: none;
+}
+
+.race-system-controls .race-speed-button.fast {
+  color: #07131f;
+  background: var(--lime);
+}
+
+.race-system-controls .camera-switcher {
+  border-color: #263951;
+  background: #0b1220;
+}
+
+.race-system-controls .camera-switcher button {
+  color: #d5e1ed;
+  background: #172235;
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.race-system-controls .camera-switcher button + button { border-left-color: #263951; }
+.race-system-controls .camera-switcher button.active { color: #07131f; background: var(--lime); }
+
+.race-system-controls .pause-button {
+  color: #ff9b9d;
+  border-left-color: #263951;
+  background: #172235;
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  text-shadow: none;
+}
+
+.race-system-controls .pause-button:hover,
+.race-system-controls .pause-button:focus-visible { color: #fff; background: #733b4d; }
+
+/* Cajas de sistema: lectura cómoda y la misma presencia pixelada que la
+   rueda táctica, sin volver a la tira comprimida. */
+.race-system-controls {
+  grid-template-columns: 54px 84px 40px;
+  height: 40px;
+  gap: 4px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.race-system-controls .race-speed-button {
+  grid-template-rows: 1fr;
+  padding: 0;
+  border: 2px solid #2b405b;
+  background: #172235;
+  box-shadow: 2px 2px 0 #05090e;
+  font-size: 16px;
+}
+
+.race-system-controls .race-speed-button > span { font-size: 16px; }
+.race-system-controls .system-camera-control { padding: 0; }
+.race-system-controls .camera-switcher {
+  height: 40px;
+  border: 2px solid #2b405b;
+  box-shadow: 2px 2px 0 #05090e;
+}
+.race-system-controls .camera-switcher button { font-size: 9px; }
+.race-system-controls .camera-switcher button + button { border-left: 2px solid #263951; }
+
+.race-system-controls .pause-button {
+  border: 2px solid #2b405b;
+  background: #172235;
+  box-shadow: 2px 2px 0 #05090e;
+  font-size: 20px;
 }

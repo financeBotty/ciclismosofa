@@ -1,16 +1,16 @@
 :root {
-  --ink: #09131f;
-  --panel: #101d2d;
-  --panel-2: #17283a;
-  --line: rgba(255,255,255,.14);
-  --muted: #bdcbd4;
-  --cream: #f7f2e8;
-  --lime: #ffcc33;
-  --yellow: #ffcc33;
-  --cyan: #62d8f2;
-  --orange: #ff7158;
-  --red: #f04452;
-  --safe: #66dfb2;
+  --ink: #0b1220;
+  --panel: #172235;
+  --panel-2: #203049;
+  --line: rgba(184, 203, 226, .18);
+  --muted: #9aa9bb;
+  --cream: #f3f6fa;
+  --lime: #62adf5;
+  --yellow: #62adf5;
+  --cyan: #59d7e8;
+  --orange: #ff7466;
+  --red: #ef5d62;
+  --safe: #79e0a2;
   --shadow: 0 24px 70px rgba(0,0,0,.38);
 }
 
@@ -131,7 +131,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; background: #07111c; color: var(--cream); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+html, body { margin: 0; min-height: 100%; background: #0b1220; color: var(--cream); font-family: "DM Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 body { overflow-x: hidden; }
 button, select { font: inherit; }
 button { touch-action: manipulation; }
@@ -3841,7 +3841,7 @@ html, body {
 
 .team-order-panel {
   position: absolute;
-  z-index: 22;
+  z-index: 40;
   right: 16px;
   bottom: 67px;
   width: min(320px, calc(100% - 32px));
@@ -3850,6 +3850,9 @@ html, body {
   border-top-color: var(--lime);
   background: #10283b;
   box-shadow: 5px 5px 0 rgba(0,0,0,.68);
+  isolation: isolate;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .team-order-panel header {
@@ -5746,7 +5749,346 @@ html.reduced-motion *::after {
     -webkit-tap-highlight-color: transparent;
   }
 
-  .race-viewport.mobile-submenu-open .mobile-view-panel:not(.is-hidden) {
+.race-viewport.mobile-submenu-open .mobile-view-panel:not(.is-hidden) {
     pointer-events: auto;
   }
+}
+
+/* Portada depurada: los modos son el foco y el título incorpora un ciclista
+   original dibujado en SVG, sin depender de una imagen externa. */
+#quickModeButton {
+  justify-content: center;
+  text-align: center;
+}
+
+#quickModeButton i { min-width: 0; }
+
+#quickModeButton {
+  gap: 8px;
+  padding-inline: 8px;
+}
+
+#quickModeButton span {
+  font-size: clamp(11px, 1.65vw, 15px);
+  white-space: nowrap;
+}
+
+.development-date {
+  margin: -2px 0 2px;
+  color: var(--cyan);
+  font: 900 10px/1 Menlo, Monaco, Consolas, monospace;
+  letter-spacing: .16em;
+}
+
+.menu-tutorial-button {
+  justify-self: center;
+  min-height: 38px;
+  padding: 7px 13px;
+  color: #c9d8de;
+  border: 2px solid #3d5a6c;
+  background: transparent;
+  font: 900 10px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.menu-tutorial-button:hover,
+.menu-tutorial-button:focus-visible {
+  color: #171200;
+  border-color: #05090e;
+  background: var(--cyan);
+  outline: 0;
+}
+
+/* Portada v2: una pantalla de lanzamiento con jerarquía clara. */
+.menu-overlay {
+  background:
+    radial-gradient(circle at 16% 13%, rgba(98,216,242,.16), transparent 25%),
+    radial-gradient(circle at 86% 80%, rgba(255,204,51,.12), transparent 28%),
+    linear-gradient(135deg, #06111c, #102a3c 58%, #0b1725);
+}
+
+.menu-card {
+  width: min(740px, calc(100% - 28px));
+  max-height: calc(100dvh - 28px);
+  gap: 13px;
+  padding: clamp(18px, 3vw, 30px);
+  border: 3px solid #05090e;
+  border-top-color: var(--cyan);
+  background: linear-gradient(145deg, rgba(21,55,78,.98), rgba(8,25,39,.98));
+  box-shadow: 8px 8px 0 #05090e, inset 0 2px 0 rgba(255,255,255,.11);
+}
+
+.menu-intro {
+  display: grid;
+  gap: 5px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(173,212,226,.22);
+}
+
+.menu-intro .eyebrow {
+  margin: 0;
+  color: var(--cyan);
+  font-size: 10px;
+  letter-spacing: .18em;
+}
+
+.menu-intro h2 {
+  margin: 0;
+  color: #f4f1e9;
+  font-family: Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(46px, 8vw, 78px);
+  font-style: normal;
+  letter-spacing: -.07em;
+  line-height: .9;
+}
+
+.menu-intro h2 span { color: var(--lime); }
+
+.menu-intro .development-date {
+  margin: 1px 0 0;
+  color: #8eb9c8;
+  font-size: 9px;
+}
+
+.menu-intro .menu-copy {
+  max-width: 48ch;
+  margin: 4px 0 0;
+  color: #c9d9df;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.menu-launch {
+  display: grid;
+  gap: 8px;
+}
+
+.menu-launch > p {
+  margin: 0;
+  color: #9ebbc5;
+  font: 900 9px/1 Menlo, Monaco, Consolas, monospace;
+  letter-spacing: .12em;
+}
+
+.game-mode-choice {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.game-mode-choice button {
+  position: relative;
+  min-height: 82px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 3px solid #071019;
+  background: linear-gradient(145deg, #244b65, #17344c);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.14), 3px 3px 0 #05090e;
+  text-align: left;
+}
+
+.game-mode-choice button:hover,
+.game-mode-choice button:focus-visible {
+  transform: translate(-1px, -1px);
+  outline: 0;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.2), 5px 5px 0 #05090e;
+}
+
+.game-mode-choice button.active {
+  color: #18200f;
+  background: linear-gradient(145deg, #e8f26f, var(--lime));
+}
+
+.game-mode-choice i {
+  min-width: 24px;
+  margin-top: 1px;
+  color: var(--cyan);
+  font-size: 23px;
+}
+
+.game-mode-choice button.active i { color: #385120; }
+
+.game-mode-choice span {
+  min-width: 0;
+  font-size: clamp(13px, 2vw, 17px);
+  line-height: 1;
+}
+
+.game-mode-choice small {
+  margin-top: 6px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.game-mode-choice b {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  font: 900 8px/1 Menlo, Monaco, Consolas, monospace;
+  letter-spacing: .08em;
+}
+
+#quickModeButton {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+#quickModeButton span { white-space: normal; }
+
+.menu-tutorial-button {
+  justify-self: start;
+  min-height: 30px;
+  padding: 5px 8px;
+  border-color: transparent;
+  color: #94b4c0;
+  font-size: 9px;
+}
+
+.menu-tutorial-button:hover,
+.menu-tutorial-button:focus-visible {
+  border-color: var(--cyan);
+  color: #07131f;
+}
+
+#tourModePanel {
+  padding-top: 2px;
+}
+
+.save-slots > header {
+  padding: 7px 9px;
+  color: #d7e6eb;
+  border-left: 4px solid var(--lime);
+  background: rgba(0,0,0,.16);
+  font-size: 10px;
+}
+
+.record-strip {
+  padding-top: 8px;
+  border-top: 1px solid rgba(173,212,226,.18);
+}
+
+@media (max-width: 520px) {
+  .menu-card {
+    width: min(100% - 16px, 520px);
+    max-height: calc(100dvh - 16px);
+    gap: 9px;
+    padding: 15px;
+  }
+
+  .menu-intro { padding-bottom: 9px; }
+  .menu-intro h2 { font-size: clamp(43px, 15vw, 62px); }
+  .menu-intro .menu-copy { font-size: 11px; }
+  .game-mode-choice button { min-height: 72px; padding: 9px; }
+  .game-mode-choice i { min-width: 19px; font-size: 19px; }
+  .game-mode-choice span { font-size: 11px; }
+  .game-mode-choice small { margin-top: 4px; font-size: 8px; }
+  .game-mode-choice b { right: 7px; bottom: 7px; font-size: 7px; }
+  .save-slots > header { font-size: 9px; }
+}
+
+/* Sistema visual: lectura sobria y acentos propios de una retransmisión. */
+.game-shell {
+  background:
+    radial-gradient(circle at 18% 0, rgba(107,199,233,.13), transparent 31rem),
+    linear-gradient(145deg, #0b1220, #101a2b 62%, #0b1220);
+}
+
+.broadcast-header {
+  background: linear-gradient(110deg, #101a2a, #182740);
+  border-bottom-color: rgba(184,203,226,.16);
+}
+
+.eyebrow, .stage-brand p, .data-block .label,
+.system-control-label, .menu-launch > p {
+  font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+.stage-brand h1, .data-block strong, .main-distance strong,
+.position-tile strong, #finalPosition {
+  font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+button, .race-speed-button, .camera-switcher button, .team-order-button,
+.action-button, .round-button, .risk-buttons button {
+  font-family: Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 900;
+  letter-spacing: .035em;
+}
+
+.menu-overlay {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(107,199,233,.16), transparent 27%),
+    radial-gradient(circle at 88% 86%, rgba(245,197,66,.12), transparent 30%),
+    linear-gradient(135deg, #0b1220, #152640 58%, #0b1220);
+}
+
+.menu-card {
+  border-color: #263951;
+  border-top-color: var(--cyan);
+  background: linear-gradient(145deg, rgba(28,43,65,.98), rgba(13,23,38,.99));
+  box-shadow: 8px 8px 0 #070b13, inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.menu-intro h2 {
+  font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+  font-weight: 800;
+  letter-spacing: -.035em;
+}
+
+.menu-intro h2 span { color: var(--lime); }
+.menu-intro .development-date { color: var(--safe); }
+.menu-intro .menu-copy { color: #c4cfdd; }
+
+.game-mode-choice button {
+  border-color: #2b405b;
+  background: linear-gradient(145deg, #253955, #182940);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 3px 3px 0 #070b13;
+}
+
+.game-mode-choice button:hover,
+.game-mode-choice button:focus-visible {
+  border-color: var(--cyan);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 5px 5px 0 #070b13;
+}
+
+.game-mode-choice button.active {
+  color: #102014;
+  background: linear-gradient(145deg, #b9ddff, var(--lime));
+}
+
+.game-mode-choice button.active i { color: #245f98; }
+.game-mode-choice i { color: var(--cyan); }
+.game-mode-choice span { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 800; letter-spacing: .035em; }
+
+.primary-button, .save-slot button.active, .team-select-card.active {
+  color: #15191d;
+  background: var(--lime);
+}
+
+.status-chip.safe b, .rider-condition strong, .resource-feedback-item.safe i { color: var(--safe); }
+.status-chip.danger b, .danger-banner, .resource-feedback-item.danger i { color: var(--red); }
+
+/* Variante arcade: azul eléctrico como selección, cian como información.
+   El amarillo queda reservado para el propio recorrido, no para la interfaz. */
+.primary-button, .save-slot button.active, .team-select-card.active,
+.team-order-button, .race-system-controls .camera-switcher button.active {
+  color: #102014;
+  background: var(--lime);
+}
+
+.game-mode-choice button, .race-system-controls,
+.team-order-panel, .control-deck, .groups-panel {
+  border-radius: 0;
+}
+
+.team-order-button .strategy-wheel,
+.team-order-button .strategy-wheel::before,
+.team-order-button .strategy-wheel::after { border-color: #102014; background-color: #102014; }
+
+.team-order-button .strategy-wheel {
+  background: radial-gradient(circle, #102014 0 2px, transparent 2.5px);
 }

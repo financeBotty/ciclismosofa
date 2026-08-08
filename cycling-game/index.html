@@ -13,6 +13,9 @@
   <title>Ciclimo Tour — Ciclismo arcade</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="responsive.css">
 </head>
@@ -65,11 +68,11 @@
     <section class="race-viewport" aria-label="Vista de carrera">
       <canvas id="gameCanvas" aria-label="Carrera ciclista animada"></canvas>
       <div id="vignette" class="weather-vignette"></div>
-      <nav id="mobileViewTabs" class="mobile-view-tabs" aria-label="Vistas del juego">
-        <button type="button" data-mobile-view="race" class="active" aria-selected="true" aria-label="Ver carrera"><i aria-hidden="true">▶</i><span>RUTA</span></button>
-        <button type="button" data-mobile-view="groups" aria-selected="false" aria-label="Ver grupos"><i aria-hidden="true">≡</i><span>GRUP.</span></button>
-        <button type="button" data-mobile-view="classification" aria-selected="false" aria-label="Ver clasificación"><i aria-hidden="true">☷</i><span>POS.</span></button>
-        <button type="button" data-mobile-view="stage" aria-selected="false" aria-label="Ver etapa"><i aria-hidden="true">▲</i><span>ETAPA</span></button>
+      <nav id="mobileViewTabs" class="mobile-view-tabs is-hidden" aria-label="Vistas del juego" aria-hidden="true">
+        <button type="button" data-mobile-view="race" class="active" aria-selected="true" aria-label="Ver carrera" title="Carrera"><i aria-hidden="true">▶</i><span>RUTA</span></button>
+        <button type="button" data-mobile-view="groups" aria-selected="false" aria-label="Ver grupos" title="Grupos"><i aria-hidden="true">≡</i><span>GRUP.</span></button>
+        <button type="button" data-mobile-view="classification" aria-selected="false" aria-label="Ver clasificación" title="Clasificación"><i aria-hidden="true">☷</i><span>POS.</span></button>
+        <button type="button" data-mobile-view="stage" aria-selected="false" aria-label="Ver etapa" title="Etapa"><i aria-hidden="true">▲</i><span>ETAPA</span></button>
       </nav>
       <section id="mobileClassificationPanel" class="mobile-view-panel mobile-classification-panel is-hidden" aria-label="Clasificación en directo">
         <header><span>☷ RANKING</span><strong id="mobileRacePosition">—</strong><button id="mobileJumpToPlayer" type="button" class="mobile-jump-player">IR A MÍ</button><button type="button" class="mobile-route-return" data-return-to-race>▶ RUTA</button></header>
@@ -104,16 +107,21 @@
       <div id="dangerBanner" class="danger-banner" role="status">
         <span>!</span><div><small>ATENCIÓN</small><strong>CURVA PELIGROSA</strong><em id="dangerDistance">EN 200 m</em></div>
       </div>
-      <button id="raceSpeedButton" class="race-speed-button" type="button"
-        aria-label="Velocidad de carrera por uno" aria-pressed="false"><span>×1</span></button>
-      <button id="pauseButton" class="icon-button pause-button" aria-label="Pausar partida">Ⅱ</button>
       <button id="returnCameraButton" class="camera-return is-hidden" aria-label="Volver a tu ciclista">⌖ TÚ</button>
-      <div id="cameraSwitcher" class="camera-switcher" role="group" aria-label="Cámara de carrera">
-        <button id="topCameraButton" type="button" data-camera-mode="top" aria-pressed="true">CEN</button>
-        <button id="sideCameraButton" type="button" data-camera-mode="side" aria-pressed="false">LAT</button>
-      </div>
-      <button id="teamOrderButton" class="team-order-button" type="button" aria-expanded="false" aria-controls="teamOrderPanel">
-        <span>♟</span><b id="teamOrderCurrent">PROTEGER</b>
+      <aside class="race-system-controls" aria-label="Controles de vista y ritmo">
+        <button id="raceSpeedButton" class="race-speed-button" type="button"
+          aria-label="Velocidad de carrera por uno" aria-pressed="false"><small>RITMO</small><span>×1</span></button>
+        <div class="system-camera-control">
+          <span class="system-control-label">VISTA</span>
+          <div id="cameraSwitcher" class="camera-switcher" role="group" aria-label="Cámara de carrera">
+            <button id="topCameraButton" type="button" data-camera-mode="top" aria-label="Vista cenital" title="Vista cenital" aria-pressed="true">CEN</button>
+            <button id="sideCameraButton" type="button" data-camera-mode="side" aria-label="Vista lateral" title="Vista lateral" aria-pressed="false">LAT</button>
+          </div>
+        </div>
+        <button id="pauseButton" class="icon-button pause-button" type="button" aria-label="Pausar partida">Ⅱ</button>
+      </aside>
+      <button id="teamOrderButton" class="team-order-button" type="button" aria-label="Abrir estrategia del equipo" aria-expanded="false" aria-controls="teamOrderPanel">
+        <span class="strategy-wheel" aria-hidden="true"></span><b id="teamOrderCurrent" class="visually-hidden">PROTEGER</b>
       </button>
       <div id="raceContextStrip" class="race-context-strip" role="status" aria-live="polite">
         <strong id="contextSpeed">0 km/h</strong><span id="contextRiderState">EN GRUPO</span><span id="contextEnergyRate">E —</span><span id="contextRisk" data-level="low">RIESGO BAJO</span>
@@ -124,7 +132,7 @@
           <button type="button" data-team-order="protect" class="active"><i>◆</i><span>PROTEGER<small>Quédate arropado</small></span></button>
           <button type="button" data-team-order="chase"><i>»</i><span>CAZAR<small>Gregarios al frente</small></span></button>
           <button type="button" data-team-order="attack"><i>!</i><span>ATACAR<small>Mueve escaladores</small></span></button>
-          <button type="button" data-team-order="conserve"><i>♥</i><span>GUARDAR<small>Ahorrar equipo</small></span></button>
+          <button type="button" data-team-order="peloton"><i>●</i><span>PELOTÓN<small>Mantener la posición</small></span></button>
         </div>
       </aside>
       <button id="followCard" class="follow-card is-hidden" type="button" aria-label="Cancelar rueda">
@@ -147,32 +155,24 @@
 
       <div id="menuOverlay" class="screen-overlay menu-overlay">
         <div class="menu-card">
-          <p class="eyebrow accent">CICLISMO ARCADE + ESTRATEGIA</p>
-          <h2>CICLIMO<br><span>TOUR</span></h2>
-          <p class="menu-copy">Elige un Tour completo o sal directamente a disputar una etapa aleatoria con 100 ciclistas.</p>
-          <div class="game-mode-choice" role="tablist" aria-label="Modo de juego">
-            <button id="tourModeButton" type="button" class="active" role="tab" aria-selected="true" aria-controls="tourModePanel">
-              <i>▣</i><span>TOUR<small>10 etapas y clasificaciones</small></span>
-            </button>
-            <button id="quickModeButton" type="button" role="tab" aria-selected="false" aria-controls="quickModePanel">
-              <i>⚡</i><span>CARRERA RÁPIDA<small>Una etapa aleatoria</small></span>
-            </button>
-          </div>
-          <div class="menu-options">
-            <label>CLIMA
-              <select id="weatherSelect">
-                <option value="dynamic" selected>Dinámico</option>
-                <option value="dry">Seco</option>
-                <option value="rain">Lluvia</option>
-              </select>
-            </label>
-          </div>
-          <div class="accessibility-options" aria-label="Accesibilidad y ayuda">
-            <button id="reducedMotionToggle" type="button" aria-pressed="false">MOVIMIENTO · ON</button>
-            <button id="hapticsToggle" type="button" aria-pressed="false">VIBRACIÓN · OFF</button>
-            <button id="tutorialResetButton" type="button">? TUTORIAL</button>
-            <button id="teamsDirectoryButton" type="button">♟ EQUIPOS</button>
-          </div>
+          <header class="menu-intro">
+            <p class="eyebrow accent">CICLISMO ARCADE</p>
+            <h2>CICLIMO <span>TOUR</span></h2>
+            <p class="development-date">AGOSTO · 26</p>
+            <p class="menu-copy">Elige una temporada completa o lánzate a una etapa distinta cada vez.</p>
+          </header>
+          <section class="menu-launch" aria-label="Comenzar a jugar">
+            <p>ELIGE CÓMO SALIR A CARRETERA</p>
+            <div class="game-mode-choice" role="group" aria-label="Modo de juego">
+              <button id="tourModeButton" type="button" class="active">
+                <i>▣</i><span>TOUR<small>10 etapas · equipo propio</small></span><b>CONTINUAR ›</b>
+              </button>
+              <button id="quickModeButton" type="button">
+                <i>⚡</i><span>CARRERA RÁPIDA<small>Etapa y equipo aleatorios</small></span><b>JUGAR ›</b>
+              </button>
+            </div>
+            <button id="tutorialButton" class="menu-tutorial-button" type="button">? CÓMO JUGAR</button>
+          </section>
           <div id="tourModePanel" class="mode-panel" role="tabpanel" aria-labelledby="tourModeButton">
             <section class="save-slots" aria-label="Partidas guardadas">
               <header><span>▣ PARTIDAS DEL TOUR</span><small>AUTOGUARDADO TRAS CADA ETAPA</small></header>
@@ -195,14 +195,6 @@
                 <button type="button" class="slot-delete" data-slot-delete="3" aria-label="Borrar slot 3" disabled>×</button>
               </article>
             </section>
-          </div>
-          <div id="quickModePanel" class="mode-panel quick-mode-panel is-hidden" role="tabpanel" aria-labelledby="quickModeButton">
-            <div>
-              <span>⚡ ETAPA NUEVA</span>
-              <strong>CUALQUIER TERRENO</strong>
-              <p>Puede salir contrarreloj, llana, media montaña o alta montaña. Sin guardar Tour.</p>
-            </div>
-            <button id="quickRaceButton" type="button"><i>▶</i><span>GENERAR Y CORRER<small>100 ciclistas · resultado completo</small></span></button>
           </div>
           <div class="record-strip">
             <span>MEJOR RESULTADO <strong id="bestPosition">—</strong></span>
@@ -467,8 +459,8 @@
             <span class="control-group-label">◆ CONDUCCIÓN</span>
             <div class="risk-panel">
               <div class="risk-buttons" role="group" aria-label="Nivel de riesgo">
-                <button data-risk="safe" aria-label="Conducción segura" title="Conducción segura · menos velocidad"><i aria-hidden="true">◈</i><span>SEGURA<small>Menos velocidad</small></span></button>
-                <button data-risk="normal" class="active" aria-label="Conducción normal" title="Conducción normal · equilibrada"><i aria-hidden="true">◆</i><span>NORMAL<small>Equilibrada</small></span></button>
+                <button data-risk="safe" aria-label="Conducción segura" title="Conducción segura · menos velocidad"><i aria-hidden="true">◌</i><span>SEGURA<small>Menos velocidad</small></span></button>
+                <button data-risk="normal" class="active" aria-label="Conducción normal" title="Conducción normal · equilibrada"><i aria-hidden="true">◉</i><span>NORMAL<small>Equilibrada</small></span></button>
                 <button data-risk="aggressive" aria-label="Conducción agresiva" title="Conducción agresiva · riesgo de caída en bajada salvo para sprinters"><i aria-hidden="true">✦</i><span>AGRESIVA<small>Riesgo de caída</small></span></button>
               </div>
               <div class="race-tip"><span>DIRECTOR</span><p id="directorTip">Mantente a rueda durante el llano y guarda fuerzas para el puerto.</p></div>

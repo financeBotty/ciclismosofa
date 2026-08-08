@@ -22,8 +22,8 @@
            "difficultyRemoved: !document.getElementById('difficultySelect'),"
            "audioRemoved: !document.getElementById('volumeRange') && !document.getElementById('soundToggle'),"
            "modeFont: mode.fontSize, slotFont: slot.fontSize,"
-           "quickVisible: !document.querySelector('#quickModePanel').classList.contains('is-hidden'),"
-           "tourHidden: document.querySelector('#tourModePanel').classList.contains('is-hidden')"
+           "quickDirect: !document.getElementById('quickModePanel') && Boolean(document.getElementById('quickModeButton')),"
+           "tourVisible: !document.querySelector('#tourModePanel').classList.contains('is-hidden')"
          "};"
          "})();", self.mode];
     [webView evaluateJavaScript:inspect completionHandler:^(NSDictionary *result, NSError *error) {
@@ -74,8 +74,7 @@
                      "});"
                      "const dashboardVisible = !document.getElementById('tourDashboard').classList.contains('is-hidden');"
                      "game.showMenu();"
-                     "game.setMenuGameMode('quick');"
-                     "document.querySelector('#quickRaceButton').click();"
+                     "document.querySelector('#quickModeButton').click();"
                      "game.state = 'RACING';"
                      "game.race.cyclists.forEach((rider, index) => {"
                        "rider.finishTime = 3600 + index * 3;"

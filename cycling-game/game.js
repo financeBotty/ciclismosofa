@@ -206,7 +206,7 @@ const TEAM_ORDERS = {
   protect: { label: "PROTEGER", state: "PROTEGER", message: "Los gregarios de Solaris pasan delante: tú ahorras energía y ellos asumen el desgaste." },
   chase: { label: "CAZAR", state: "PERSEGUIR", message: "Los gregarios de Solaris toman el mando." },
   attack: { label: "ATACAR", state: "ATACAR", message: "Escaladores y atacante de Solaris preparan un movimiento." },
-  conserve: { label: "GUARDAR", state: "RECUPERAR", message: "Solaris guarda fuerzas para más adelante." }
+  peloton: { label: "PELOTÓN", state: "RECUPERAR", message: "Solaris se mantiene arropado en el pelotón y guarda fuerzas." }
 };
 const TUTORIAL_STEPS = [
   {
@@ -219,7 +219,7 @@ const TUTORIAL_STEPS = [
   },
   {
     icon: "♟", title: "DIRIGE TU EQUIPO",
-    text: "En etapas en línea abre EQUIPO para protegerte, perseguir una fuga, ordenar un ataque o guardar fuerzas."
+    text: "En etapas en línea abre EQUIPO para protegerte, perseguir una fuga, ordenar un ataque o mantenerte en el pelotón."
   },
   {
     icon: "!", title: "ELIGE EL MOMENTO",
@@ -579,7 +579,10 @@ class Road {
       { id: "desert", name: "Desierto", ground: "#c79b5c", detail: "#936b42", accent: "#ead38a" },
       { id: "mountain", name: "Alta montaña", ground: "#7d897e", detail: "#53635d", accent: "#bdc1a8" },
       { id: "green", name: "Campiña verde", ground: "#68a05c", detail: "#3c784b", accent: "#a6c46a" },
-      { id: "dry", name: "Terreno seco", ground: "#a08351", detail: "#705e40", accent: "#c8aa68" }
+      { id: "dry", name: "Terreno seco", ground: "#a08351", detail: "#705e40", accent: "#c8aa68" },
+      { id: "vineyard", name: "Viñedos", ground: "#779154", detail: "#49683e", accent: "#d4a958" },
+      { id: "coast", name: "Costa rocosa", ground: "#77969a", detail: "#486d72", accent: "#d8d0a5" },
+      { id: "wetland", name: "Humedales", ground: "#6d927a", detail: "#3f6d63", accent: "#b5c978" }
     ];
     // El paisaje define la identidad visual de la etapa completa: una etapa
     // árida no se convierte a mitad de recorrido en bosque o campiña.
@@ -590,6 +593,9 @@ class Road {
       startKm: 0,
       endKm: this.lengthKm,
       timeOfDay: "day",
+      // El modelo de paisaje queda fijado para toda la etapa; los detalles se
+      // anclan por kilómetro y no se regeneran mientras avanza la cámara.
+      landmarkVariant: Math.floor(this.random.next() * 4),
       ...biome
     });
   }
@@ -1612,14 +1618,18 @@ class Race {
   }
 
   initializeRaceVehicles() {
-    const colors = this.teams.slice(0, 3).map((team) => team.color);
+    const playerTeam = this.teams.find((team) => team.id === this.playerTeamId) || this.teams[0];
+    const carTeams = [playerTeam, ...this.teams.filter((team) => team !== playerTeam)].slice(0, 3);
     this.raceVehicles = [
       { id: "tv-0", type: "tv", distance: -0.06, lateral: -0.52, speed: 40, cruiseSpeed: 40, color: "#ffcc33", active: true },
       { id: "tv-1", type: "tv", distance: -0.22, lateral: 0.5, speed: 35, cruiseSpeed: 35, color: "#62d8f2", active: true },
       { id: "tv-2", type: "tv", distance: -0.38, lateral: -0.08, speed: 31, cruiseSpeed: 31, color: "#f4f1e9", active: true },
-      { id: "team-0", type: "team", distance: -0.18, lateral: 0.5, speed: 29, cruiseSpeed: 29, color: colors[0] || "#2f80ed", active: true },
-      { id: "team-1", type: "team", distance: -0.38, lateral: -0.48, speed: 31, cruiseSpeed: 31, color: colors[1] || "#ef476f", active: true },
-      { id: "team-2", type: "team", distance: -0.58, lateral: 0.12, speed: 28, cruiseSpeed: 28, color: colors[2] || "#36bd69", active: true },
+      ...carTeams.map((team, index) => ({
+        id: `team-${index}`, type: "team", teamId: team.id, teamName: team.name,
+        distance: -0.18 - index * 0.2, lateral: [0.5, -0.48, 0.12][index],
+        speed: [29, 31, 28][index], cruiseSpeed: [29, 31, 28][index],
+        color: team.color, active: true
+      })),
       { id: "broom", type: "broom", distance: -0.56, lateral: 0.55, speed: 28, color: "#f0a62b", active: true }
     ];
   }
@@ -1634,13 +1644,15 @@ class Race {
     const trafficVehicles = this.raceVehicles.filter((vehicle) => vehicle.type === "tv" && vehicle.active);
     const broom = this.raceVehicles.find((vehicle) => vehicle.type === "broom");
 
-    // Las motos avanzan delante de carrera con velocidad propia.
+    // Las motos son parte de la retransmisión, no tráfico para el jugador.
+    // Se mantienen claramente delante del líder y acompañan su velocidad,
+    // para que nunca puedan entrar en el pelotón ni cortar una escapada.
     const orderedTraffic = [...trafficVehicles].sort((a, b) => b.distance - a.distance);
-    let motorcycleCeiling = leader.distance - 0.06;
+    const motorcycleLeadGap = 0.28;
     for (let index = 0; index < orderedTraffic.length; index += 1) {
       const vehicle = orderedTraffic[index];
       const aheadVehicle = orderedTraffic[index - 1];
-      let targetSpeed = vehicle.cruiseSpeed;
+      let targetSpeed = Math.max(vehicle.cruiseSpeed, leader.speed + 6);
       const safeVehicleGap = vehicle.type === "tv" && aheadVehicle?.type === "tv" ? 0.14 : 0.22;
       if (aheadVehicle && aheadVehicle.distance - vehicle.distance < safeVehicleGap) {
         targetSpeed = Math.min(targetSpeed, Math.max(8, aheadVehicle.speed - 2));
@@ -1656,9 +1668,13 @@ class Race {
       vehicle.distance += vehicle.speed * this.simulationScale / 3600 * dt;
       vehicle.lateral = clamp(vehicle.lateral, -0.62, 0.62);
       if (vehicle.type === "tv") {
-        // Ninguna moto puede abrir carrera ni amontonarse con otra en cabeza.
-        vehicle.distance = Math.min(vehicle.distance, motorcycleCeiling);
-        motorcycleCeiling = vehicle.distance - 0.14;
+        // La primera moto no puede caer dentro del pelotón. Las siguientes
+        // conservan su hueco respecto a la moto que las precede.
+        const rearLimit = aheadVehicle ? aheadVehicle.distance - 0.16 : Infinity;
+        const leadFloor = leader.distance + motorcycleLeadGap +
+          (orderedTraffic.length - index - 1) * 0.16;
+        vehicle.distance = Math.max(vehicle.distance, leadFloor);
+        vehicle.distance = Math.min(vehicle.distance, rearLimit);
       }
       if (vehicle.distance > this.road.lengthKm + 0.25) vehicle.active = false;
     }
@@ -1667,7 +1683,21 @@ class Race {
     // No nacen en puntos arbitrarios de la etapa ni atraviesan al pelotón.
     const vehicleGroups = this.groups?.length ? this.groups : [{ riders: activeRiders }];
     teamCars.forEach((vehicle, index) => {
-      const group = vehicleGroups[Math.min(index, vehicleGroups.length - 1)];
+      const matchingGroups = vehicle.teamId === this.playerTeamId
+        ? vehicleGroups.filter((candidate) => candidate.riders?.includes(this.player))
+        : vehicleGroups.filter((candidate) => candidate.riders?.some((rider) => rider.team === vehicle.teamName));
+      // Un equipo puede estar repartido en varios cortes. Escoger el primero
+      // de la lista hacía que el coche saltase de un grupo a otro al variar la
+      // composición de los cortes. Sigue el corte del equipo más próximo a su
+      // posición actual, que es estable mientras ambos avanzan por carretera.
+      const group = matchingGroups.length
+        ? matchingGroups.reduce((closest, candidate) => {
+          const closestTail = closest.tail?.distance ?? closest.leader?.distance ?? tail.distance;
+          const candidateTail = candidate.tail?.distance ?? candidate.leader?.distance ?? tail.distance;
+          return Math.abs(candidateTail - vehicle.distance) < Math.abs(closestTail - vehicle.distance)
+            ? candidate : closest;
+        })
+        : vehicleGroups[Math.min(index, vehicleGroups.length - 1)];
       const groupTail = group?.riders?.length
         ? Math.min(...group.riders.filter((rider) => !rider.finished).map((rider) => rider.distance))
         : tail.distance;
@@ -2685,6 +2715,7 @@ class Race {
     }
     for (const vehicle of this.raceVehicles || []) {
       if (!vehicle.active) continue;
+      if (vehicle.type === "tv") continue;
       const longitudinal = Math.abs(vehicle.distance - rider.distance);
       const lateral = Math.abs(vehicle.lateral - candidate);
       const vehicleWidth = vehicle.type === "tv" ? 0.3 : 0.46;
@@ -2703,6 +2734,7 @@ class Race {
       let nearest = Infinity;
       for (const vehicle of this.raceVehicles || []) {
         if (!vehicle.active) continue;
+        if (vehicle.type === "tv") continue;
         const ahead = vehicle.distance - rider.distance;
         const lateralGap = Math.abs(vehicle.lateral - rider.lateral);
         const vehicleWidth = vehicle.type === "tv" ? 0.3 : 0.46;
@@ -2820,6 +2852,8 @@ class Race {
     const riders = this.timeTrial ? [this.player] : this.cyclists;
     for (const vehicle of this.raceVehicles || []) {
       if (!vehicle.active) continue;
+      // Las motos de televisión no tienen colisión: son una capa ambiental.
+      if (vehicle.type === "tv") continue;
       const vehicleWidth = vehicle.type === "tv" ? 0.27 : 0.42;
       const longitudinalClearance = vehicle.type === "tv" ? 0.032 : 0.052;
       for (const rider of riders) {
@@ -3288,6 +3322,7 @@ class HUD {
         ? `${activeProtectors} gregario${activeProtectors === 1 ? "" : "s"} tirando delante de ti`
         : "Los gregarios están formando a tu alrededor"
       : `Orden de equipo: ${order.label}`;
+    this.elements.teamOrderButton.setAttribute("aria-label", `Abrir estrategia del equipo. Estado: ${this.elements.teamOrderCurrent.textContent}`);
     this.elements.energyValue.textContent = Math.round(player.energy);
     this.elements.powerValue.textContent = Math.round(player.explosive);
     this.elements.nutritionValue.textContent = Math.round(player.nutrition);
@@ -3744,9 +3779,6 @@ class Game {
   loadStorage() {
     const stored = safeJsonParse(safeStorageGet("ultimoPuerto.stats"), null);
     const source = stored && typeof stored === "object" && !Array.isArray(stored) ? stored : {};
-    const storedWeather = safeStorageGet("ultimoPuerto.weather");
-    const weather = ["dynamic", "dry", "rain"].includes(source.weather)
-      ? source.weather : ["dynamic", "dry", "rain"].includes(storedWeather) ? storedWeather : "dynamic";
     const systemReducedMotion = Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
     return {
       bestPosition: Number.isFinite(source.bestPosition) && source.bestPosition > 0 ? source.bestPosition : null,
@@ -3754,7 +3786,7 @@ class Game {
       races: Number.isFinite(source.races) && source.races >= 0 ? Math.floor(source.races) : 0,
       wins: Number.isFinite(source.wins) && source.wins >= 0 ? Math.floor(source.wins) : 0,
       difficulty: FIXED_DIFFICULTY,
-      weather,
+      weather: "dynamic",
       reducedMotion: typeof source.reducedMotion === "boolean" ? source.reducedMotion : systemReducedMotion,
       haptics: typeof source.haptics === "boolean" ? source.haptics : false,
       tutorialSeen: source.tutorialSeen === true
@@ -3763,7 +3795,7 @@ class Game {
 
   saveStorage() {
     this.storage.difficulty = FIXED_DIFFICULTY;
-    this.storage.weather = document.getElementById("weatherSelect").value;
+    this.storage.weather = "dynamic";
     this.storage.reducedMotion = Boolean(this.reducedMotion);
     this.storage.haptics = Boolean(this.hapticsEnabled);
     const statsSaved = safeStorageSet("ultimoPuerto.stats", JSON.stringify(this.storage));
@@ -3777,7 +3809,6 @@ class Game {
     document.getElementById("bestPosition").textContent = this.storage.bestPosition ? ordinal(this.storage.bestPosition) : "—";
     document.getElementById("raceCount").textContent = this.storage.races;
     document.getElementById("winCount").textContent = this.storage.wins;
-    document.getElementById("weatherSelect").value = this.storage.weather || "dynamic";
     this.syncAccessibilityButtons();
   }
 
@@ -3786,21 +3817,13 @@ class Game {
     window.addEventListener("orientationchange", () => window.setTimeout(() => this.resize(), 120));
     if (window.visualViewport) window.visualViewport.addEventListener("resize", () => this.resize());
     document.getElementById("tourModeButton").addEventListener("click", () => this.setMenuGameMode("tour"));
-    document.getElementById("quickModeButton").addEventListener("click", () => this.setMenuGameMode("quick"));
-    document.getElementById("quickRaceButton").addEventListener("click", () => this.startQuickRace());
-    document.getElementById("teamsDirectoryButton").addEventListener("click", () => this.openTeamsDirectory());
+    document.getElementById("quickModeButton").addEventListener("click", () => this.startQuickRace());
+    document.getElementById("tutorialButton").addEventListener("click", () => this.openTutorial());
     document.querySelectorAll("[data-slot-action]").forEach((button) => {
       button.addEventListener("click", () => this.openSaveSlot(Number(button.dataset.slotAction)));
     });
     document.querySelectorAll("[data-slot-delete]").forEach((button) => {
       button.addEventListener("click", () => this.deleteSaveSlot(Number(button.dataset.slotDelete)));
-    });
-    ["weatherSelect"].forEach((id) => {
-      document.getElementById(id).addEventListener("change", () => {
-        this.storage.difficulty = FIXED_DIFFICULTY;
-        this.storage.weather = document.getElementById("weatherSelect").value;
-        this.saveStorage();
-      });
     });
     document.getElementById("dashboardBackButton").addEventListener("click", () => this.showMenu());
     document.getElementById("dashboardTeamButton").addEventListener("click", () => {
@@ -3845,23 +3868,8 @@ class Game {
     document.querySelectorAll("[data-team-order]").forEach((button) => {
       button.addEventListener("click", () => this.setTeamOrder(button.dataset.teamOrder));
     });
-    document.getElementById("reducedMotionToggle").addEventListener("click", () => {
-      this.reducedMotion = !this.reducedMotion;
-      this.applyAccessibilityPreferences();
-      this.saveStorage();
-    });
-    document.getElementById("hapticsToggle").addEventListener("click", () => {
-      this.hapticsEnabled = !this.hapticsEnabled;
-      this.syncAccessibilityButtons();
-      this.saveStorage();
-      if (this.hapticsEnabled) this.haptic(25);
-    });
-    document.getElementById("tutorialResetButton").addEventListener("click", () => {
-      this.storage.tutorialSeen = false;
-      this.saveStorage();
-      const button = document.getElementById("tutorialResetButton");
-      button.textContent = "✓ AL JUGAR";
-      window.setTimeout(() => { button.textContent = "? TUTORIAL"; }, 1600);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") this.closeTeamOrders();
     });
     document.getElementById("nextTutorialButton").addEventListener("click", () => this.nextTutorialStep());
     document.getElementById("skipTutorialButton").addEventListener("click", () => this.completeTutorial());
@@ -4050,15 +4058,17 @@ class Game {
   }
 
   toggleTeamOrders() {
-    if (!this.canControl() || this.race.timeTrial) return;
+    if (!this.canIssueTeamOrder()) return;
     const panel = document.getElementById("teamOrderPanel");
     const willOpen = panel.classList.contains("is-hidden");
     panel.classList.toggle("is-hidden", !willOpen);
     document.getElementById("teamOrderButton").setAttribute("aria-expanded", String(willOpen));
     if (this.teamOrderPopupTimer) window.clearTimeout(this.teamOrderPopupTimer);
-    this.teamOrderPopupTimer = willOpen
-      ? window.setTimeout(() => this.closeTeamOrders(), POPUP_MAX_MS)
-      : null;
+    // Una orden táctica no es un aviso efímero: en equipos lentos o con una
+    // pestaña que ha perdido foco, el cierre automático podía ejecutarse justo
+    // al intentar elegir y dar la sensación de que el panel estaba bloqueado.
+    this.teamOrderPopupTimer = null;
+    if (willOpen) panel.querySelector("[data-team-order].active")?.focus({ preventScroll: true });
   }
 
   closeTeamOrders() {
@@ -4071,7 +4081,7 @@ class Game {
   }
 
   setTeamOrder(order) {
-    if (!this.canControl() || this.race.timeTrial || !TEAM_ORDERS[order]) return;
+    if (!this.canIssueTeamOrder() || !TEAM_ORDERS[order]) return;
     const changed = this.race.playerTeamOrder !== order;
     this.race.playerTeamOrder = order;
     if (changed) this.race.playerTeamOrderChanges += 1;
@@ -4081,10 +4091,15 @@ class Game {
       button.classList.toggle("active", button.dataset.teamOrder === order);
     });
     document.getElementById("teamOrderCurrent").textContent = TEAM_ORDERS[order].label;
+    document.getElementById("teamOrderButton").setAttribute("aria-label", `Abrir estrategia del equipo. Estado: ${TEAM_ORDERS[order].label}`);
     this.closeTeamOrders();
     this.haptic(18);
     const teamName = this.race.player.team;
     this.notify(TEAM_ORDERS[order].message.replaceAll("Solaris", teamName));
+  }
+
+  canIssueTeamOrder() {
+    return Boolean(this.race) && !this.race.timeTrial && ["COUNTDOWN", "RACING"].includes(this.state);
   }
 
   openTutorial() {
@@ -4120,6 +4135,10 @@ class Game {
     this.storage.tutorialSeen = true;
     this.saveStorage();
     document.getElementById("tutorialOverlay").classList.add("is-hidden");
+    if (!this.race) {
+      this.state = "MENU";
+      return;
+    }
     this.state = "COUNTDOWN";
     this.runCountdown();
   }
@@ -4371,7 +4390,7 @@ class Game {
   createCurrentRace(options = {}) {
     const stage = this.tour.stages[this.tour.stageIndex];
     const difficulty = FIXED_DIFFICULTY;
-    const weather = document.getElementById("weatherSelect").value;
+    const weather = "dynamic";
     const general = this.getTourRanking("time");
     const timeTrialOrder = stage.type === "itt" && general.length
       ? [...general].reverse().map((entry) => entry.tourId) : null;
@@ -4786,6 +4805,7 @@ class Game {
 
   createQuickRaceSession() {
     const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    const randomTeam = TEAM_DEFINITIONS[Math.floor(new SeededRandom(seed ^ 0x9e3779b9).next() * TEAM_DEFINITIONS.length)];
     return {
       seed,
       slot: null,
@@ -4795,6 +4815,7 @@ class Game {
       totals: new Map(),
       conditions: new Map(),
       stageResults: [],
+      playerTeamId: randomTeam.id,
       playerProfile: DEFAULT_PLAYER_PROFILE,
       jerseyAssignments: {},
       leaders: {},
@@ -4804,16 +4825,12 @@ class Game {
   }
 
   setMenuGameMode(mode) {
-    this.menuGameMode = mode === "quick" ? "quick" : "tour";
-    const quick = this.menuGameMode === "quick";
+    this.menuGameMode = "tour";
     const tourButton = document.getElementById("tourModeButton");
     const quickButton = document.getElementById("quickModeButton");
-    tourButton.classList.toggle("active", !quick);
-    quickButton.classList.toggle("active", quick);
-    tourButton.setAttribute("aria-selected", String(!quick));
-    quickButton.setAttribute("aria-selected", String(quick));
-    document.getElementById("tourModePanel").classList.toggle("is-hidden", quick);
-    document.getElementById("quickModePanel").classList.toggle("is-hidden", !quick);
+    tourButton.classList.add("active");
+    quickButton.classList.remove("active");
+    document.getElementById("tourModePanel").classList.remove("is-hidden");
   }
 
   startQuickRace() {
@@ -4940,6 +4957,7 @@ class Game {
   pause() {
     if (this.state !== "RACING") return;
     this.state = "PAUSED";
+    this.closeTeamOrders();
     document.getElementById("pauseOverlay").classList.remove("is-hidden");
   }
 
@@ -5763,7 +5781,10 @@ class Game {
       desert: ["#9f7437", "#d0a350", "#76532e"],
       mountain: ["#48534f", "#78817a", "#aeb0a1"],
       dry: ["#775a31", "#a77c3e", "#55442d"],
-      city: ["#59636a", "#7b8588", "#39444b"]
+      city: ["#59636a", "#7b8588", "#39444b"],
+      vineyard: ["#3f673a", "#7f9b4c", "#c89b52"],
+      coast: ["#365e67", "#6c8c8e", "#d1c69b"],
+      wetland: ["#315f58", "#638c67", "#a5bd74"]
     };
     const colors = palettes[biome.id] || palettes.green;
     const shiftY = 0;
@@ -5773,7 +5794,21 @@ class Game {
       for (let x = -46 + shiftX + (Math.floor(y / 38) % 2) * 19; x < this.width + 46; x += 46) {
         const hash = Math.abs(Math.sin(x * 13.17 + y * 7.31));
         ctx.fillStyle = colors[Math.floor(hash * 10) % colors.length];
-        if (biome.id === "city") {
+        if (biome.id === "vineyard") {
+          ctx.fillRect(x - 12, y - 8, 25, 2);
+          ctx.fillRect(x - 9, y - 3, 19, 2);
+          ctx.fillStyle = colors[2];
+          ctx.fillRect(x - 6, y - 7, 3, 3);
+          ctx.fillRect(x + 5, y - 2, 3, 3);
+        } else if (biome.id === "coast") {
+          ctx.fillRect(x - 12, y, 25, 2);
+          ctx.fillRect(x - 5, y - 5, 13, 2);
+          if (hash > 0.63) ctx.fillRect(x - 9, y + 6, 7, 4);
+        } else if (biome.id === "wetland") {
+          ctx.fillRect(x - 2, y - 12, 3, 14);
+          ctx.fillRect(x - 7, y - 7, 5, 2);
+          ctx.fillRect(x + 1, y - 9, 7, 2);
+        } else if (biome.id === "city") {
           ctx.fillRect(x - 10, y, 22, 2);
           ctx.fillRect(x, y - 10, 2, 22);
           if (hash > 0.72) {
@@ -5997,7 +6032,32 @@ class Game {
     const block = Math.max(3, Math.round(size / 4));
     x = Math.round(x);
     y = Math.round(y);
-    if (biome.id === "city") {
+    if (biome.id === "vineyard") {
+      ctx.fillStyle = "#4a3828";
+      ctx.fillRect(x - size, y - size * 0.35, size * 2, block);
+      ctx.fillRect(x - size * 0.55, y - size, block, size * 0.72);
+      ctx.fillRect(x + size * 0.5, y - size * 0.85, block, size * 0.58);
+      ctx.fillStyle = "#3f6c39";
+      ctx.fillRect(x - size * 0.74, y - size * 0.72, size * 0.9, block * 2);
+      ctx.fillRect(x + size * 0.04, y - size * 0.62, size * 0.8, block * 2);
+    } else if (biome.id === "coast") {
+      ctx.fillStyle = "#4f5c59";
+      ctx.fillRect(x - size, y - size * 0.3, size * 2, size * 0.34);
+      if (marker % 3 === biome.landmarkVariant % 3) {
+        ctx.fillStyle = "#f0eee0";
+        ctx.fillRect(x - block, y - size * 1.35, block * 2, size);
+        ctx.fillStyle = "#d54f52";
+        ctx.fillRect(x - block * 1.4, y - size * 1.25, block * 2.8, block * 2);
+      }
+      ctx.fillStyle = "#cdd9d3";
+      ctx.fillRect(x - size * 0.7, y + 2, size * 1.4, block);
+    } else if (biome.id === "wetland") {
+      ctx.fillStyle = "#345d51";
+      ctx.fillRect(x - block, y - size, block * 2, size);
+      ctx.fillRect(x - size * 0.65, y - size * 0.58, size * 1.2, block);
+      ctx.fillStyle = biome.accent;
+      ctx.fillRect(x - size * 0.9, y + 1, size * 1.8, block * 2);
+    } else if (biome.id === "city") {
       const height = Math.round(size * (1.8 + marker % 3 * 0.35));
       ctx.fillStyle = "#2d3942";
       ctx.fillRect(x - size, y - height, size * 2, height);
@@ -7178,6 +7238,21 @@ class Game {
           ctx.fillRect(x + 7, y - 7, 3, 3);
         }
         ctx.globalAlpha = 1;
+      } else if (biome.id === "vineyard") {
+        ctx.fillStyle = "#3e653a";
+        ctx.fillRect(x - 7, y - 5, 14, 3);
+        ctx.fillStyle = "#7c5638";
+        ctx.fillRect(x - 2, y - 9, 3, 9);
+      } else if (biome.id === "coast") {
+        ctx.fillStyle = "#d7e2d7";
+        ctx.fillRect(x - 8, y - 4, 17, 2);
+        ctx.fillStyle = "#526764";
+        ctx.fillRect(x - 5, y - 2, 11, 4);
+      } else if (biome.id === "wetland") {
+        ctx.fillStyle = "#375f54";
+        ctx.fillRect(x - 1, y - 11, 3, 12);
+        ctx.fillRect(x - 6, y - 6, 5, 2);
+        ctx.fillRect(x + 2, y - 8, 6, 2);
       } else if (biome.id === "city") {
         ctx.fillStyle = "#39454c";
         ctx.fillRect(x - 8, y, 18, 3);
@@ -7202,7 +7277,8 @@ class Game {
     const biome = this.race.road.visualBiomeAt(this.cameraKm);
     const skyColors = {
       forest: "#8fc4d5", city: "#acd2df", desert: "#edc679",
-      mountain: "#b5d5df", green: "#8bcde2", dry: "#ddb878"
+      mountain: "#b5d5df", green: "#8bcde2", dry: "#ddb878",
+      vineyard: "#b9d8d6", coast: "#a8d4df", wetland: "#9bcbd0"
     };
     // Incluso con lluvia intensa el cielo conserva luminosidad diurna.
     ctx.fillStyle = weather > 0.6 ? "#abc4ca" : skyColors[biome.id];
@@ -7220,7 +7296,8 @@ class Game {
     } else {
       ctx.fillStyle = weather > 0.6 ? lerpColor(biome.detail, "#718b82", 0.42) : biome.detail;
       for (let x = -20; x < this.width + 30; x += 18) {
-        const amplitude = biome.id === "mountain" ? 75 : biome.id === "desert" ? 28 : 38;
+        const amplitude = biome.id === "mountain" ? 75 : biome.id === "coast" ? 18
+          : biome.id === "desert" ? 28 : 38;
         const peak = this.height * 0.42 + Math.round(Math.sin(x * 0.018 + this.cameraKm) * amplitude / 6) * 6;
         ctx.fillRect(x, peak, 20, this.height - peak);
       }
@@ -7415,7 +7492,9 @@ class Game {
       const km = marker * spacing;
       if (km < 0 || km > this.race.road.lengthKm) continue;
       const biome = this.race.road.biomeAt(km);
-      if (biome.id !== "forest" && biome.id !== "green" && Math.abs(marker) % 2) continue;
+      if (![
+        "forest", "green", "vineyard", "coast", "wetland"
+      ].includes(biome.id) && Math.abs(marker) % 2) continue;
       const x = Math.round(focusX + (km - this.cameraKm) * pixelsPerKm);
       if (x < -45 || x > this.width + 45) continue;
       // La línea de la carretera representa su eje y se dibuja con un arcén
@@ -7442,6 +7521,28 @@ class Game {
           ctx.fillRect(x + offsetX - treeSize * 0.45, y - treeSize * 1.2, treeSize * 0.62, treeSize * 0.22);
           ctx.fillRect(x + offsetX + treeSize * 0.18, y - treeSize * 0.78, treeSize * 0.4, treeSize * 0.18);
         }
+      } else if (biome.id === "vineyard") {
+        ctx.fillStyle = "#62442d";
+        ctx.fillRect(x - size, y - size * 0.38, size * 2, 3);
+        ctx.fillRect(x - size * 0.55, y - size, 3, size * 0.65);
+        ctx.fillStyle = "#315b35";
+        ctx.fillRect(x - size * 0.85, y - size * 0.78, size * 0.85, size * 0.26);
+        ctx.fillRect(x + size * 0.04, y - size * 0.66, size * 0.8, size * 0.24);
+      } else if (biome.id === "coast") {
+        ctx.fillStyle = "#52615e";
+        ctx.fillRect(x - size, y - size * 0.26, size * 2, size * 0.3);
+        if (Math.abs(marker) % 7 === biome.landmarkVariant) {
+          ctx.fillStyle = "#f3efe2";
+          ctx.fillRect(x - 3, y - size * 1.45, 6, size * 1.15);
+          ctx.fillStyle = "#d44e52";
+          ctx.fillRect(x - 7, y - size * 1.3, 14, 5);
+        }
+      } else if (biome.id === "wetland") {
+        ctx.fillStyle = "#315d53";
+        ctx.fillRect(x - 2, y - size, 4, size);
+        ctx.fillRect(x - size * 0.6, y - size * 0.55, size * 1.2, 3);
+        ctx.fillStyle = biome.accent;
+        ctx.fillRect(x - size * 0.9, y + 1, size * 1.8, 3);
       } else if (biome.id === "desert") {
         ctx.fillStyle = "#64733b";
         ctx.fillRect(x - 3, y - size, 6, size);

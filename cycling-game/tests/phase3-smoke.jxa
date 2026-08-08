@@ -116,6 +116,12 @@ const phase3SoakRace = phase3Game.createCurrentRace({ simulationOnly: true });
 phase3Game.tour.stageIndex = phase3TacticalStageIndex;
 phase3Game.race = phase3SoakRace;
 const phase3VehicleIds = phase3SoakRace.raceVehicles.map((vehicle) => vehicle.id);
+const phase3VehicleColors = new Map(phase3SoakRace.raceVehicles.map((vehicle) => [vehicle.id, vehicle.color]));
+const phase3PlayerTeamCar = phase3SoakRace.raceVehicles.find((vehicle) =>
+  vehicle.type === "team" && vehicle.teamId === phase3SoakRace.playerTeamId);
+const phase3PlayerTeam = TEAM_BY_ID.get(phase3SoakRace.playerTeamId);
+phase3Assert(phase3PlayerTeamCar?.color === phase3PlayerTeam?.color,
+  "El coche del jugador no conserva el color del equipo elegido");
 let phase3MinimumTvVehicles = Infinity;
 let phase3MinimumTeamCars = Infinity;
 for (let tick = 0; tick < 4000; tick += 1) {
@@ -136,6 +142,9 @@ for (let tick = 0; tick < 4000; tick += 1) {
 }
 phase3Assert(phase3SoakRace.raceVehicles.map((vehicle) => vehicle.id).join("|") === phase3VehicleIds.join("|"),
   "Los vehículos se recrearon o desaparecieron durante la prueba prolongada");
+phase3Assert(phase3SoakRace.raceVehicles.every((vehicle) =>
+  vehicle.color === phase3VehicleColors.get(vehicle.id)),
+  "Un coche cambió de color durante la carrera prolongada");
 phase3Assert(phase3MinimumTvVehicles === 3 && phase3MinimumTeamCars === 3,
   "La carrera prolongada dejó de mostrar motos o coches de equipo");
 phase3Game.race = phase3Race;
@@ -218,7 +227,7 @@ phase3Game.race.updateRanking();
 [
   ["chase", "PERSEGUIR"],
   ["attack", "ATACAR"],
-  ["conserve", "RECUPERAR"],
+  ["peloton", "RECUPERAR"],
   ["protect", "PROTEGER"]
 ].forEach(([order, expectedState]) => {
   phase3Game.setTeamOrder(order);
